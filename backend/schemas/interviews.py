@@ -65,6 +65,14 @@ class InterviewInDB(InterviewBase):
     class Config:
         orm_mode = True
 
+class CompanyData(BaseModel):
+    company_name: Optional[str]
+    company_logo: Optional[str]
+
+class JobData(BaseModel):
+    title: Optional[str]
+    company: Optional[CompanyData]
+
 class InterviewResponse(InterviewBase):
     id: int
     status: str
@@ -76,6 +84,7 @@ class InterviewResponse(InterviewBase):
     updated_at: datetime
     access_code: str
     questions: List[InterviewQuestionResponse] = []
+    job: Optional[JobData] = None
     
     class Config:
         orm_mode = True

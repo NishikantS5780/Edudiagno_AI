@@ -312,7 +312,7 @@ async def get_interview_by_access_code(
     db: Session = Depends(get_db)
 ):
     """Get an interview by access code"""
-    interview = db.query(Interview).filter(Interview.access_code == access_code).first()
+    interview = db.query(Interview).join(Job).join(User).filter(Interview.access_code == access_code).first()
     if not interview:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
