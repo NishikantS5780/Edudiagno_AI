@@ -23,20 +23,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Save, ArrowLeft, Wand2, HelpCircle, X } from "lucide-react";
+import { Save, ArrowLeft, HelpCircle } from "lucide-react";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import {
   Tooltip,
@@ -44,8 +35,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import AIJobDescriptionGenerator from "@/components/jobs/AIJobDescriptionGenerator";
 import { jobAPI } from "@/lib/api";
+import AIGeneratePopup from "@/components/jobs/AIGeneratePopup";
 
 const jobFormSchema = z.object({
   title: z.string().min(3, { message: "Job title must be at least 3 characters" }),
@@ -69,10 +60,6 @@ type JobFormValues = z.infer<typeof jobFormSchema>;
 const NewJob = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
-  const [showAIGenerator, setShowAIGenerator] = useState(false);
-  const [openAIKey, setOpenAIKey] = useState("");
-  const [showAPIKeyInput, setShowAPIKeyInput] = useState(false);
 
   const defaultValues: JobFormValues = {
     title: "",
@@ -95,76 +82,6 @@ const NewJob = () => {
     resolver: zodResolver(jobFormSchema),
     defaultValues,
   });
-
-  const generateJobDescription = async () => {
-    const jobTitle = form.getValues("title");
-    
-    if (!jobTitle) {
-      toast.error("Please enter a job title first");
-      return;
-    }
-    
-    if (!openAIKey) {
-      setShowAPIKeyInput(true);
-      return;
-    }
-    
-    setShowAIGenerator(true);
-  };
-
-  const handleAPIKeySubmit = () => {
-    if (!openAIKey.trim()) {
-      toast.error("Please enter a valid OpenAI API key");
-      return;
-    }
-    
-    setShowAPIKeyInput(false);
-    setShowAIGenerator(true);
-    toast.success("API key saved for this session");
-  };
-
-  const handleAIGeneratedDescription = (description: string) => {
-    const descriptionParts = description.split('##');
-    
-    let mainDescription = '';
-    let requirements = '';
-    let benefits = '';
-    
-    if (descriptionParts.length > 0) {
-      const titleAndDesc = descriptionParts[0].split('\n').filter(line => line.trim());
-      if (titleAndDesc.length > 0 && titleAndDesc[0].startsWith('#')) {
-        titleAndDesc.shift();
-      }
-      mainDescription = titleAndDesc.join('\n').trim();
-    }
-    
-    for (const part of descriptionParts) {
-      const trimmedPart = part.trim();
-      
-      if (
-        trimmedPart.toLowerCase().startsWith('requirements') || 
-        trimmedPart.toLowerCase().startsWith('qualifications')
-      ) {
-        requirements = trimmedPart.split('\n').slice(1).join('\n').trim();
-      }
-      
-      else if (
-        trimmedPart.toLowerCase().startsWith('about our company') ||
-        trimmedPart.toLowerCase().includes('offer') ||
-        trimmedPart.toLowerCase().includes('benefits')
-      ) {
-        benefits = trimmedPart.split('\n').slice(1).join('\n').trim();
-      }
-    }
-    
-    form.setValue('description', mainDescription, { shouldValidate: true });
-    if (requirements) {
-      form.setValue('requirements', requirements, { shouldValidate: true });
-    }
-    if (benefits) {
-      form.setValue('benefits', benefits, { shouldValidate: true });
-    }
-  };
 
   const onSubmit = async (data: JobFormValues) => {
     try {
@@ -194,6 +111,10 @@ const NewJob = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleGeneratedContent = (field: keyof JobFormValues, content: string) => {
+    form.setValue(field, content, { shouldValidate: true });
   };
 
   return (
@@ -410,25 +331,24 @@ const NewJob = () => {
                 </div>
 
                 <div className="space-y-6 p-6 border rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <FormLabel className="text-base">Job Description</FormLabel>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={generateJobDescription}
-                    >
-                      <Wand2 className="mr-2 h-4 w-4" />
-                      Generate with AI
-                    </Button>
-                  </div>
-
                   <FormField
                     control={form.control}
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-base">Description</FormLabel>
+                          <AIGeneratePopup
+                            title="Generate Job Description"
+                            fieldLabel="Description"
+                            jobTitle={form.getValues("title")}
+                            department={form.getValues("department")}
+                            location={form.getValues("location")}
+                            jobType={form.getValues("type")}
+                            onGenerated={(content) => handleGeneratedContent("description", content)}
+                            buttonText="Generate with AI"
+                          />
+                        </div>
                         <FormControl>
                           <Textarea
                             placeholder="Describe the role, responsibilities, and ideal candidate"
@@ -446,7 +366,19 @@ const NewJob = () => {
                     name="requirements"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Requirements</FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-base">Requirements</FormLabel>
+                          <AIGeneratePopup
+                            title="Generate Job Requirements"
+                            fieldLabel="Requirements"
+                            jobTitle={form.getValues("title")}
+                            department={form.getValues("department")}
+                            location={form.getValues("location")}
+                            jobType={form.getValues("type")}
+                            onGenerated={(content) => handleGeneratedContent("requirements", content)}
+                            buttonText="Generate with AI"
+                          />
+                        </div>
                         <FormControl>
                           <Textarea
                             placeholder="List the skills, qualifications, and experience required"
@@ -464,7 +396,19 @@ const NewJob = () => {
                     name="benefits"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Benefits (Optional)</FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-base">Benefits (Optional)</FormLabel>
+                          <AIGeneratePopup
+                            title="Generate Job Benefits & Compensation"
+                            fieldLabel="Benefits"
+                            jobTitle={form.getValues("title")}
+                            department={form.getValues("department")}
+                            location={form.getValues("location")}
+                            jobType={form.getValues("type")}
+                            onGenerated={(content) => handleGeneratedContent("benefits", content)}
+                            buttonText="Generate with AI"
+                          />
+                        </div>
                         <FormControl>
                           <Textarea
                             placeholder="List the benefits, perks, and why candidates should apply"
@@ -641,56 +585,6 @@ const NewJob = () => {
           </form>
         </Form>
       </div>
-      
-      <Dialog open={showAIGenerator} onOpenChange={setShowAIGenerator}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </DialogClose>
-          <AIJobDescriptionGenerator
-            onGenerate={handleAIGeneratedDescription}
-            onClose={() => setShowAIGenerator(false)}
-            jobTitle={form.getValues("title")}
-            department={form.getValues("department")}
-            location={form.getValues("location")}
-          />
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={showAPIKeyInput} onOpenChange={setShowAPIKeyInput}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Enter OpenAI API Key</DialogTitle>
-            <DialogDescription>
-              Your API key is required to generate content with AI. It will only be stored for this session.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <FormLabel className="text-right col-span-1">API Key</FormLabel>
-              <div className="col-span-3">
-                <Input 
-                  id="apiKey" 
-                  type="password" 
-                  placeholder="sk-..." 
-                  value={openAIKey}
-                  onChange={(e) => setOpenAIKey(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowAPIKeyInput(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAPIKeySubmit}>
-              Submit
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </DashboardLayout>
   );
 };
