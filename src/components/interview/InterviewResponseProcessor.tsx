@@ -27,10 +27,13 @@ export function useInterviewResponseProcessor() {
     maxQuestions,
     interviewId,
     conversationHistory = [],
-  }: GenerateQuestionParams): Promise<{
-    question: string;
-    speech: string;
-  } | null> => {
+  }: GenerateQuestionParams): Promise<
+    | {
+        question: string;
+        type: string;
+      }[]
+    | null
+  > => {
     try {
       setIsProcessing(true);
       const response = await api.post("/interview-ai/generate-question", {
@@ -41,10 +44,7 @@ export function useInterviewResponseProcessor() {
         interview_id: interviewId,
         conversation_history: conversationHistory,
       });
-      return {
-        question: response.data.question,
-        speech: response.data.audio_base64,
-      };
+      return response.data;
     } catch (error) {
       console.error("Error generating question:", error);
       toast.error("Failed to generate question");

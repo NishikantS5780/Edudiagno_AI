@@ -121,7 +121,7 @@ def generate_question(
             raise HTTPException(status_code=500, detail="Failed to generate questions")
 
         logger.info(f"Successfully generated {len(questions)} questions")
-        return {"question": questions[0]}  # Return first question only
+        return questions  # Return first question only
     except HTTPException:
         raise
     except Exception as e:

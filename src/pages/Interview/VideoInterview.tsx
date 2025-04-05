@@ -132,6 +132,7 @@ export default function VideoInterview({
 
   useEffect(() => {
     const text_to_speech = async () => {
+      console.log(currentQuestion);
       const response = await api.post("/audio/text-to-speech", {
         text: currentQuestion,
       });
@@ -164,9 +165,9 @@ export default function VideoInterview({
           audio: true,
           video: true,
         });
-        
+
         streamRef.current = stream;
-        
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch((error) => {
@@ -174,21 +175,21 @@ export default function VideoInterview({
             toast.error("Failed to start video feed");
           });
         }
-        
+
         // Set up media recorder
         const mediaRecorder = new MediaRecorder(stream, {
           mimeType: "video/webm;codecs=vp9,opus",
         });
-        
+
         mediaRecorderRef.current = mediaRecorder;
-        
+
         // Set up data handler
         mediaRecorder.ondataavailable = (e) => {
           if (e.data.size > 0) {
             recordedChunksRef.current.push(e.data);
           }
         };
-        
+
         // Set up stop handler
         mediaRecorder.onstop = () => {
           const videoBlob = new Blob(recordedChunksRef.current, {
@@ -202,7 +203,7 @@ export default function VideoInterview({
                 blob: videoBlob,
               },
             ]);
-            
+
             transcribeVideo(videoBlob)
               .then((transcript) => {
                 if (transcript) {
@@ -215,17 +216,17 @@ export default function VideoInterview({
               });
           }
         };
-        
+
         // Set up error handler
         mediaRecorder.onerror = (error) => {
           console.error("MediaRecorder error:", error);
           toast.error("Recording error occurred");
           setIsRecording(false);
         };
-        
+
         return () => {
           if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current.getTracks().forEach((track) => track.stop());
           }
         };
       } catch (error) {
@@ -235,7 +236,7 @@ export default function VideoInterview({
         );
       }
     };
-    
+
     initializeVideo();
   }, []);
 
@@ -320,7 +321,6 @@ export default function VideoInterview({
   };
 
   const handleStartRecording = () => {
-    console.log("hi");
     if (
       !mediaRecorderRef.current ||
       mediaRecorderRef.current.state === "recording"
@@ -373,43 +373,45 @@ export default function VideoInterview({
 
       // Create FormData and append data
       const formData = new FormData();
-      
+
       // Convert video blob to audio blob
       const audioContext = new AudioContext();
-      const videoElement = document.createElement('video');
+      const videoElement = document.createElement("video");
       videoElement.src = URL.createObjectURL(videoBlob);
-      
+
       await new Promise((resolve) => {
         videoElement.onloadedmetadata = () => {
           resolve(null);
         };
       });
-      
-      const mediaStreamSource = audioContext.createMediaElementSource(videoElement);
-      const mediaStreamDestination = audioContext.createMediaStreamDestination();
+
+      const mediaStreamSource =
+        audioContext.createMediaElementSource(videoElement);
+      const mediaStreamDestination =
+        audioContext.createMediaStreamDestination();
       mediaStreamSource.connect(mediaStreamDestination);
-      
+
       const mediaRecorder = new MediaRecorder(mediaStreamDestination.stream);
       const audioChunks: BlobPart[] = [];
-      
+
       mediaRecorder.ondataavailable = (event) => {
         audioChunks.push(event.data);
       };
-      
+
       // Create a promise to handle the transcription result
       const transcriptionPromise = new Promise<string>((resolve, reject) => {
         mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
           console.log("Audio blob details:", {
             size: audioBlob.size,
             type: audioBlob.type,
           });
-          
+
           // Create audio file
-          const audioFile = new File([audioBlob], "audio.webm", { 
-            type: "audio/webm" 
+          const audioFile = new File([audioBlob], "audio.webm", {
+            type: "audio/webm",
           });
-          
+
           // Log the file details before appending
           console.log("Audio file details:", {
             name: audioFile.name,
@@ -464,7 +466,7 @@ export default function VideoInterview({
       // Start recording and playing
       mediaRecorder.start();
       await videoElement.play();
-      
+
       // Record until video ends
       await new Promise((resolve) => {
         videoElement.onended = () => {
@@ -492,17 +494,14 @@ export default function VideoInterview({
     console.log("handleResponseRecorded called with transcript:", transcript);
     setCurrentResponse(transcript);
     setHasRecordedCurrentQuestion(true);
-    
+
     // Add the transcribed text to the conversation
     console.log("Adding message to conversation:", transcript);
     addMessage("user", transcript);
-    
+
     // Update conversation history with user's response
     setConversationHistory((prev) => {
-      const newHistory = [
-        ...prev,
-        { role: "user", content: transcript },
-      ];
+      const newHistory = [...prev, { role: "user", content: transcript }];
       console.log("Updated conversation history:", newHistory);
       return newHistory;
     });
@@ -511,37 +510,38 @@ export default function VideoInterview({
   const handleNextQuestion = () => {
     console.log("Current question index:", currentQuestionIndex);
     console.log("Interview flow length:", interviewFlow.length);
-    
+
     if (currentQuestionIndex < interviewFlow.length - 1) {
       const nextIndex = currentQuestionIndex + 1;
       console.log("Moving to next question index:", nextIndex);
-      
+
       // Update the current question index
       setCurrentQuestionIndex(nextIndex);
-      
+
       // Get the next question
+      console.log(interviewFlow);
       const nextQuestion = interviewFlow[nextIndex].question;
       console.log("Next question:", nextQuestion);
-      
+
       // Update the current question
       setCurrentQuestion(nextQuestion);
-      
+
       // Add the AI's question to the conversation
       addMessage("ai", nextQuestion);
-      
+
       // Update conversation history
       setConversationHistory((prev) => [
         ...prev,
         { role: "assistant", content: nextQuestion },
       ]);
-      
+
       // Reset recording state
       setHasRecordedCurrentQuestion(false);
       setCurrentResponse(null);
-      
+
       // Clear recorded chunks for the next recording
       recordedChunksRef.current = [];
-      
+
       // Show AI speaking animation
       setIsAiSpeaking(true);
       setTimeout(() => setIsAiSpeaking(false), 3000);
@@ -597,11 +597,7 @@ export default function VideoInterview({
       });
 
       // Handle both single question and array responses
-      const questionArray = Array.isArray(questions)
-        ? questions.question
-        : [questions.question];
-
-      if (!questionArray || questionArray.length === 0) {
+      if (!questions || questions.length === 0) {
         throw new Error("Failed to generate questions");
       }
 
@@ -612,18 +608,12 @@ export default function VideoInterview({
           question:
             "Hello! I'm Alex, your AI interviewer. Could you please introduce yourself and tell me a bit about your background?",
         },
-        { type: "behavioral", question: questionArray[0] },
-        { type: "behavioral", question: questionArray[1] },
-        { type: "resume", question: questionArray[2] },
-        { type: "resume", question: questionArray[3] },
-        { type: "job", question: questionArray[4] },
-        { type: "job", question: questionArray[5] },
-        { type: "job", question: questionArray[6] },
+        ...questions,
       ];
 
       // Log the interview flow for debugging
       console.log("Interview Flow:", interviewFlow);
-      console.log("Generated Questions:", questionArray);
+      console.log("Generated Questions:", questions);
 
       setCurrentQuestion(interviewFlow[0].question);
 
@@ -677,9 +667,9 @@ export default function VideoInterview({
         audio: true,
         video: true,
       });
-      
+
       streamRef.current = stream;
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.play().catch((error) => {
@@ -687,21 +677,21 @@ export default function VideoInterview({
           toast.error("Failed to start video feed");
         });
       }
-      
+
       // Set up media recorder
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: "video/webm;codecs=vp9,opus",
       });
-      
+
       mediaRecorderRef.current = mediaRecorder;
-      
+
       // Set up data handler
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           recordedChunksRef.current.push(e.data);
         }
       };
-      
+
       // Set up stop handler
       mediaRecorder.onstop = () => {
         const videoBlob = new Blob(recordedChunksRef.current, {
@@ -715,7 +705,7 @@ export default function VideoInterview({
               blob: videoBlob,
             },
           ]);
-          
+
           transcribeVideo(videoBlob)
             .then((transcript) => {
               if (transcript) {
@@ -728,7 +718,7 @@ export default function VideoInterview({
             });
         }
       };
-      
+
       // Set up error handler
       mediaRecorder.onerror = (error) => {
         console.error("MediaRecorder error:", error);
@@ -1097,10 +1087,7 @@ export default function VideoInterview({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent
-                value="transcript"
-                className="mt-4 space-y-4"
-              >
+              <TabsContent value="transcript" className="mt-4 space-y-4">
                 <div className="text-sm text-muted-foreground">
                   Live transcript of your interview conversation
                 </div>
