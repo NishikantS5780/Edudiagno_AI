@@ -1,4 +1,3 @@
-
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, JSON, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -14,12 +13,30 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     first_name = Column(String)
     last_name = Column(String)
+    title = Column(String)
+    phone = Column(String)
+    timezone = Column(String, default="America/New_York")
+    language = Column(String, default="English")
     company_name = Column(String)
     company_logo = Column(String)
-    phone = Column(String)
     website = Column(String)
     industry = Column(String)
     company_size = Column(String)
+    address = Column(String)
+    city = Column(String)
+    state = Column(String)
+    zip = Column(String)
+    country = Column(String, default="United States")
+    is_profile_complete = Column(Boolean, default=False)
+    profile_progress = Column(Integer, default=0)
+    notification_settings = Column(JSON, default={
+        "emailNewCandidate": True,
+        "emailInterviewComplete": True,
+        "emailWeeklySummary": True,
+        "browserNewCandidate": True,
+        "browserInterviewComplete": True,
+        "smsInterviewComplete": False
+    })
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -52,6 +69,7 @@ class Job(Base):
     candidates = relationship("Candidate", back_populates="job")
     interviews = relationship("Interview", back_populates="job")
     settings = relationship("InterviewSettings", back_populates="job", uselist=False)
+    public_links = relationship("PublicInterviewLink", back_populates="job", cascade="all, delete-orphan")
 
 class InterviewSettings(Base):
     __tablename__ = "interview_settings"
@@ -80,11 +98,17 @@ class Candidate(Base):
     last_name = Column(String, nullable=False)
     email = Column(String, nullable=False)
     phone = Column(String)
+    location = Column(String)
+    linkedin_url = Column(String)
+    portfolio_url = Column(String)
     resume_url = Column(String)
     resume_text = Column(Text)
+    work_experience = Column(Text)  # Store as JSON string
+    education = Column(Text)  # Store as JSON string
+    skills = Column(Text)  # Store as JSON string
     resume_match_score = Column(Float)
     resume_match_feedback = Column(Text)
-    status = Column(String, default="new")  # new, reviewing, interviewing, hired, rejected
+    status = Column(String, default="new")
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -144,3 +168,21 @@ class VideoResponse(Base):
     # Relationships
     interview = relationship("Interview", back_populates="video_responses")
     question = relationship("InterviewQuestion", back_populates="video_response")
+
+class PublicInterviewLink(Base):
+    __tablename__ = "public_interview_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
+    name = Column(String, nullable=False)
+    access_code = Column(String, unique=True, index=True, nullable=False)
+    is_active = Column(Boolean, default=True)
+    expires_at = Column(DateTime)
+    visits = Column(Integer, default=0)
+    started_interviews = Column(Integer, default=0)
+    completed_interviews = Column(Integer, default=0)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    # Relationships
+    job = relationship("Job", back_populates="public_links")

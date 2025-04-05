@@ -1,42 +1,42 @@
-
 import os
-import uuid
-from pathlib import Path
+import logging
+from typing import Optional
 from fastapi import UploadFile
 import shutil
+from datetime import datetime
+import string
+import random
 
-# Create upload directories if they don't exist
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+logger = logging.getLogger(__name__)
 
-VIDEO_DIR = UPLOAD_DIR / "videos"
-VIDEO_DIR.mkdir(exist_ok=True)
+# Directory constants
+LOGO_DIR = "uploads/logos"
+RESUME_DIR = "uploads/resumes"
 
-RESUME_DIR = UPLOAD_DIR / "resumes"
-RESUME_DIR.mkdir(exist_ok=True)
+# Ensure directories exist
+os.makedirs(LOGO_DIR, exist_ok=True)
+os.makedirs(RESUME_DIR, exist_ok=True)
 
-LOGO_DIR = UPLOAD_DIR / "logos"
-LOGO_DIR.mkdir(exist_ok=True)
+def generate_unique_filename(prefix: str, extension: str) -> str:
+    """Generate a unique filename with timestamp and random string"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    random_str = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    return f"{prefix}_{timestamp}_{random_str}.{extension}"
 
-def generate_unique_filename(directory: str, extension: str) -> str:
-    """Generate a unique filename for uploaded files"""
-    unique_id = str(uuid.uuid4())
-    return f"{directory}/{unique_id}.{extension}"
-
-async def save_upload_file(upload_file: UploadFile, directory: Path) -> str:
-    """Save an uploaded file to the specified directory and return the file path"""
-    # Ensure the directory exists
-    directory.mkdir(exist_ok=True)
-    
-    # Generate a unique filename
-    file_extension = upload_file.filename.split(".")[-1] if "." in upload_file.filename else ""
-    unique_filename = f"{uuid.uuid4()}.{file_extension}"
-    file_path = directory / unique_filename
-    
-    # Save the file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(upload_file.file, buffer)
-    
-    # Return the relative path from the uploads directory
-    relative_path = str(file_path.relative_to(UPLOAD_DIR))
-    return f"/uploads/{relative_path}"
+async def save_upload_file(upload_file: UploadFile, directory: str) -> str:
+    """Save an uploaded file to the specified directory"""
+    try:
+        # Generate unique filename
+        file_extension = upload_file.filename.split(".")[-1]
+        filename = generate_unique_filename("file", file_extension)
+        file_path = os.path.join(directory, filename)
+        
+        # Save the file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(upload_file.file, buffer)
+        
+        # Return the relative path
+        return f"/{os.path.relpath(file_path, 'uploads')}"
+    except Exception as e:
+        logger.error(f"Error saving file: {str(e)}")
+        raise 

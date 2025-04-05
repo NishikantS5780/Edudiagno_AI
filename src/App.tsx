@@ -1,13 +1,19 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import RequireAuth from "@/components/common/RequireAuth";
+import RequireProfileCompletion from "@/components/common/RequireProfileCompletion";
 import ChatbotButton from "@/components/common/ChatbotButton";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { publicInterviewApi } from "@/lib/api";
+import VideoInterview from "@/pages/Interview/VideoInterview";
+import { AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Landing pages
 import Landing from "@/pages/Landing";
@@ -31,6 +37,8 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import Dashboard from "@/pages/Dashboard/Dashboard";
 import JobsIndex from "@/pages/Dashboard/Jobs/JobsIndex";
 import NewJob from "@/pages/Dashboard/Jobs/NewJob";
+import JobDetail from "@/pages/Dashboard/Jobs/JobDetail";
+import JobEdit from "@/pages/Dashboard/Jobs/JobEdit";
 import InterviewsIndex from "@/pages/Dashboard/Interviews/InterviewsIndex";
 import InterviewDetail from "@/pages/Dashboard/Interviews/InterviewDetail";
 import CandidatesIndex from "@/pages/Dashboard/Candidates/CandidatesIndex";
@@ -41,7 +49,11 @@ import Settings from "@/pages/Dashboard/Settings";
 import Help from "@/pages/Dashboard/Help";
 
 // Candidate Interview Experience
-import CandidateInterview from "@/pages/Interview/CandidateInterview";
+import PublicInterview from "@/pages/Interview/PublicInterview";
+import InterviewStart from "@/pages/Interview/InterviewStart";
+import InterviewFlow from "@/pages/Interview/InterviewFlow";
+import InterviewSetupStage from "@/pages/Interview/InterviewSetupStage";
+import CandidatePreCheck from "@/components/interview/CandidatePreCheck";
 
 // Error pages
 import NotFound from "@/pages/NotFound";
@@ -54,6 +66,84 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const VideoInterviewWrapper = () => {
+  const { accessCode } = useParams();
+  const navigate = useNavigate();
+  const [interviewData, setInterviewData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchInterviewData = async () => {
+      try {
+        const response = await publicInterviewApi.getByAccessCode(accessCode!);
+        if (!response.data || !response.data.job || !response.data.job.title || !response.data.job.company?.name) {
+          throw new Error('Invalid interview data');
+        }
+        setInterviewData(response.data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching interview data:', error);
+        toast.error('Failed to load interview data');
+        navigate(`/interview/${accessCode}`);
+      }
+    };
+    
+    fetchInterviewData();
+  }, [accessCode, navigate]);
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading interview...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!interviewData || !interviewData.job || !interviewData.job.title || !interviewData.job.company?.name) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <p className="text-muted-foreground">Invalid interview data. Please try again.</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => navigate(`/interview/${accessCode}`)}
+          >
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <VideoInterview
+      jobTitle={interviewData.job.title}
+      companyName={interviewData.job.company.name}
+      interviewId={interviewData.id}
+      candidate={interviewData.candidate}
+      jobDescription={interviewData.job.description || ''}
+      resumeText={interviewData.candidate?.resume_text || ''}
+      onComplete={() => navigate(`/interview/${accessCode}/complete`)}
+    />
+  );
+};
+
+const CandidatePreCheckWrapper = () => {
+  const { accessCode } = useParams();
+  const navigate = useNavigate();
+  
+  return (
+    <CandidatePreCheck 
+      onReady={() => navigate(`/interview/${accessCode}/video-interview`)} 
+    />
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -80,8 +170,12 @@ const App = () => (
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               
-              {/* Candidate Interview Experience (Public) */}
-              <Route path="/interview/:interviewId" element={<CandidateInterview />} />
+              {/* Public Interview Routes */}
+              <Route path="/interview/:accessCode" element={<PublicInterview />} />
+              <Route path="/interview/:accessCode/start" element={<InterviewStart />} />
+              <Route path="/interview/:accessCode/compatibility" element={<InterviewFlow />} />
+              <Route path="/interview/:accessCode/setup" element={<CandidatePreCheckWrapper />} />
+              <Route path="/interview/:accessCode/video-interview" element={<VideoInterviewWrapper />} />
               
               {/* Protected Dashboard Routes */}
               <Route 
@@ -93,7 +187,7 @@ const App = () => (
                 } 
               />
               
-              {/* Jobs Routes */}
+              {/* Jobs Routes - Protected with Profile Completion Requirement */}
               <Route 
                 path="/dashboard/jobs" 
                 element={
@@ -106,7 +200,29 @@ const App = () => (
                 path="/dashboard/jobs/new" 
                 element={
                   <RequireAuth>
-                    <NewJob />
+                    <RequireProfileCompletion>
+                      <NewJob />
+                    </RequireProfileCompletion>
+                  </RequireAuth>
+                } 
+              />
+              <Route 
+                path="/dashboard/jobs/:id" 
+                element={
+                  <RequireAuth>
+                    <RequireProfileCompletion>
+                      <JobDetail />
+                    </RequireProfileCompletion>
+                  </RequireAuth>
+                } 
+              />
+              <Route 
+                path="/dashboard/jobs/:id/edit" 
+                element={
+                  <RequireAuth>
+                    <RequireProfileCompletion>
+                      <JobEdit />
+                    </RequireProfileCompletion>
                   </RequireAuth>
                 } 
               />
@@ -143,6 +259,18 @@ const App = () => (
                 element={
                   <RequireAuth>
                     <InterviewDetail />
+                  </RequireAuth>
+                } 
+              />
+
+              {/* New Interview - Protected with Profile Completion */}
+              <Route 
+                path="/dashboard/interviews/new" 
+                element={
+                  <RequireAuth>
+                    <RequireProfileCompletion>
+                      <InterviewDetail />
+                    </RequireProfileCompletion>
                   </RequireAuth>
                 } 
               />

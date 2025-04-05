@@ -8,14 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, Video, Check, AlertTriangle, CheckCircle, XCircle, Info, ArrowRight } from "lucide-react";
 import ResumeUpload from "@/components/common/ResumeUpload";
+import { toast } from "sonner";
 
 interface CandidatePreCheckProps {
   onReady: () => void;
 }
 
 const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
-  const [activeStep, setActiveStep] = useState<"resume" | "device" | "preparation">("resume");
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [activeStep, setActiveStep] = useState<"device" | "preparation">("device");
   const [isAgreementChecked, setIsAgreementChecked] = useState(false);
   const [progress, setProgress] = useState(0);
   const [cameraAccess, setCameraAccess] = useState<"pending" | "granted" | "denied">("pending");
@@ -35,18 +35,15 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
 
   useEffect(() => {
     let newProgress = 0;
-    if (resumeFile) newProgress += 33;
-    if (isDeviceTestComplete) newProgress += 33;
-    if (isAgreementChecked) newProgress += 34;
+    if (isDeviceTestComplete) newProgress += 50;
+    if (isAgreementChecked) newProgress += 50;
     setProgress(newProgress);
-  }, [resumeFile, isDeviceTestComplete, isAgreementChecked]);
-
-  const handleResumeUpload = (file: File) => {
-    setResumeFile(file);
-  };
+  }, [isDeviceTestComplete, isAgreementChecked]);
 
   const startDeviceTest = async () => {
     setIsTestingDevices(true);
+    setCameraAccess("pending");
+    setMicrophoneAccess("pending");
     
     try {
       let internetConnectionQuality = "unknown";
@@ -62,56 +59,54 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
       
       setInternetConnection(internetConnectionQuality as "good" | "poor" | "unknown");
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
-      
-      mediaStream.current = stream;
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      // Try to get video first
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (videoRef.current) {
+          videoRef.current.srcObject = videoStream;
+          videoRef.current.play();
+        }
+        setCameraAccess("granted");
+      } catch (videoError) {
+        console.log('Camera access not available:', videoError);
+        setCameraAccess("denied");
+      }
+
+      // Then try to get audio
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStream.current = audioStream;
+        setMicrophoneAccess("granted");
+        
+        audioContext.current = new AudioContext();
+        analyser.current = audioContext.current.createAnalyser();
+        microphone.current = audioContext.current.createMediaStreamSource(audioStream);
+        
+        analyser.current.fftSize = 256;
+        microphone.current.connect(analyser.current);
+        
+        const bufferLength = analyser.current.frequencyBinCount;
+        dataArray.current = new Uint8Array(bufferLength);
+        
+        monitorMicVolume();
+      } catch (audioError) {
+        console.error('Error accessing microphone:', audioError);
+        setMicrophoneAccess("denied");
+        toast.error('Microphone access is required. Please allow microphone access in your browser settings.');
       }
       
-      setCameraAccess("granted");
-      setMicrophoneAccess("granted");
-      
-      audioContext.current = new AudioContext();
-      analyser.current = audioContext.current.createAnalyser();
-      microphone.current = audioContext.current.createMediaStreamSource(stream);
-      
-      analyser.current.fftSize = 256;
-      microphone.current.connect(analyser.current);
-      
-      const bufferLength = analyser.current.frequencyBinCount;
-      dataArray.current = new Uint8Array(bufferLength);
-      
-      monitorMicVolume();
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing media devices:', error);
       
-      if (error instanceof DOMException) {
-        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-          navigator.mediaDevices.getUserMedia({ video: true })
-            .then(() => {
-              setCameraAccess("granted");
-              setMicrophoneAccess("denied");
-            })
-            .catch(() => {
-              setCameraAccess("denied");
-              navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(() => {
-                  setMicrophoneAccess("granted");
-                })
-                .catch(() => {
-                  setMicrophoneAccess("denied");
-                });
-            });
-        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-          setCameraAccess("denied");
-          setMicrophoneAccess("denied");
-        }
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setMicrophoneAccess("denied");
+        toast.error('Microphone access is required. Please allow microphone access in your browser settings.');
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        setMicrophoneAccess("denied");
+        toast.error('No microphone found. Please check your device connections.');
+      } else {
+        setMicrophoneAccess("denied");
+        toast.error('Failed to access microphone. Please check your device settings.');
       }
     }
   };
@@ -138,6 +133,12 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
       mediaStream.current = null;
     }
     
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    
     if (audioContext.current && audioContext.current.state !== 'closed') {
       audioContext.current.close();
       audioContext.current = null;
@@ -153,14 +154,15 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
       animationFrame.current = null;
     }
     
-    setIsDeviceTestComplete(true);
+    // Only set device test complete if we have microphone access
+    if (microphoneAccess === "granted") {
+      setIsDeviceTestComplete(true);
+    }
     setIsTestingDevices(false);
   };
 
   const proceedToNextStep = () => {
-    if (activeStep === "resume") {
-      setActiveStep("device");
-    } else if (activeStep === "device") {
+    if (activeStep === "device") {
       setActiveStep("preparation");
     } else {
       onReady();
@@ -200,22 +202,6 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className={`border ${activeStep === "resume" ? "border-brand" : ""}`}>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center text-lg">
-                <div className={`w-6 h-6 rounded-full mr-2 flex items-center justify-center ${resumeFile ? "bg-brand text-white" : "bg-muted"}`}>
-                  {resumeFile ? <Check className="h-4 w-4" /> : "1"}
-                </div>
-                Upload Resume
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Share your resume to help the AI interviewer customize questions
-              </p>
-            </CardContent>
-          </Card>
-          
           <Card className={`border ${activeStep === "device" ? "border-brand" : ""}`}>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
@@ -227,7 +213,7 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Test your camera and microphone to ensure everything works
+                Test your microphone to ensure it works properly
               </p>
             </CardContent>
           </Card>
@@ -249,50 +235,12 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
           </Card>
         </div>
         
-        {activeStep === "resume" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload Your Resume</CardTitle>
-              <CardDescription>
-                Your resume helps us personalize your interview experience
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResumeUpload onUpload={handleResumeUpload} />
-              
-              {resumeFile && (
-                <div className="mt-4 p-4 bg-muted rounded-md flex items-center justify-between">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-success mr-2" />
-                    <span>{resumeFile.name}</span>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => setResumeFile(null)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    Remove
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <p className="text-sm text-muted-foreground">
-                Accepted formats: PDF, DOCX, DOC (Max 5MB)
-              </p>
-              <Button onClick={proceedToNextStep} disabled={!resumeFile}>
-                Continue <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
-        )}
-        
         {activeStep === "device" && (
           <Card>
             <CardHeader>
               <CardTitle>Test Your Devices</CardTitle>
               <CardDescription>
-                Make sure your camera and microphone are working properly
+                Make sure your microphone is working properly
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -300,11 +248,11 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
                 {!isTestingDevices && !isDeviceTestComplete && (
                   <div className="text-center py-8">
                     <div className="bg-muted rounded-full p-4 inline-flex mb-4">
-                      <Video className="h-8 w-8 text-brand" />
+                      <Mic className="h-8 w-8 text-brand" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2">Device Check Required</h3>
                     <p className="mb-6 max-w-md mx-auto text-muted-foreground">
-                      We need to check your camera and microphone to ensure they work properly for the interview
+                      We need to check your microphone to ensure it works properly for the interview
                     </p>
                     <Button onClick={startDeviceTest}>
                       Start Device Test
@@ -322,22 +270,6 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
                         muted 
                         className="w-full h-full object-cover"
                       />
-                      
-                      {cameraAccess === "denied" && (
-                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-4">
-                          <AlertTriangle className="h-10 w-10 text-destructive mb-4" />
-                          <h3 className="text-lg font-semibold mb-2">Camera Access Denied</h3>
-                          <p className="text-center text-muted-foreground mb-4">
-                            Please allow camera access in your browser settings to continue
-                          </p>
-                          <Button 
-                            variant="outline" 
-                            onClick={() => window.location.reload()}
-                          >
-                            Try Again
-                          </Button>
-                        </div>
-                      )}
                     </div>
                     
                     <div className="space-y-4">
@@ -345,14 +277,14 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
                         <div className="flex items-center">
                           <div className={`h-2.5 w-2.5 rounded-full mr-2 ${
                             cameraAccess === "granted" ? "bg-success" : 
-                            cameraAccess === "denied" ? "bg-destructive" :
-                            "bg-yellow-500"
+                            cameraAccess === "denied" ? "bg-yellow-500" :
+                            "bg-muted"
                           }`} />
                           <span>Camera</span>
                         </div>
                         <span className="text-sm">
                           {cameraAccess === "granted" ? "Working" : 
-                           cameraAccess === "denied" ? "Access denied" :
+                           cameraAccess === "denied" ? "Optional" :
                            "Checking..."}
                         </span>
                       </div>
@@ -428,11 +360,11 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
                     <ul className="space-y-2 mb-6 max-w-md mx-auto text-sm">
                       <li className="flex items-center">
                         <Check className="h-4 w-4 text-success mr-2" />
-                        Camera is working properly
+                        Microphone is detected and functioning
                       </li>
                       <li className="flex items-center">
                         <Check className="h-4 w-4 text-success mr-2" />
-                        Microphone is detected and functioning
+                        Camera is {cameraAccess === "granted" ? "detected and functioning" : "optional"}
                       </li>
                       <li className="flex items-center">
                         <Check className="h-4 w-4 text-success mr-2" />
@@ -444,12 +376,12 @@ const CandidatePreCheck: React.FC<CandidatePreCheckProps> = ({ onReady }) => {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={() => setActiveStep("resume")}>
+              <Button variant="outline" onClick={() => setActiveStep("device")}>
                 Back
               </Button>
               <Button 
                 onClick={proceedToNextStep} 
-                disabled={!isDeviceTestComplete}
+                disabled={!isDeviceTestComplete || microphoneAccess !== "granted"}
               >
                 Continue <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

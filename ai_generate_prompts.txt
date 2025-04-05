@@ -1,0 +1,85 @@
+# AI GENERATE POPUP PROMPTS
+# High-quality, fine-tuned prompts for job content generation
+
+## JOB DESCRIPTION PROMPTS
+
+### Keywords for Job Descriptions
+leadership, strategic thinking, innovation, collaboration, problem-solving, communication, adaptability, results-driven, customer-focused, technical expertise
+
+### Custom Prompts for Job Descriptions
+
+#### Standard Job Description
+Create a compelling job description for a [Job Title] position in the [Department] department. The role is [Job Type] and located in [Location]. Include information about the company culture, the impact this role will have, and what makes this position unique. Focus on the day-to-day responsibilities and the overall mission of the role.
+
+#### Technical Role Description
+Generate a detailed job description for a [Job Title] position with a focus on technical responsibilities. Include specific technologies, frameworks, and methodologies the candidate should be familiar with. Emphasize the technical challenges they'll face and the impact their work will have on the company's products or services.
+
+#### Leadership Role Description
+Create a comprehensive job description for a [Job Title] leadership position. Focus on strategic responsibilities, team management, and the candidate's role in driving organizational success. Include information about the size of the team they'll manage, the reporting structure, and key performance indicators for success.
+
+#### Entry-Level Position Description
+Write an engaging job description for an entry-level [Job Title] position. Emphasize learning opportunities, mentorship, and growth potential. Make the role sound accessible to recent graduates while still highlighting the value they'll bring to the organization.
+
+#### Remote/Hybrid Position Description
+Generate a job description for a [Job Type] [Job Title] position that can be performed remotely or in a hybrid arrangement. Include information about remote work policies, collaboration tools used, and how the team stays connected. Emphasize the flexibility while maintaining a sense of team cohesion.
+
+## JOB REQUIREMENTS PROMPTS
+
+### Keywords for Job Requirements
+technical expertise, communication skills, project management, analytical thinking, team leadership, problem-solving, attention to detail, time management, adaptability, industry knowledge
+
+### Custom Prompts for Job Requirements
+
+#### Standard Requirements
+Generate a comprehensive list of requirements for a [Job Title] position. Include both technical skills and soft skills needed for success. Specify education requirements, years of experience, and any certifications or specialized knowledge that would be valuable. Make sure to include both essential requirements and preferred qualifications.
+
+#### Technical Role Requirements
+Create a detailed list of technical requirements for a [Job Title] position. Include specific programming languages, tools, frameworks, and methodologies the candidate should be proficient in. Specify minimum years of experience with each technology and any certifications that would be valuable. Organize requirements by priority (essential vs. preferred).
+
+#### Leadership Role Requirements
+Generate a comprehensive list of requirements for a [Job Title] leadership position. Include both technical expertise and leadership capabilities needed for success. Specify education requirements, years of experience in both technical and leadership roles, and any certifications or specialized knowledge that would be valuable. Emphasize strategic thinking, team management, and business acumen.
+
+#### Entry-Level Position Requirements
+Create a realistic list of requirements for an entry-level [Job Title] position. Focus on foundational skills and knowledge that recent graduates or career changers might possess. Include both technical requirements and soft skills. Make the requirements accessible while still ensuring the candidate can contribute meaningfully to the organization.
+
+#### Industry-Specific Requirements
+Generate a list of requirements for a [Job Title] position in the [Industry] industry. Include both general requirements and industry-specific knowledge or certifications needed for success. Specify any regulatory compliance requirements or specialized training that would be valuable.
+
+## JOB BENEFITS PROMPTS
+
+### Keywords for Job Benefits
+work-life balance, professional development, competitive compensation, health benefits, flexible hours, remote work, career advancement, team culture, learning opportunities, performance bonuses
+
+### Custom Prompts for Job Benefits
+
+#### Standard Benefits Package
+Create an attractive benefits package description for a [Job Title] position. Include information about compensation, health benefits, retirement plans, paid time off, professional development opportunities, and any unique perks. Make the benefits sound appealing and competitive while being honest about what's offered.
+
+#### Comprehensive Benefits Package
+Generate a detailed benefits package description for a [Job Title] position. Include information about base salary range, bonus structure, equity options, health/dental/vision insurance, retirement plans with employer matching, paid time off, parental leave, professional development budget, wellness programs, and any unique company perks. Emphasize the total value of the compensation package.
+
+#### Work-Life Balance Benefits
+Create a benefits description that emphasizes work-life balance for a [Job Title] position. Include information about flexible work arrangements, remote work options, paid time off, wellness programs, and any unique perks that support a healthy work-life balance. Emphasize the company's commitment to employee wellbeing.
+
+#### Professional Development Benefits
+Generate a benefits description that emphasizes professional growth for a [Job Title] position. Include information about learning and development opportunities, mentorship programs, conference attendance, certification support, and career advancement paths. Emphasize the company's investment in employee growth and development.
+
+#### Family-Friendly Benefits
+Create a benefits description that emphasizes family-friendly policies for a [Job Title] position. Include information about parental leave, family health insurance, dependent care assistance, flexible work arrangements, and any unique perks that support employees with families. Emphasize the company's commitment to supporting employees' family lives.
+
+## SPECIALIZED PROMPTS
+
+### For Startup Environments
+Generate a job description for a [Job Title] position at a fast-growing startup. Emphasize the dynamic environment, opportunity for impact, and potential for growth. Include information about the company's mission, culture, and the candidate's role in building the company. Highlight the chance to wear multiple hats and contribute to various aspects of the business.
+
+### For Enterprise Environments
+Create a comprehensive job description for a [Job Title] position at a large enterprise organization. Emphasize the stability, resources, and structured career paths available. Include information about the company's industry leadership, global presence, and the candidate's role in driving innovation within an established framework.
+
+### For Non-Profit Organizations
+Generate a job description for a [Job Title] position at a non-profit organization. Emphasize the mission-driven nature of the work, the impact on communities, and the opportunity to make a difference. Include information about the organization's goals, values, and how the candidate's work will contribute to the greater good.
+
+### For Government/Public Sector
+Create a job description for a [Job Title] position in the public sector. Emphasize the service to the public, stability, and comprehensive benefits. Include information about the agency's mission, the candidate's role in serving citizens, and the opportunity to work on projects with broad societal impact.
+
+### For Academic/Research Institutions
+Generate a job description for a [Job Title] position at an academic or research institution. Emphasize the intellectual environment, opportunity for research and publication, and contribution to knowledge. Include information about the institution's reputation, research focus areas, and the candidate's role in advancing scholarship or innovation. 

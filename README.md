@@ -1,2 +1,1 @@
-# Edudiagno_AI
-AI Interviewer
+# edudiagno_int

@@ -65,14 +65,6 @@ class InterviewInDB(InterviewBase):
     class Config:
         orm_mode = True
 
-class CompanyData(BaseModel):
-    company_name: Optional[str]
-    company_logo: Optional[str]
-
-class JobData(BaseModel):
-    title: Optional[str]
-    company: Optional[CompanyData]
-
 class InterviewResponse(InterviewBase):
     id: int
     status: str
@@ -84,7 +76,7 @@ class InterviewResponse(InterviewBase):
     updated_at: datetime
     access_code: str
     questions: List[InterviewQuestionResponse] = []
-    job: Optional[JobData] = None
+    candidate: Optional[dict] = None
     
     class Config:
         orm_mode = True
@@ -94,3 +86,41 @@ class GenerateQuestionsRequest(BaseModel):
     resume_text: Optional[str] = None
     question_types: List[str] = ["technical", "behavioral", "problemSolving"]
     count: int = 5
+
+class PublicInterviewLinkBase(BaseModel):
+    name: str
+    expiration: Optional[int] = None
+    is_active: bool = True
+
+class PublicInterviewLinkCreate(PublicInterviewLinkBase):
+    pass
+
+class JobDetailsResponse(BaseModel):
+    id: int
+    title: str
+    company: dict
+    location: str
+    type: str
+    description: str
+    requirements: str
+    compensation: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PublicInterviewLinkResponse(PublicInterviewLinkBase):
+    id: int
+    job_id: int
+    access_code: str
+    expires_at: Optional[datetime]
+    visits: int
+    started_interviews: int
+    completed_interviews: int
+    created_at: datetime
+    updated_at: datetime
+    job: JobDetailsResponse
+
+    class Config:
+        from_attributes = True
+        orm_mode = True

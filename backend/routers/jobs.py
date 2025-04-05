@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -10,9 +9,13 @@ from schemas.jobs import (
     InterviewSettingsCreate, InterviewSettingsResponse, InterviewSettingsUpdate,
     PublicJobResponse
 )
-from models.models import User, Job, Interview, Candidate
+from models.models import (
+    User, Job, Interview, Candidate, 
+    VideoResponse, InterviewQuestion, 
+    PublicInterviewLink, InterviewSettings
+)
 from utils.auth import get_current_user
-from utils.openai_utils import generate_job_description, generate_interview_questions
+from utils.openai_utils import generate_job_description, generate_interview_questions, generate_job_requirements, generate_job_benefits
 
 router = APIRouter()
 
@@ -218,14 +221,43 @@ async def delete_job(
             detail="Job not found"
         )
     
-    # Delete associated interviews and candidates
-    db.query(Interview).filter(Interview.job_id == job_id).delete()
-    db.query(Candidate).filter(Candidate.job_id == job_id).delete()
-    
-    # Delete the job
-    db.delete(job)
-    db.commit()
-    return {"detail": "Job deleted"}
+    try:
+        # Delete video responses first (deepest in the relationship tree)
+        db.query(VideoResponse).filter(
+            VideoResponse.interview_id.in_(
+                db.query(Interview.id).filter(Interview.job_id == job_id)
+            )
+        ).delete(synchronize_session=False)
+        
+        # Delete interview questions
+        db.query(InterviewQuestion).filter(
+            InterviewQuestion.interview_id.in_(
+                db.query(Interview.id).filter(Interview.job_id == job_id)
+            )
+        ).delete(synchronize_session=False)
+        
+        # Delete interviews
+        db.query(Interview).filter(Interview.job_id == job_id).delete(synchronize_session=False)
+        
+        # Delete candidates
+        db.query(Candidate).filter(Candidate.job_id == job_id).delete(synchronize_session=False)
+        
+        # Delete interview settings
+        db.query(InterviewSettings).filter(InterviewSettings.job_id == job_id).delete(synchronize_session=False)
+        
+        # Delete public interview links
+        db.query(PublicInterviewLink).filter(PublicInterviewLink.job_id == job_id).delete(synchronize_session=False)
+        
+        # Finally, delete the job
+        db.delete(job)
+        db.commit()
+        return None
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting job: {str(e)}"
+        )
 
 # Job Interview Settings
 @router.post("/{job_id}/interview-settings", response_model=InterviewSettingsResponse)
@@ -378,13 +410,11 @@ async def share_job(
 
 @router.post("/generate-description")
 async def generate_job_description_api(
-    title: str,
-    department: str,
-    location: str,
+    data: dict = Body(...),
     current_user: User = Depends(get_current_user)
 ):
     """Generate a job description using AI"""
-    description = await generate_job_description(title, department, location)
+    description = await generate_job_description(data["title"], data["department"], data["location"])
     return {"description": description}
 
 @router.get("/{job_id}/stats")
@@ -435,3 +465,31 @@ async def get_job_stats(
             "completed": completed_interviews
         }
     }
+
+@router.post("/generate-requirements")
+async def generate_job_requirements_api(
+    data: dict = Body(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Generate job requirements using AI"""
+    requirements = await generate_job_requirements(
+        data["title"], 
+        data["department"], 
+        data["location"], 
+        data.get("keywords", "")
+    )
+    return {"requirements": requirements}
+
+@router.post("/generate-benefits")
+async def generate_job_benefits_api(
+    data: dict = Body(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Generate job benefits using AI"""
+    benefits = await generate_job_benefits(
+        data["title"], 
+        data["department"], 
+        data["location"], 
+        data.get("keywords", "")
+    )
+    return {"benefits": benefits}

@@ -1,5 +1,5 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,38 +11,22 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
-import { Pencil, Shield, UserCircle } from "lucide-react";
+import { Pencil, Shield, UserCircle, AlertCircle } from "lucide-react";
+import ProfileCompletion from "@/components/profile/ProfileCompletion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Profile = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, updateUserProfile, updateProfileProgress } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(user?.companyLogo || null);
-
-  // Mock profile data
-  const [profileData, setProfileData] = useState({
-    name: user?.name || "Alex Johnson",
-    email: user?.email || "alex@examplecompany.com",
-    company: "Example Company Ltd.",
-    title: "HR Director",
-    phone: "(555) 123-4567",
-    timezone: "America/New_York",
-    language: "English",
-  });
-
-  // Mock company settings
-  const [companySettings, setCompanySettings] = useState({
-    companyName: "Example Company Ltd.",
-    website: "https://examplecompany.com",
-    industry: "Technology",
-    size: "51-200 employees",
-    logo: profileImage,
-    address: "123 Business St, Suite 200",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94105",
-    country: "United States",
-  });
+  const [profileImage, setProfileImage] = useState<string | null>(user?.company_logo || null);
+  const location = useLocation();
+  const isNewUser = location.state?.isNewUser || user?.is_profile_complete === false;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState("profile");
+ 
+  // Determine if user is coming directly after signup
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
 
   const [notificationSettings, setNotificationSettings] = useState({
     emailNewCandidate: true,
@@ -53,30 +37,218 @@ const Profile = () => {
     smsInterviewComplete: false,
   });
 
-  const handleProfileUpdate = () => {
+  // Initialize profile data with actual user data
+  const [profileData, setProfileData] = useState({
+    name: user ? `${user.first_name} ${user.last_name}` : "",
+    email: user?.email || "",
+    company: user?.company_name || "",
+    title: user?.title || "",
+    phone: user?.phone || "",
+    timezone: user?.timezone || "America/New_York",
+    language: user?.language || "English",
+  });
+
+  // Initialize company settings with actual user data
+  const [companySettings, setCompanySettings] = useState({
+    companyName: user?.company_name || "",
+    website: user?.website || "",
+    industry: user?.industry || "Technology",
+    size: user?.company_size || "51-200 employees",
+    logo: profileImage,
+    address: user?.address || "",
+    city: user?.city || "",
+    state: user?.state || "",
+    zip: user?.zip || "",
+    country: user?.country || "United States",
+  });
+
+  // Add this near the top of the component with other state declarations
+  const [hasCompletedProfile, setHasCompletedProfile] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // Separate useEffect for checking profile completion status
+  useEffect(() => {
+    const hasCompleted = localStorage.getItem('hasCompletedProfile');
+    const progress = calculateProfileProgress();
+    
+    // Only update hasCompletedProfile if progress is 100%
+    if (progress === 100 && hasCompleted === 'true') {
+      setHasCompletedProfile(true);
+    } else {
+      setHasCompletedProfile(false);
+    }
+  }, [profileData, companySettings]);
+
+  // Add this useEffect to handle initial edit mode state
+  useEffect(() => {
+    const hasCompleted = localStorage.getItem('hasCompletedProfile');
+    // Start in view mode if profile is completed
+    if (hasCompleted === 'true') {
+      setIsEditMode(false);
+    } else {
+      setIsEditMode(true);
+    }
+  }, []); // Only run once on component mount
+
+  // Calculate profile completion percentage
+  const calculateProfileProgress = () => {
+    let progress = 0;
+    let totalFields = 0;
+    let completedFields = 0;
+
+    // Basic info (required)
+    totalFields += 4;
+    if (profileData.name && profileData.name.trim()) completedFields++;
+    if (profileData.email && profileData.email.trim()) completedFields++;
+    if (profileData.title && profileData.title.trim()) completedFields++;
+    if (profileData.phone && profileData.phone.trim()) completedFields++;
+
+    // Company info (required)
+    totalFields += 5;
+    if (companySettings.companyName && companySettings.companyName.trim()) completedFields++;
+    if (companySettings.website && companySettings.website.trim()) completedFields++;
+    if (companySettings.industry && companySettings.industry.trim()) completedFields++;
+    if (companySettings.address && companySettings.address.trim()) completedFields++;
+    if (companySettings.city && companySettings.city.trim() && 
+        companySettings.state && companySettings.state.trim() && 
+        companySettings.zip && companySettings.zip.trim()) completedFields++;
+
+    // Additional fields (optional but contribute to progress)
+    totalFields += 2;
+    if (profileData.timezone && profileData.timezone !== "America/New_York") completedFields++;
+    if (profileData.language && profileData.language !== "English") completedFields++;
+
+    // Calculate percentage
+    progress = Math.round((completedFields / totalFields) * 100);
+    
+    // Ensure profile is marked as complete if all required fields are filled
+    const requiredFieldsComplete = 
+      profileData.name && profileData.name.trim() &&
+      profileData.email && profileData.email.trim() &&
+      profileData.title && profileData.title.trim() &&
+      profileData.phone && profileData.phone.trim() &&
+      companySettings.companyName && companySettings.companyName.trim() &&
+      companySettings.website && companySettings.website.trim() &&
+      companySettings.industry && companySettings.industry.trim() &&
+      companySettings.address && companySettings.address.trim() &&
+      companySettings.city && companySettings.city.trim() &&
+      companySettings.state && companySettings.state.trim() &&
+      companySettings.zip && companySettings.zip.trim();
+
+    if (requiredFieldsComplete) {
+      progress = 100;
+    }
+
+    return progress;
+  };
+
+  // Calculate and update profile progress when component mounts or data changes
+  useEffect(() => {
+    const updateProgress = async () => {
+      if (user) {
+        const progress = calculateProfileProgress();
+        if (progress !== user.profileProgress) {
+          await updateProfileProgress(progress);
+        }
+      }
+    };
+
+    updateProgress();
+  }, [user, profileData, companySettings]);
+
+  useEffect(() => {
+   // Check for query param indicating first login
+    const isNew = searchParams.get("new") === "true";
+   if (isNew) {
+      setIsFirstLogin(true);
+       // Remove the query param to avoid showing the message on refresh
+       const newParams = new URLSearchParams(searchParams);
+       newParams.delete("new");
+       setSearchParams(newParams);
+     }
+ 
+     // Set active tab based on URL parameter
+     const tabParam = searchParams.get("tab");
+     if (tabParam && ["profile", "company", "notifications"].includes(tabParam)) {
+       setActiveTab(tabParam);
+     }
+   }, [searchParams, setSearchParams]);
+
+  const handleProfileUpdate = async () => {
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Split name into first_name and last_name
+      const nameParts = profileData.name.split(" ");
+      const first_name = nameParts[0];
+      const last_name = nameParts.slice(1).join(" ");
+      
+      await updateUserProfile({
+        first_name,
+        last_name,
+        email: profileData.email,
+        title: profileData.title,
+        phone: profileData.phone,
+        timezone: profileData.timezone,
+        language: profileData.language,
+        is_profile_complete: true,
+      });
+      
       toast({
         title: "Profile updated",
         description: "Your profile information has been updated successfully.",
       });
-    }, 1000);
+
+      // If profile is complete, exit edit mode
+      if (calculateProfileProgress() === 100) {
+        setIsEditMode(false);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleCompanyUpdate = () => {
+  const handleCompanyUpdate = async () => {
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await updateUserProfile({
+        company_name: companySettings.companyName,
+        website: companySettings.website,
+        industry: companySettings.industry,
+        company_size: companySettings.size,
+        address: companySettings.address,
+        city: companySettings.city,
+        state: companySettings.state,
+        zip: companySettings.zip,
+        country: companySettings.country,
+        is_profile_complete: true,
+      });
+      
       toast({
         title: "Company settings updated",
         description: "Your company information has been updated successfully.",
       });
-    }, 1000);
+
+      // If profile is complete, exit edit mode
+      if (calculateProfileProgress() === 100) {
+        setIsEditMode(false);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update company settings. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleNotificationUpdate = () => {
@@ -128,7 +300,22 @@ const Profile = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="profile" className="w-full">
+        {isFirstLogin && (
+           <div className="mb-6">
+             <Card className="border-brand bg-brand/5">
+               <CardContent className="pt-6">
+                 <h3 className="text-lg font-semibold mb-2">Welcome to EduDiagno!</h3>
+                 <p className="text-muted-foreground">
+                   Please complete your profile to get the most out of our platform. This will help us provide you with a better experience.
+                 </p>
+               </CardContent>
+             </Card>
+           </div>
+         )}
+ 
+         <ProfileCompletion />
+ 
+         <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="profile">
               <UserCircle className="mr-2 h-4 w-4" /> Profile
@@ -184,6 +371,7 @@ const Profile = () => {
                         id="name" 
                         value={profileData.name}
                         onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                        disabled={hasCompletedProfile && !isEditMode}
                       />
                     </div>
                     <div className="space-y-2">
@@ -193,6 +381,7 @@ const Profile = () => {
                         type="email"
                         value={profileData.email}
                         onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+                        disabled={hasCompletedProfile && !isEditMode}
                       />
                     </div>
                   </div>
@@ -203,6 +392,7 @@ const Profile = () => {
                         id="title" 
                         value={profileData.title}
                         onChange={(e) => setProfileData({...profileData, title: e.target.value})}
+                        disabled={hasCompletedProfile && !isEditMode}
                       />
                     </div>
                     <div className="space-y-2">
@@ -211,6 +401,7 @@ const Profile = () => {
                         id="phone" 
                         value={profileData.phone}
                         onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                        disabled={hasCompletedProfile && !isEditMode}
                       />
                     </div>
                   </div>
@@ -222,6 +413,7 @@ const Profile = () => {
                         className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                         value={profileData.timezone}
                         onChange={(e) => setProfileData({...profileData, timezone: e.target.value})}
+                        disabled={hasCompletedProfile && !isEditMode}
                       >
                         <option value="America/New_York">Eastern Time (ET)</option>
                         <option value="America/Chicago">Central Time (CT)</option>
@@ -237,6 +429,7 @@ const Profile = () => {
                         className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                         value={profileData.language}
                         onChange={(e) => setProfileData({...profileData, language: e.target.value})}
+                        disabled={hasCompletedProfile && !isEditMode}
                       >
                         <option value="English">English</option>
                         <option value="Spanish">Spanish</option>
@@ -247,10 +440,23 @@ const Profile = () => {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-end">
-                  <Button onClick={handleProfileUpdate} disabled={isLoading}>
-                    {isLoading ? "Saving..." : "Save Changes"}
-                  </Button>
+                <CardFooter className="flex justify-end gap-2">
+                  {hasCompletedProfile ? (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsEditMode(!isEditMode)}
+                    >
+                      {isEditMode ? "Cancel" : "Edit Profile"}
+                    </Button>
+                  ) : null}
+                  {(!hasCompletedProfile || isEditMode) && (
+                    <Button 
+                      onClick={handleProfileUpdate} 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Saving..." : "Save Changes"}
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
 
@@ -328,6 +534,7 @@ const Profile = () => {
                         id="company-name" 
                         value={companySettings.companyName}
                         onChange={(e) => setCompanySettings({...companySettings, companyName: e.target.value})}
+                        disabled={hasCompletedProfile && !isEditMode}
                       />
                     </div>
                     <div className="space-y-2">
@@ -336,6 +543,7 @@ const Profile = () => {
                         id="website" 
                         value={companySettings.website}
                         onChange={(e) => setCompanySettings({...companySettings, website: e.target.value})}
+                        disabled={hasCompletedProfile && !isEditMode}
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -346,6 +554,7 @@ const Profile = () => {
                           className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                           value={companySettings.industry}
                           onChange={(e) => setCompanySettings({...companySettings, industry: e.target.value})}
+                          disabled={hasCompletedProfile && !isEditMode}
                         >
                           <option value="Technology">Technology</option>
                           <option value="Healthcare">Healthcare</option>
@@ -363,6 +572,7 @@ const Profile = () => {
                           className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                           value={companySettings.size}
                           onChange={(e) => setCompanySettings({...companySettings, size: e.target.value})}
+                          disabled={hasCompletedProfile && !isEditMode}
                         >
                           <option value="1-10 employees">1-10 employees</option>
                           <option value="11-50 employees">11-50 employees</option>
@@ -445,6 +655,7 @@ const Profile = () => {
                         id="address" 
                         value={companySettings.address}
                         onChange={(e) => setCompanySettings({...companySettings, address: e.target.value})}
+                        disabled={hasCompletedProfile && !isEditMode}
                       />
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -454,6 +665,7 @@ const Profile = () => {
                           id="city" 
                           value={companySettings.city}
                           onChange={(e) => setCompanySettings({...companySettings, city: e.target.value})}
+                          disabled={hasCompletedProfile && !isEditMode}
                         />
                       </div>
                       <div className="space-y-2">
@@ -462,6 +674,7 @@ const Profile = () => {
                           id="state" 
                           value={companySettings.state}
                           onChange={(e) => setCompanySettings({...companySettings, state: e.target.value})}
+                          disabled={hasCompletedProfile && !isEditMode}
                         />
                       </div>
                       <div className="space-y-2">
@@ -470,6 +683,7 @@ const Profile = () => {
                           id="zip" 
                           value={companySettings.zip}
                           onChange={(e) => setCompanySettings({...companySettings, zip: e.target.value})}
+                          disabled={hasCompletedProfile && !isEditMode}
                         />
                       </div>
                       <div className="space-y-2">
@@ -479,6 +693,7 @@ const Profile = () => {
                           className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                           value={companySettings.country}
                           onChange={(e) => setCompanySettings({...companySettings, country: e.target.value})}
+                          disabled={hasCompletedProfile && !isEditMode}
                         >
                           <option value="United States">United States</option>
                           <option value="Canada">Canada</option>
@@ -492,10 +707,23 @@ const Profile = () => {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-end">
-                <Button onClick={handleCompanyUpdate} disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Save Company Information"}
-                </Button>
+              <CardFooter className="flex justify-end gap-2">
+                {hasCompletedProfile ? (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsEditMode(!isEditMode)}
+                  >
+                    {isEditMode ? "Cancel" : "Edit Company Info"}
+                  </Button>
+                ) : null}
+                {(!hasCompletedProfile || isEditMode) && (
+                  <Button 
+                    onClick={handleCompanyUpdate} 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Saving..." : "Save Company Information"}
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           </TabsContent>

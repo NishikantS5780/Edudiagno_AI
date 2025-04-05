@@ -6,12 +6,28 @@ import { toast } from "sonner";
 
 interface ResumeUploadProps {
   onUpload: (file: File) => void;
+  disabled?: boolean;
 }
 
-const ResumeUpload: React.FC<ResumeUploadProps> = ({ onUpload }) => {
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+export function ResumeUpload({ onUpload, disabled = false }: ResumeUploadProps) {
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    if (rejectedFiles.length > 0) {
+      const error = rejectedFiles[0].errors[0];
+      let errorMessage = "Error uploading file";
+      
+      if (error.code === 'file-too-large') {
+        errorMessage = "File size must be less than 5MB";
+      } else if (error.code === 'file-invalid-type') {
+        errorMessage = "Please upload a PDF or Word document";
+      } else if (error.message) {
+        errorMessage = String(error.message);
+      }
+      
+      toast.error(errorMessage);
+      return;
+    }
+
     const file = acceptedFiles[0];
-    
     if (!file) return;
     
     // Check file type
@@ -27,6 +43,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onUpload }) => {
       return;
     }
     
+    // Pass the file to the parent component
     onUpload(file);
   }, [onUpload]);
 
@@ -38,17 +55,16 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onUpload }) => {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
     },
     maxSize: 5 * 1024 * 1024, // 5MB
+    disabled,
     multiple: false
   });
 
   return (
     <div
       {...getRootProps()}
-      className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-        isDragActive
-          ? "border-brand bg-brand/5"
-          : "border-muted-foreground/25 hover:border-brand/50"
-      }`}
+      className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+        ${isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <input {...getInputProps()} />
       
@@ -82,6 +98,6 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onUpload }) => {
       </div>
     </div>
   );
-};
+}
 
 export default ResumeUpload;

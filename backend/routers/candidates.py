@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -8,14 +7,15 @@ import random
 import string
 from tempfile import NamedTemporaryFile
 from datetime import datetime
+import json
 
 from database import get_db
 from schemas.candidates import CandidateCreate, CandidateResponse, CandidateUpdate, ResumeAnalysis
 from schemas.interviews import InterviewCreate, InterviewResponse
 from models.models import User, Candidate, Job, Interview, InterviewQuestion, InterviewSettings
 from utils.auth import get_current_user
-from utils.s3 import generate_presigned_url, generate_unique_filename, upload_file_to_s3
-from utils.openai_utils import analyze_resume_match, generate_interview_questions
+from utils.file_utils import generate_unique_filename, RESUME_DIR
+from utils.openai_utils import analyze_resume_match, generate_interview_questions, extract_resume_details
 
 router = APIRouter()
 
@@ -180,9 +180,11 @@ async def delete_candidate(
 @router.post("/resume-upload")
 async def upload_resume(
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user)
+    job_id: int = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """Upload a resume file to S3"""
+    """Upload a resume file to local storage"""
     if not file:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -190,28 +192,83 @@ async def upload_resume(
         )
     
     try:
+        # Generate unique filename
         file_key = generate_unique_filename("resumes", file.filename.split(".")[-1])
-        file_content = await file.read()
+        file_path = os.path.join(RESUME_DIR, file_key)
         
-        # Save the file to a temporary location
-        with NamedTemporaryFile(delete=False) as temp_file:
-            temp_file.write(file_content)
-            temp_path = temp_file.name
+        # Ensure the directory exists
+        os.makedirs(RESUME_DIR, exist_ok=True)
         
-        # Upload the file to S3
-        s3_url = upload_file_to_s3(temp_path, file_key)
+        # Save the file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
         
-        # Clean up the temporary file
-        os.unlink(temp_path)
+        # Extract resume text and details
+        resume_text = await extract_resume_details(file_path)
+        resume_data = json.loads(resume_text)
+        
+        # Split name into first and last name
+        name_parts = resume_data.get("name", "").split(" ", 1)
+        first_name = name_parts[0] if name_parts else ""
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+        
+        # Create or update candidate with resume text and details
+        candidate = db.query(Candidate).filter(
+            Candidate.job_id == job_id,
+            Candidate.company_id == current_user.id
+        ).first()
+        
+        if not candidate:
+            candidate = Candidate(
+                job_id=job_id,
+                company_id=current_user.id,
+                first_name=first_name,
+                last_name=last_name,
+                email=resume_data.get("email", ""),
+                phone=resume_data.get("phone", ""),
+                location=resume_data.get("location", ""),
+                linkedin_url=resume_data.get("linkedin", ""),
+                portfolio_url=resume_data.get("portfolio", ""),
+                resume_url=file_path,
+                resume_text=resume_text,
+                work_experience=json.dumps(resume_data.get("work_experience", [])),
+                education=json.dumps(resume_data.get("education", [])),
+                skills=json.dumps(resume_data.get("skills", {})),
+                status="new"
+            )
+            db.add(candidate)
+        else:
+            candidate.first_name = first_name
+            candidate.last_name = last_name
+            candidate.email = resume_data.get("email", "")
+            candidate.phone = resume_data.get("phone", "")
+            candidate.location = resume_data.get("location", "")
+            candidate.linkedin_url = resume_data.get("linkedin", "")
+            candidate.portfolio_url = resume_data.get("portfolio", "")
+            candidate.resume_url = file_path
+            candidate.resume_text = resume_text
+            candidate.work_experience = json.dumps(resume_data.get("work_experience", []))
+            candidate.education = json.dumps(resume_data.get("education", []))
+            candidate.skills = json.dumps(resume_data.get("skills", {}))
+        
+        db.commit()
+        db.refresh(candidate)
         
         return {
-            "resume_url": s3_url,
-            "file_name": file.filename
+            "file_path": file_path,
+            "job_id": job_id,
+            "candidate_id": candidate.id,
+            "resume_text": resume_text
         }
+    except json.JSONDecodeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid JSON response from AI: {str(e)}"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload file: {str(e)}"
+            detail=f"Error uploading resume: {str(e)}"
         )
 
 @router.post("/resume-upload-url")
@@ -219,14 +276,141 @@ async def get_resume_upload_url(
     filename: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Generate a presigned URL for uploading a resume to S3"""
+    """Generate a local file path for resume upload"""
     file_key = generate_unique_filename("resumes", filename.split(".")[-1])
-    presigned_url = generate_presigned_url(file_key)
     return {
-        "upload_url": presigned_url,
+        "upload_url": f"/uploads/resumes/{file_key}",
         "file_key": file_key,
-        "resume_url": f"https://{os.getenv('S3_BUCKET_NAME')}.s3.amazonaws.com/{file_key}"
+        "resume_url": f"/uploads/resumes/{file_key}"
     }
+
+@router.post("/resume/analyze")
+async def analyze_resume(
+    resume_url: str = Body(...),
+    job_id: int = Body(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Analyze a candidate's resume against a job description"""
+    try:
+        # Get job details
+        job = db.query(Job).filter(Job.id == job_id).first()
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Job not found"
+            )
+
+        # Convert relative URL to absolute path
+        resume_path = os.path.join(os.getcwd(), resume_url.lstrip('/'))
+        
+        if not os.path.exists(resume_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Resume file not found"
+            )
+        
+        # Extract resume details using AI
+        try:
+            resume_details = await extract_resume_details(resume_path)
+            resume_data = json.loads(resume_details)
+        except json.JSONDecodeError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid JSON response from AI: {str(e)}"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to extract resume details: {str(e)}"
+            )
+        
+        # Analyze resume match with job description
+        try:
+            match_analysis = await analyze_resume_match(
+                resume_text=resume_data["resume_text"],
+                job_description=job.description,
+                job_requirements=job.requirements
+            )
+            match_data = json.loads(match_analysis)
+        except json.JSONDecodeError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid JSON response from AI match analysis: {str(e)}"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to analyze resume match: {str(e)}"
+            )
+
+        # Split name into first and last name
+        name_parts = resume_data.get("name", "").split(" ", 1)
+        first_name = name_parts[0] if name_parts else ""
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+        # Create candidate with extracted details
+        candidate_data = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": resume_data.get("email", ""),
+            "phone": resume_data.get("phone", ""),
+            "location": resume_data.get("location", ""),
+            "linkedin_url": resume_data.get("linkedin", ""),
+            "portfolio_url": resume_data.get("portfolio", ""),
+            "resume_url": resume_url,
+            "resume_text": resume_data.get("resume_text", ""),
+            "work_experience": json.dumps(resume_data.get("work_experience", [])),
+            "education": json.dumps(resume_data.get("education", [])),
+            "skills": json.dumps(resume_data.get("skills", {})),
+            "resume_match_score": match_data.get("match_score", 0),
+            "resume_match_feedback": match_data.get("feedback", ""),
+            "job_id": job_id,
+            "company_id": current_user.id,
+            "status": "new",
+            "created_at": datetime.utcnow()
+        }
+
+        # Create new candidate
+        db_candidate = Candidate(**candidate_data)
+        db.add(db_candidate)
+        db.commit()
+        db.refresh(db_candidate)
+
+        return {
+            "candidate": {
+                "id": db_candidate.id,
+                "name": f"{db_candidate.first_name} {db_candidate.last_name}",
+                "email": db_candidate.email,
+                "phone": db_candidate.phone,
+                "location": db_candidate.location,
+                "linkedin_url": db_candidate.linkedin_url,
+                "portfolio_url": db_candidate.portfolio_url,
+                "resume_url": db_candidate.resume_url,
+                "work_experience": json.loads(db_candidate.work_experience),
+                "education": json.loads(db_candidate.education),
+                "skills": json.loads(db_candidate.skills),
+                "resume_match_score": db_candidate.resume_match_score,
+                "resume_match_feedback": db_candidate.resume_match_feedback,
+                "status": db_candidate.status,
+                "created_at": db_candidate.created_at
+            },
+            "match_analysis": {
+                "match_score": match_data.get("match_score", 0),
+                "strengths": match_data.get("strengths", []),
+                "improvements": match_data.get("improvements", []),
+                "feedback": match_data.get("feedback", "")
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error analyzing resume: {str(e)}")  # Log the error
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to analyze resume: {str(e)}"
+        )
 
 @router.post("/{candidate_id}/analyze-resume", response_model=ResumeAnalysis)
 async def analyze_candidate_resume(

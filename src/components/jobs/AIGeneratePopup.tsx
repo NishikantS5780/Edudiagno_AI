@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Wand2, Copy, ArrowRight, Sparkles, PenBox, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import { jobAPI } from "@/lib/api";
 
 interface AIGeneratePopupProps {
   title: string;
@@ -74,35 +75,17 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
     setIsGenerating(true);
     
     try {
-      // Simulate API call with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Create appropriate content based on field type
       let content = "";
       
-      // This is a simplified mock generation - in a real app, you'd call an API
       if (fieldLabel === "Description") {
-        content = `We are seeking an experienced ${jobTitle} to join our ${department || "team"} in ${location || "our location"}. 
-        
-This ${jobType || "full-time"} position offers an opportunity to work with cutting-edge technologies and contribute to meaningful projects.
-
-The ideal candidate will possess strong ${keywords || "problem-solving skills"} and be passionate about delivering high-quality work.`;
+        const response = await jobAPI.generateDescription(jobTitle, department, location);
+        content = response.description;
       } else if (fieldLabel === "Requirements") {
-        content = `- Bachelor's degree in a relevant field
-- ${keywords ? keywords.split(",")[0] || "3+ years of experience" : "3+ years of experience"} in a similar role
-- Strong communication and teamwork abilities
-- Proficient in industry-standard tools and technologies
-- Ability to work independently and as part of a team
-- ${keywords ? keywords.split(",")[1] || "Problem-solving mindset" : "Problem-solving mindset"}
-- Attention to detail and commitment to quality`;
+        const response = await jobAPI.generateRequirements(jobTitle, department, location, keywords);
+        content = response.requirements;
       } else if (fieldLabel === "Benefits") {
-        content = `- Competitive salary and performance bonuses
-- Comprehensive health, dental, and vision insurance
-- Retirement plan with employer matching
-- Flexible work arrangements and paid time off
-- Professional development opportunities
-- ${keywords ? keywords.split(",")[0] || "Collaborative work environment" : "Collaborative work environment"}
-- ${keywords ? keywords.split(",")[1] || "Career advancement opportunities" : "Career advancement opportunities"}`;
+        const response = await jobAPI.generateBenefits(jobTitle, department, location, keywords);
+        content = response.benefits;
       }
       
       setGeneratedContent(content);
@@ -200,7 +183,13 @@ The ideal candidate will possess strong ${keywords || "problem-solving skills"} 
                       <Label htmlFor="keywords">Enter Keywords</Label>
                       <Input
                         id="keywords"
-                        placeholder="e.g., teamwork, communication, leadership"
+                        placeholder={
+                          fieldLabel === "Description"
+                            ? "e.g., remote work, flexible hours, startup culture, innovation"
+                            : fieldLabel === "Requirements"
+                            ? "e.g., 5+ years experience, Python, AWS, Agile, leadership"
+                            : "e.g., 401k matching, unlimited PTO, health insurance, stock options"
+                        }
                         value={keywords}
                         onChange={(e) => setKeywords(e.target.value)}
                         className="mt-1.5 border-slate-300 focus-visible:ring-blue-500"

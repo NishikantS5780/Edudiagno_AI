@@ -9,6 +9,21 @@ interface User {
   company_name?: string;
   company_logo?: string;
   role: "employer" | "admin";
+  title?: string;
+  phone?: string;
+  timezone?: string;
+  language?: string;
+  website?: string;
+  industry?: string;
+  company_size?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  profileCompleted?: boolean;
+  profileProgress?: number;
+  is_profile_complete?: boolean;
 }
 
 interface AuthContextType {
@@ -18,6 +33,8 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string, companyName: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUserProfile: (data: Partial<User>) => Promise<void>;
+  updateProfileProgress: (progress: number) => Promise<void>;
+  checkProfileCompletion: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,6 +97,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfileProgress = async (progress: number) => {
+    if (!user) return;
+    
+    try {
+      // Update backend
+      await userAPI.updateProfile({
+        profileProgress: progress,
+        is_profile_complete: progress === 100
+      });
+
+      // Update local state
+      const updatedUser = { 
+        ...user, 
+        profileProgress: progress,
+        profileCompleted: progress === 100,
+        is_profile_complete: progress === 100
+      };
+      
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    } catch (error) {
+      console.error("Profile progress update failed:", error);
+      throw error;
+    }
+  };
+
+  // Check if profile is complete
+  const checkProfileCompletion = () => {
+    if (!user) return false;
+    return user.profileCompleted === true || 
+           user.profileProgress === 100 || 
+           user.is_profile_complete === true;
+  };
+
+
   const signup = async (email: string, password: string, name: string, companyName: string) => {
     try {
       // Basic validation
@@ -96,6 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
         name,
         companyName,
+        is_profile_complete: false,
       });
       const userData = await authAPI.getCurrentUser();
       setUser(userData);
@@ -147,6 +200,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signup,
         logout,
         updateUserProfile,
+        updateProfileProgress,
+        checkProfileCompletion
       }}
     >
       {children}

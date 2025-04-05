@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -24,22 +23,9 @@ async def update_user(
 ):
     """Update current user information"""
     # Update user fields
-    if user_update.first_name is not None:
-        current_user.first_name = user_update.first_name
-    if user_update.last_name is not None:
-        current_user.last_name = user_update.last_name
-    if user_update.company_name is not None:
-        current_user.company_name = user_update.company_name
-    if user_update.company_logo is not None:
-        current_user.company_logo = user_update.company_logo
-    if user_update.phone is not None:
-        current_user.phone = user_update.phone
-    if user_update.website is not None:
-        current_user.website = user_update.website
-    if user_update.industry is not None:
-        current_user.industry = user_update.industry
-    if user_update.company_size is not None:
-        current_user.company_size = user_update.company_size
+    for field, value in user_update.dict(exclude_unset=True).items():
+        if value is not None:
+            setattr(current_user, field, value)
     
     db.commit()
     db.refresh(current_user)

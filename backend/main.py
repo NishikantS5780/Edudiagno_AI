@@ -10,14 +10,20 @@ from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 from pathlib import Path
+import openai
 
 from models import models
 from database import engine, get_db
-from routers import users, jobs, candidates, interviews, auth, videos
+from routers import users, jobs, candidates, interviews, auth, videos, interview_ai, audio
 from config import settings
 
 # Load environment variables
 load_dotenv()
+
+# Initialize OpenAI
+openai.api_key = settings.OPENAI_API_KEY
+if not openai.api_key:
+    raise ValueError("OPENAI_API_KEY environment variable is not set")
 
 # Create database tables if they don't exist
 models.Base.metadata.create_all(bind=engine)
@@ -32,13 +38,15 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Allow CORS
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=["http://localhost:8080"],  # Frontend origin
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Explicitly list allowed methods
+    allow_headers=["*"],  # Allows all headers
+    expose_headers=["*"],  # Expose all headers to the client
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Mount static files
@@ -51,6 +59,8 @@ app.include_router(jobs.router, prefix="/api/jobs", tags=["Jobs"])
 app.include_router(candidates.router, prefix="/api/candidates", tags=["Candidates"])
 app.include_router(interviews.router, prefix="/api/interviews", tags=["Interviews"])
 app.include_router(videos.router, prefix="/api/videos", tags=["Videos"])
+app.include_router(interview_ai.router, prefix="/api/interview-ai", tags=["Interview AI"])
+app.include_router(audio.router, prefix="/api/audio", tags=["Audio"])
 
 # Root endpoint for health check
 @app.get("/", tags=["Health"])

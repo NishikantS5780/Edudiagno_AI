@@ -190,9 +190,13 @@ const JobsIndex = () => {
 
   const handleDeleteJob = async (jobId: number) => {
     try {
-      await jobAPI.delete(jobId);
-      toast.success("Job deleted successfully");
-      fetchJobs(); // Refresh the jobs list
+      const response = await jobAPI.delete(jobId);
+      if (response.status === 204) {
+        toast.success("Job deleted successfully");
+        fetchJobs(); // Refresh the jobs list
+      } else {
+        throw new Error("Failed to delete job");
+      }
     } catch (error) {
       console.error("Error deleting job:", error);
       toast.error("Failed to delete job");
@@ -248,6 +252,31 @@ const JobsIndex = () => {
     } catch (error) {
       console.error("Error creating interview link:", error);
       toast.error("Failed to create interview link");
+    }
+  };
+
+  const handleDuplicateJob = async (jobId: number) => {
+    try {
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) {
+        toast.error("Job not found");
+        return;
+      }
+
+      // Create a new job with the same data but with "(Copy)" appended to the title
+      const newJob = {
+        ...job,
+        title: `${job.title} (Copy)`,
+        status: "draft" // Set as draft by default
+      };
+      delete newJob.id; // Remove the ID so a new one is generated
+
+      await jobAPI.create(newJob);
+      toast.success("Job duplicated successfully");
+      fetchJobs(); // Refresh the jobs list
+    } catch (error) {
+      console.error("Error duplicating job:", error);
+      toast.error("Failed to duplicate job");
     }
   };
 
@@ -377,12 +406,12 @@ const JobsIndex = () => {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link to={`/dashboard/jobs/${job.id}/edit`}>
+                          <Link to={`/dashboard/jobs/${job.id}`}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicateJob(job.id)}>
                           <Copy className="h-4 w-4 mr-2" />
                           Duplicate
                         </DropdownMenuItem>

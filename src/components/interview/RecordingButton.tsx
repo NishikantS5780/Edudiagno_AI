@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, Square, Clock, Loader2 } from "lucide-react";

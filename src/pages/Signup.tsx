@@ -75,7 +75,7 @@ const SignUp = () => {
     try {
       await signup(email, password, name, companyName);
       toast.success("Account created successfully");
-      navigate("/dashboard");
+      navigate("/dashboard/profile", { state: { isNewUser: true } });
     } catch (error) {
       toast.error("Failed to create account");
       console.error("Signup failed:", error);

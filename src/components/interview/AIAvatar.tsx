@@ -1,88 +1,41 @@
-
-import React, { useEffect, useState } from "react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Bot } from "lucide-react";
+import React from 'react';
+import { cn } from '@/lib/utils';
 
 interface AIAvatarProps {
-  isSpeaking: boolean;
-  size?: "sm" | "md" | "lg";
-  avatarUrl?: string;
+  isSpeaking?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-const AIAvatar: React.FC<AIAvatarProps> = ({ 
-  isSpeaking, 
-  size = "md",
-  avatarUrl = "https://randomuser.me/api/portraits/women/44.jpg" 
-}) => {
-  const [pulseIntensity, setPulseIntensity] = useState(0);
-  
-  // Size mapping
+const AIAvatar: React.FC<AIAvatarProps> = ({ isSpeaking = false, size = 'md' }) => {
   const sizeClasses = {
-    sm: "w-12 h-12",
-    md: "w-20 h-20",
-    lg: "w-32 h-32"
+    sm: 'w-8 h-8',
+    md: 'w-12 h-12',
+    lg: 'w-16 h-16'
   };
-  
-  const iconSizes = {
-    sm: 20,
-    md: 32,
-    lg: 48
-  };
-  
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isSpeaking) {
-      // Create a pulsating effect when the AI is speaking
-      interval = setInterval(() => {
-        setPulseIntensity(prev => {
-          // Oscillate between 0 and 100
-          const newValue = prev + (Math.random() * 15);
-          return newValue > 100 ? 0 : newValue;
-        });
-      }, 150);
-    } else {
-      setPulseIntensity(0);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isSpeaking]);
-  
+
   return (
-    <div className={`relative ${sizeClasses[size]}`}>
-      {/* Pulsating border effect */}
-      <div 
-        className={`absolute inset-0 rounded-full bg-brand/20 transition-all duration-200 ease-in-out ${isSpeaking ? 'scale-110 opacity-100' : 'scale-100 opacity-0'}`}
-        style={{ 
-          transform: `scale(${1 + (pulseIntensity / 100) * 0.3})`,
-          opacity: pulseIntensity / 100
-        }}
-      />
-      
-      {/* Avatar */}
-      <Avatar className={`${sizeClasses[size]} border-2 ${isSpeaking ? 'border-brand' : 'border-transparent'}`}>
-        <AvatarImage src={avatarUrl} alt="AI Interviewer" />
-        <AvatarFallback className="bg-brand/10">
-          <Bot size={iconSizes[size]} className="text-brand" />
-        </AvatarFallback>
-      </Avatar>
-      
-      {/* Sound wave visualization (when speaking) */}
+    <div className="relative">
+      <div className={cn(
+        "rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center",
+        sizeClasses[size]
+      )}>
+        <svg
+          className={cn(
+            "text-white",
+            size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-6 h-6' : 'w-8 h-8'
+          )}
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"
+            fill="currentColor"
+          />
+        </svg>
+      </div>
       {isSpeaking && (
-        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 flex gap-0.5 bg-background/80 px-2 py-1 rounded-full">
-          {[...Array(5)].map((_, i) => (
-            <div 
-              key={i}
-              className="w-0.5 bg-brand rounded-full"
-              style={{ 
-                height: `${4 + Math.sin((Date.now() / 200) + i) * 3 + Math.random() * 4}px`,
-                animationDelay: `${i * 0.1}s`
-              }}
-            />
-          ))}
-        </div>
+        <div className="absolute inset-0 animate-ping rounded-full bg-primary/30" />
       )}
     </div>
   );
