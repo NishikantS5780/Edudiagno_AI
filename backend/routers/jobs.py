@@ -47,7 +47,7 @@ async def create_job(
     db.refresh(db_job)
     return db_job
 
-@router.get("/", response_model=List[JobResponse])
+@router.get("", response_model=List[JobResponse])
 async def get_jobs(
     status: Optional[str] = Query(None),
     department: Optional[str] = Query(None),
