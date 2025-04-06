@@ -20,7 +20,7 @@ from utils.openai_utils import generate_job_description, generate_interview_ques
 router = APIRouter()
 
 # Job CRUD operations
-@router.post("/", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
 async def create_job(
     job: JobCreate,
     current_user: User = Depends(get_current_user),
