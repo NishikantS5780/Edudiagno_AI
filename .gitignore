@@ -50,4 +50,4 @@ dist-ssr
 *.sln
 *.sw?
 
-uploads/*
+uploads/
