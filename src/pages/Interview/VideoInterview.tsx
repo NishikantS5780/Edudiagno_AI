@@ -508,10 +508,10 @@ export default function VideoInterview({
   };
 
   const handleNextQuestion = () => {
-    console.log("Current question index:", currentQuestionIndex);
-    console.log("Interview flow length:", interviewFlow.length);
+    console.warn("Current question index:", currentQuestionIndex);
+    console.warn("Interview flow length:", interviewFlow.length);
 
-    if (currentQuestionIndex < interviewFlow.length - 1) {
+    if (currentQuestionIndex < interviewFlow.length) {
       const nextIndex = currentQuestionIndex + 1;
       console.log("Moving to next question index:", nextIndex);
 
@@ -1016,7 +1016,7 @@ export default function VideoInterview({
                         className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
                       />
                       {hasRecordedCurrentQuestion &&
-                        currentQuestionIndex < interviewFlow.length - 1 && (
+                        currentQuestionIndex <= interviewFlow.length && (
                           <Button
                             variant="default"
                             onClick={handleNextQuestion}
