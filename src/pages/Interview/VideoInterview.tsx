@@ -1021,7 +1021,7 @@ export default function VideoInterview({
                             variant="default"
                             onClick={handleNextQuestion}
                             disabled={isRecording || isProcessingResponse}
-                            className="bg-background/80 backdrop-blur-sm hover:bg-background/90 mix-blend-difference"
+                            className=""
                           >
                             Next Question
                           </Button>
