@@ -207,7 +207,6 @@ def transcribe_audio(
 ):
     """Transcribe audio from blob"""
     try:
-        print("m")
         result = transcribe_audio_from_blob(audio_blob, filename)
         return result
     except Exception as e:

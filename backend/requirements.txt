@@ -23,7 +23,7 @@ bcrypt
 python-dotenv
 
 # OpenAI
-openai
+openai>=1.0.0
 
 # Utilities
 aiohttp
