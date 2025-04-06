@@ -511,7 +511,7 @@ export default function VideoInterview({
     console.warn("Current question index:", currentQuestionIndex);
     console.warn("Interview flow length:", interviewFlow.length);
 
-    if (currentQuestionIndex < interviewFlow.length) {
+    if (currentQuestionIndex < interviewFlow.length-1) {
       const nextIndex = currentQuestionIndex + 1;
       console.log("Moving to next question index:", nextIndex);
 
