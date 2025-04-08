@@ -2,7 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useParams,
+  useNavigate,
+} from "react-router-dom";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import RequireAuth from "@/components/common/RequireAuth";
@@ -72,26 +79,31 @@ const VideoInterviewWrapper = () => {
   const navigate = useNavigate();
   const [interviewData, setInterviewData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   useEffect(() => {
     const fetchInterviewData = async () => {
       try {
         const response = await publicInterviewApi.getByAccessCode(accessCode!);
-        if (!response.data || !response.data.job || !response.data.job.title || !response.data.job.company?.name) {
-          throw new Error('Invalid interview data');
+        if (
+          !response.data ||
+          !response.data.job ||
+          !response.data.job.title ||
+          !response.data.job.company?.name
+        ) {
+          throw new Error("Invalid interview data");
         }
         setInterviewData(response.data);
         setIsLoading(false);
       } catch (error) {
-        console.error('Error fetching interview data:', error);
-        toast.error('Failed to load interview data');
+        console.error("Error fetching interview data:", error);
+        toast.error("Failed to load interview data");
         navigate(`/interview/${accessCode}`);
       }
     };
-    
+
     fetchInterviewData();
   }, [accessCode, navigate]);
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -102,15 +114,22 @@ const VideoInterviewWrapper = () => {
       </div>
     );
   }
-  
-  if (!interviewData || !interviewData.job || !interviewData.job.title || !interviewData.job.company?.name) {
+
+  if (
+    !interviewData ||
+    !interviewData.job ||
+    !interviewData.job.title ||
+    !interviewData.job.company?.name
+  ) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <p className="text-muted-foreground">Invalid interview data. Please try again.</p>
-          <Button 
-            variant="outline" 
+          <p className="text-muted-foreground">
+            Invalid interview data. Please try again.
+          </p>
+          <Button
+            variant="outline"
             className="mt-4"
             onClick={() => navigate(`/interview/${accessCode}`)}
           >
@@ -120,15 +139,15 @@ const VideoInterviewWrapper = () => {
       </div>
     );
   }
-  
+
   return (
     <VideoInterview
       jobTitle={interviewData.job.title}
       companyName={interviewData.job.company.name}
       interviewId={interviewData.id}
       candidate={interviewData.candidate}
-      jobDescription={interviewData.job.description || ''}
-      resumeText={interviewData.candidate?.resume_text || ''}
+      jobDescription={interviewData.job.description || ""}
+      resumeText={interviewData.candidate?.resume_text || ""}
       onComplete={() => navigate(`/interview/${accessCode}/complete`)}
     />
   );
@@ -137,10 +156,10 @@ const VideoInterviewWrapper = () => {
 const CandidatePreCheckWrapper = () => {
   const { accessCode } = useParams();
   const navigate = useNavigate();
-  
+
   return (
-    <CandidatePreCheck 
-      onReady={() => navigate(`/interview/${accessCode}/video-interview`)} 
+    <CandidatePreCheck
+      onReady={() => navigate(`/interview/${accessCode}/video-interview`)}
     />
   );
 };
@@ -169,151 +188,169 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-              
+
               {/* Public Interview Routes */}
-              <Route path="/interview/:accessCode" element={<PublicInterview />} />
-              <Route path="/interview/:accessCode/start" element={<InterviewStart />} />
-              <Route path="/interview/:accessCode/compatibility" element={<InterviewFlow />} />
-              <Route path="/interview/:accessCode/setup" element={<CandidatePreCheckWrapper />} />
-              <Route path="/interview/:accessCode/video-interview" element={<VideoInterviewWrapper />} />
-              
+              <Route
+                path="/interview/:accessCode"
+                element={<PublicInterview />}
+              />
+              <Route
+                path="/interview/:accessCode/start"
+                element={<InterviewStart />}
+              />
+              <Route
+                path="/interview/:accessCode/compatibility"
+                element={<InterviewFlow />}
+              />
+              <Route
+                path="/interview/:accessCode/setup"
+                element={<CandidatePreCheckWrapper />}
+              />
+              <Route
+                path="/interview/:accessCode/video-interview"
+                element={<VideoInterviewWrapper />}
+              />
+
               {/* Protected Dashboard Routes */}
-              <Route 
-                path="/dashboard" 
+              <Route
+                path="/dashboard"
                 element={
                   <RequireAuth>
                     <Dashboard />
                   </RequireAuth>
-                } 
+                }
               />
-              
+
               {/* Jobs Routes - Protected with Profile Completion Requirement */}
-              <Route 
-                path="/dashboard/jobs" 
+              <Route
+                path="/dashboard/jobs"
                 element={
                   <RequireAuth>
                     <JobsIndex />
                   </RequireAuth>
-                } 
+                }
               />
-              <Route 
-                path="/dashboard/jobs/new" 
+              <Route
+                path="/dashboard/jobs/new"
                 element={
                   <RequireAuth>
                     <RequireProfileCompletion>
                       <NewJob />
                     </RequireProfileCompletion>
                   </RequireAuth>
-                } 
+                }
               />
-              <Route 
-                path="/dashboard/jobs/:id" 
+              <Route
+                path="/dashboard/jobs/:id"
                 element={
                   <RequireAuth>
                     <RequireProfileCompletion>
                       <JobDetail />
                     </RequireProfileCompletion>
                   </RequireAuth>
-                } 
+                }
               />
-              <Route 
-                path="/dashboard/jobs/:id/edit" 
+              <Route
+                path="/dashboard/jobs/:id/edit"
                 element={
                   <RequireAuth>
                     <RequireProfileCompletion>
                       <JobEdit />
                     </RequireProfileCompletion>
                   </RequireAuth>
-                } 
+                }
               />
 
               {/* Candidates Routes */}
-              <Route 
-                path="/dashboard/candidates" 
+              <Route
+                path="/dashboard/candidates"
                 element={
                   <RequireAuth>
                     <CandidatesIndex />
                   </RequireAuth>
-                } 
+                }
               />
-              <Route 
-                path="/dashboard/candidates/:id" 
+              <Route
+                path="/dashboard/candidates/:id"
                 element={
                   <RequireAuth>
                     <CandidateDetail />
                   </RequireAuth>
-                } 
+                }
               />
 
               {/* Interviews Routes */}
-              <Route 
-                path="/dashboard/interviews" 
+              <Route
+                path="/dashboard/interviews"
                 element={
                   <RequireAuth>
                     <InterviewsIndex />
                   </RequireAuth>
-                } 
+                }
               />
-              <Route 
-                path="/dashboard/interviews/:id" 
+              <Route
+                path="/dashboard/interviews/:id"
                 element={
                   <RequireAuth>
                     <InterviewDetail />
                   </RequireAuth>
-                } 
+                }
               />
 
               {/* New Interview - Protected with Profile Completion */}
-              <Route 
-                path="/dashboard/interviews/new" 
+              <Route
+                path="/dashboard/interviews/new"
                 element={
                   <RequireAuth>
                     <RequireProfileCompletion>
                       <InterviewDetail />
                     </RequireProfileCompletion>
                   </RequireAuth>
-                } 
+                }
               />
 
               {/* Analytics Route */}
-              <Route 
-                path="/dashboard/analytics" 
+              <Route
+                path="/dashboard/analytics"
                 element={
                   <RequireAuth>
                     <Analytics />
                   </RequireAuth>
-                } 
+                }
               />
 
               {/* Profile & Settings Routes */}
-              <Route 
-                path="/dashboard/profile" 
+              <Route
+                path="/dashboard/profile"
                 element={
                   <RequireAuth>
                     <Profile />
                   </RequireAuth>
-                } 
+                }
               />
-              <Route 
-                path="/dashboard/settings" 
+              <Route
+                path="/dashboard/settings"
                 element={
                   <RequireAuth>
                     <Settings />
                   </RequireAuth>
-                } 
+                }
               />
-              <Route 
-                path="/dashboard/help" 
+              <Route
+                path="/dashboard/help"
                 element={
                   <RequireAuth>
                     <Help />
                   </RequireAuth>
-                } 
+                }
               />
-              
+
               {/* Redirects */}
-              <Route path="/dashboard/*" element={<Navigate to="/dashboard" replace />} />
-              
+              <Route
+                path="/dashboard/*"
+                element={<Navigate to="/dashboard" replace />}
+              />
+
               {/* 404 - Must be the last route */}
               <Route path="*" element={<NotFound />} />
             </Routes>

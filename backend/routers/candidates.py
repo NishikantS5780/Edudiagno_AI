@@ -181,7 +181,7 @@ async def delete_candidate(
 async def upload_resume(
     file: UploadFile = File(...),
     job_id: int = Form(...),
-    current_user: User = Depends(get_current_user),
+    # current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Upload a resume file to local storage"""
@@ -215,13 +215,13 @@ async def upload_resume(
         # Create or update candidate with resume text and details
         candidate = db.query(Candidate).filter(
             Candidate.job_id == job_id,
-            Candidate.company_id == current_user.id
+            # Candidate.company_id == current_user.id
         ).first()
         
         if not candidate:
             candidate = Candidate(
                 job_id=job_id,
-                company_id=current_user.id,
+                # company_id=current_user.id,
                 first_name=first_name,
                 last_name=last_name,
                 email=resume_data.get("email", ""),
@@ -288,7 +288,7 @@ async def get_resume_upload_url(
 async def analyze_resume(
     resume_url: str = Body(...),
     job_id: int = Body(...),
-    current_user: User = Depends(get_current_user),
+    # current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Analyze a candidate's resume against a job description"""
@@ -366,7 +366,7 @@ async def analyze_resume(
             "resume_match_score": match_data.get("match_score", 0),
             "resume_match_feedback": match_data.get("feedback", ""),
             "job_id": job_id,
-            "company_id": current_user.id,
+            "company_id": job.company_id,
             "status": "new",
             "created_at": datetime.utcnow()
         }

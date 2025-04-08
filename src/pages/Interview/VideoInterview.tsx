@@ -818,7 +818,7 @@ export default function VideoInterview({
             </div>
           </CardContent>
           <CardFooter className="flex justify-center gap-4">
-            <Button variant="outline" onClick={() => navigate("/dashboard")}>
+            <Button variant="outline" onClick={() => navigate("/")}>
               Close Window
             </Button>
             <Button

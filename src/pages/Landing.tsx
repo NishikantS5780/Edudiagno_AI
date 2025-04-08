@@ -39,23 +39,31 @@ const Landing = () => {
               </span>
             </div>
 
-            <h1 className="h1 text-gradient animate-fade-up [animation-delay:100ms]">
+            <h1 className="h1 min-h-min text-gradient animate-fade-up [animation-delay:100ms]">
               The AI-Powered Hiring Revolution
             </h1>
             <p className="p text-muted-foreground text-lg md:text-xl animate-fade-up [animation-delay:200ms]">
               Smart AI Interviews. Automated Screening. Data-Driven Hiring.
-              Transform your recruitment process with our cutting-edge platform designed for employers.
+              Transform your recruitment process with our cutting-edge platform
+              designed for employers.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6 animate-fade-up [animation-delay:300ms]">
               <Link to="/signup">
-                <Button size="lg" className="w-full sm:w-auto button-hover-effect">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto button-hover-effect"
+                >
                   Start Hiring Smarter
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <Link to="/demo">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto glass-button">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto glass-button"
+                >
                   Request a Demo
                 </Button>
               </Link>
@@ -70,7 +78,8 @@ const Landing = () => {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="h2 mb-4">Cutting-Edge Features</h2>
             <p className="p">
-              Our platform streamlines the hiring process with powerful AI tools designed specifically for employers.
+              Our platform streamlines the hiring process with powerful AI tools
+              designed specifically for employers.
             </p>
           </div>
 
@@ -84,7 +93,8 @@ const Landing = () => {
                 </div>
                 <h3 className="font-bold text-xl mb-2">AI Video Interviews</h3>
                 <p className="text-muted-foreground">
-                  Conduct interviews in real-time with an AI interviewer that asks job-relevant questions and evaluates responses.
+                  Conduct interviews in real-time with an AI interviewer that
+                  asks job-relevant questions and evaluates responses.
                 </p>
               </CardContent>
             </Card>
@@ -98,7 +108,8 @@ const Landing = () => {
                 </div>
                 <h3 className="font-bold text-xl mb-2">Instant Insights</h3>
                 <p className="text-muted-foreground">
-                  AI analyzes candidate responses and generates comprehensive hiring reports with scores and recommendations.
+                  AI analyzes candidate responses and generates comprehensive
+                  hiring reports with scores and recommendations.
                 </p>
               </CardContent>
             </Card>
@@ -112,7 +123,8 @@ const Landing = () => {
                 </div>
                 <h3 className="font-bold text-xl mb-2">Shareable Links</h3>
                 <p className="text-muted-foreground">
-                  Invite candidates with a simple shareable link that can be distributed via email or social media platforms.
+                  Invite candidates with a simple shareable link that can be
+                  distributed via email or social media platforms.
                 </p>
               </CardContent>
             </Card>
@@ -126,7 +138,8 @@ const Landing = () => {
                 </div>
                 <h3 className="font-bold text-xl mb-2">Smart Screening</h3>
                 <p className="text-muted-foreground">
-                  AI filters only the best-matched candidates by analyzing resumes against your job requirements.
+                  AI filters only the best-matched candidates by analyzing
+                  resumes against your job requirements.
                 </p>
               </CardContent>
             </Card>
@@ -140,7 +153,8 @@ const Landing = () => {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="h2 mb-4">How It Works</h2>
             <p className="p">
-              Our streamlined AI-driven hiring process makes finding the right candidates easier than ever.
+              Our streamlined AI-driven hiring process makes finding the right
+              candidates easier than ever.
             </p>
           </div>
 
@@ -152,7 +166,8 @@ const Landing = () => {
               </div>
               <h3 className="text-xl font-bold mb-3">Create Job Listings</h3>
               <p className="text-muted-foreground">
-                Create detailed job listings, specify requirements, and let AI generate optimized job descriptions.
+                Create detailed job listings, specify requirements, and let AI
+                generate optimized job descriptions.
               </p>
             </div>
 
@@ -163,7 +178,8 @@ const Landing = () => {
               </div>
               <h3 className="text-xl font-bold mb-3">AI Screens Candidates</h3>
               <p className="text-muted-foreground">
-                Our AI analyzes resumes and identifies candidates that best match your job requirements.
+                Our AI analyzes resumes and identifies candidates that best
+                match your job requirements.
               </p>
             </div>
 
@@ -174,7 +190,8 @@ const Landing = () => {
               </div>
               <h3 className="text-xl font-bold mb-3">Automated Interviews</h3>
               <p className="text-muted-foreground">
-                Candidates participate in AI-conducted video interviews, with responses analyzed for key insights.
+                Candidates participate in AI-conducted video interviews, with
+                responses analyzed for key insights.
               </p>
             </div>
           </div>
@@ -196,7 +213,8 @@ const Landing = () => {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="h2 mb-4">Trusted by Employers</h2>
             <p className="p">
-              See how companies are transforming their hiring process with InterviewPro AI.
+              See how companies are transforming their hiring process with
+              InterviewPro AI.
             </p>
           </div>
 
@@ -209,13 +227,17 @@ const Landing = () => {
                 ))}
               </div>
               <p className="mb-6 italic">
-                "InterviewPro AI has completely transformed our hiring process. The AI interviews have saved our team countless hours and improved our candidate selection."
+                "InterviewPro AI has completely transformed our hiring process.
+                The AI interviews have saved our team countless hours and
+                improved our candidate selection."
               </p>
               <div className="flex items-center">
                 <div className="w-12 h-12 rounded-full bg-muted mr-4" />
                 <div>
                   <p className="font-semibold">Sarah Johnson</p>
-                  <p className="text-sm text-muted-foreground">HR Director, TechGrowth Inc.</p>
+                  <p className="text-sm text-muted-foreground">
+                    HR Director, TechGrowth Inc.
+                  </p>
                 </div>
               </div>
             </Card>
@@ -228,13 +250,17 @@ const Landing = () => {
                 ))}
               </div>
               <p className="mb-6 italic">
-                "The insights we get from the AI interview analysis are incredible. We're making better hires and our turnover rate has decreased by 35%."
+                "The insights we get from the AI interview analysis are
+                incredible. We're making better hires and our turnover rate has
+                decreased by 35%."
               </p>
               <div className="flex items-center">
                 <div className="w-12 h-12 rounded-full bg-muted mr-4" />
                 <div>
                   <p className="font-semibold">Michael Chen</p>
-                  <p className="text-sm text-muted-foreground">CEO, Innovate Solutions</p>
+                  <p className="text-sm text-muted-foreground">
+                    CEO, Innovate Solutions
+                  </p>
                 </div>
               </div>
             </Card>
@@ -247,13 +273,17 @@ const Landing = () => {
                 ))}
               </div>
               <p className="mb-6 italic">
-                "The automated resume screening is a game-changer. We're now only interviewing candidates who truly match our requirements, saving enormous time."
+                "The automated resume screening is a game-changer. We're now
+                only interviewing candidates who truly match our requirements,
+                saving enormous time."
               </p>
               <div className="flex items-center">
                 <div className="w-12 h-12 rounded-full bg-muted mr-4" />
                 <div>
                   <p className="font-semibold">Jessica Martinez</p>
-                  <p className="text-sm text-muted-foreground">Talent Acquisition Manager, Global Retail</p>
+                  <p className="text-sm text-muted-foreground">
+                    Talent Acquisition Manager, Global Retail
+                  </p>
                 </div>
               </div>
             </Card>
@@ -267,7 +297,8 @@ const Landing = () => {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="h2 mb-4">Why Choose InterviewPro AI</h2>
             <p className="p">
-              Our platform offers unparalleled benefits for modern employers looking to optimize their hiring process.
+              Our platform offers unparalleled benefits for modern employers
+              looking to optimize their hiring process.
             </p>
           </div>
 
@@ -282,7 +313,8 @@ const Landing = () => {
                 <div>
                   <h3 className="text-xl font-bold mb-2">Save Time</h3>
                   <p className="text-muted-foreground">
-                    Reduce hiring time by up to 70% with automated screening and AI-conducted interviews.
+                    Reduce hiring time by up to 70% with automated screening and
+                    AI-conducted interviews.
                   </p>
                 </div>
               </div>
@@ -295,7 +327,8 @@ const Landing = () => {
                 <div>
                   <h3 className="text-xl font-bold mb-2">Better Candidates</h3>
                   <p className="text-muted-foreground">
-                    AI screening ensures you only review candidates who truly match your requirements.
+                    AI screening ensures you only review candidates who truly
+                    match your requirements.
                   </p>
                 </div>
               </div>
@@ -306,9 +339,12 @@ const Landing = () => {
                   <BarChart3 className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold mb-2">Data-Driven Decisions</h3>
+                  <h3 className="text-xl font-bold mb-2">
+                    Data-Driven Decisions
+                  </h3>
                   <p className="text-muted-foreground">
-                    Make hiring decisions based on objective data and AI insights rather than gut feelings.
+                    Make hiring decisions based on objective data and AI
+                    insights rather than gut feelings.
                   </p>
                 </div>
               </div>
@@ -324,7 +360,8 @@ const Landing = () => {
                 <div>
                   <h3 className="text-xl font-bold mb-2">Reduce Bias</h3>
                   <p className="text-muted-foreground">
-                    Our AI is designed to minimize unconscious bias in the hiring process, promoting diversity.
+                    Our AI is designed to minimize unconscious bias in the
+                    hiring process, promoting diversity.
                   </p>
                 </div>
               </div>
@@ -335,9 +372,12 @@ const Landing = () => {
                   <Calendar className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold mb-2">Flexible Scheduling</h3>
+                  <h3 className="text-xl font-bold mb-2">
+                    Flexible Scheduling
+                  </h3>
                   <p className="text-muted-foreground">
-                    Candidates can complete AI interviews at their convenience, expanding your talent pool.
+                    Candidates can complete AI interviews at their convenience,
+                    expanding your talent pool.
                   </p>
                 </div>
               </div>
@@ -348,9 +388,12 @@ const Landing = () => {
                   <Search className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold mb-2">Customizable Process</h3>
+                  <h3 className="text-xl font-bold mb-2">
+                    Customizable Process
+                  </h3>
                   <p className="text-muted-foreground">
-                    Tailor interview questions and screening criteria to your specific job requirements.
+                    Tailor interview questions and screening criteria to your
+                    specific job requirements.
                   </p>
                 </div>
               </div>
@@ -365,17 +408,25 @@ const Landing = () => {
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="h2 mb-6">Ready to Transform Your Hiring Process?</h2>
             <p className="p text-lg mb-8 max-w-2xl mx-auto">
-              Join thousands of employers who are saving time, reducing costs, and finding better candidates with InterviewPro AI.
+              Join thousands of employers who are saving time, reducing costs,
+              and finding better candidates with InterviewPro AI.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link to="/signup">
-                <Button size="lg" className="w-full sm:w-auto button-hover-effect">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto button-hover-effect"
+                >
                   Start Hiring Smarter
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <Link to="/pricing">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto glass-button">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto glass-button"
+                >
                   View Pricing
                 </Button>
               </Link>
