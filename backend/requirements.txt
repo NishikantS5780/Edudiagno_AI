@@ -1,50 +1,8 @@
-# FastAPI framework and dependencies
 fastapi
 uvicorn
-pydantic
-pydantic-settings
-email-validator
-
-# Database
 sqlalchemy
-psycopg2-binary
 alembic
-psycopg2
+psycopg2-binary
 
 python-dotenv
-
-# Authentication
-python-jose
-passlib
-python-multipart
-bcrypt
-
-# Environment variables
-python-dotenv
-
-# OpenAI
 openai>=1.0.0
-
-# Utilities
-aiohttp
-httpx
-async-timeout
-python-dateutil
-requests
-
-# File processing
-python-magic
-pydub  # For audio processing
-moviepy  # For video processing
-ffmpeg-python  # For audio/video manipulation
-
-# AWS
-boto3  # For S3 integration
-
-# PDF processing
-pdfplumber
-pypdf2
-
-# Testing
-pytest
-pytest-asyncio
