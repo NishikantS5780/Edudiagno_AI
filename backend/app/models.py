@@ -80,8 +80,7 @@ class Interview(Base):
 
     # Relationships
     job = relationship("Job", back_populates="interviews")
-    questions = relationship("InterviewQuestion", back_populates="interview", cascade="all, delete-orphan")
-    video_responses = relationship("VideoResponse", back_populates="interview", cascade="all, delete-orphan")
+    question_and_responses = relationship("InterviewQuestionAndResponse", back_populates="interview", cascade="all, delete-orphan")
 
 class InterviewQuestionAndResponse(Base):
     __tablename__ = "interview_question_and_responses"
@@ -95,4 +94,4 @@ class InterviewQuestionAndResponse(Base):
     interview_id = Column(Integer, ForeignKey("interviews.id"), nullable=False)
 
     # Relationships
-    interview = relationship("Interview", back_populates="questions")
+    interview = relationship("Interview", back_populates="question_and_responses")
