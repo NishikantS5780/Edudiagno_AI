@@ -5,19 +5,65 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Check, ChevronsUpDown } from "lucide-react";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { cn } from "@/lib/utils";
 
+// List of countries
+const countries = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+  "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic",
+  "Denmark", "Djibouti", "Dominica", "Dominican Republic",
+  "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
+  "Fiji", "Finland", "France",
+  "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+  "Haiti", "Honduras", "Hungary",
+  "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Ivory Coast",
+  "Jamaica", "Japan", "Jordan",
+  "Kazakhstan", "Kenya", "Kiribati", "Korea, North", "Korea, South", "Kosovo", "Kuwait", "Kyrgyzstan",
+  "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
+  "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
+  "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Macedonia", "Norway",
+  "Oman",
+  "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+  "Qatar",
+  "Romania", "Russia", "Rwanda",
+  "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+  "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
+  "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan",
+  "Vanuatu", "Vatican City", "Venezuela", "Vietnam",
+  "Yemen",
+  "Zambia", "Zimbabwe"
+];
+
 const SignUp = () => {
+  // Basic information
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [companyName, setCompanyName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Company information
+  const [companyName, setCompanyName] = useState("");
+  const [designation, setDesignation] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [phone, setPhone] = useState("");
+  
+  // Address information
+  const [country, setCountry] = useState("");
+  const [state, setState] = useState("");
+  const [city, setCity] = useState("");
+  const [zip, setZip] = useState("");
+  const [address, setAddress] = useState("");
+  
+  // Form state
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -50,8 +96,16 @@ const SignUp = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !email.trim() || !companyName.trim() || !password.trim()) {
+    // Check if all required fields are filled
+    if (!name.trim() || !email.trim() || !password.trim() || !companyName.trim() || 
+        !designation.trim() || !industry.trim() || !phone.trim() || !country.trim() || 
+        !state.trim() || !city.trim() || !zip.trim() || !address.trim()) {
       toast.error("All fields are required");
+      return;
+    }
+
+    if (!country) {
+      toast.error("Please select a country");
       return;
     }
 
@@ -73,11 +127,28 @@ const SignUp = () => {
     setIsLoading(true);
     
     try {
-      await signup(email, password, name, companyName);
+      await signup({
+        name,
+        email,
+        password,
+        phone,
+        designation,
+        company_name: companyName,
+        industry,
+        country,
+        state,
+        city,
+        zip,
+        address
+      });
       toast.success("Account created successfully");
       navigate("/dashboard/profile", { state: { isNewUser: true } });
-    } catch (error) {
-      toast.error("Failed to create account");
+    } catch (error: any) {
+      if (error.response?.data?.detail) {
+        toast.error(error.response.data.detail);
+      } else {
+        toast.error("Failed to create account");
+      }
       console.error("Signup failed:", error);
     } finally {
       setIsLoading(false);
@@ -90,7 +161,7 @@ const SignUp = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="max-w-md w-full mx-auto glass-card rounded-xl p-8 animate-fade-in">
+      <div className="max-w-2xl w-full mx-auto glass-card rounded-xl p-8 animate-fade-in">
         <div className="flex justify-center mb-6">
           <Link to="/" className="flex items-center space-x-2">
             <div className="w-10 h-10 rounded-md bg-brand flex items-center justify-center text-white font-bold">
@@ -107,128 +178,281 @@ const SignUp = () => {
           </p>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="John Smith"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="name@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="companyName">Company Name</Label>
-            <Input
-              id="companyName"
-              type="text"
-              placeholder="Acme Inc"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-                required
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full px-3"
-                onClick={togglePasswordVisibility}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-                <span className="sr-only">
-                  {showPassword ? "Hide password" : "Show password"}
-                </span>
-              </Button>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Basic Information</h3>
+              
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  autoComplete="tel"
+                  required
+                  aria-required="true"
+                />
+              </div>
             </div>
             
-            {password && (
-              <div className="mt-2 space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full transition-all",
-                        getPasswordStrengthColor()
-                      )}
-                      style={{
-                        width: `${(passwordStrengthScore / 5) * 100}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    {getPasswordStrengthLabel()}
-                  </span>
-                </div>
-                <ul className="text-xs space-y-1 text-muted-foreground">
-                  <li className={passwordStrength.hasMinLength ? "text-success" : ""}>
-                    ✓ At least 8 characters
-                  </li>
-                  <li className={passwordStrength.hasUppercase ? "text-success" : ""}>
-                    ✓ At least one uppercase letter
-                  </li>
-                  <li className={passwordStrength.hasLowercase ? "text-success" : ""}>
-                    ✓ At least one lowercase letter
-                  </li>
-                  <li className={passwordStrength.hasNumber ? "text-success" : ""}>
-                    ✓ At least one number
-                  </li>
-                  <li className={passwordStrength.hasSpecialChar ? "text-success" : ""}>
-                    ✓ At least one special character
-                  </li>
-                </ul>
+            {/* Company Information */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Company Information</h3>
+              
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input
+                  id="companyName"
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  required
+                  aria-required="true"
+                />
               </div>
-            )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="designation">Your Designation</Label>
+                <Input
+                  id="designation"
+                  type="text"
+                  value={designation}
+                  onChange={(e) => setDesignation(e.target.value)}
+                  required
+                  aria-required="true"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="industry">Industry</Label>
+                <Input
+                  id="industry"
+                  type="text"
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  required
+                  aria-required="true"
+                />
+              </div>
+            </div>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              type={showPassword ? "text" : "password"}
-              placeholder="••••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              autoComplete="new-password"
-              required
-            />
-            {password && confirmPassword && password !== confirmPassword && (
-              <p className="text-xs text-destructive mt-1">Passwords don't match</p>
-            )}
+          {/* Address Information */}
+          <div className="space-y-4">
+            <h3 className="font-medium">Address Information</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between",
+                        !country && "text-muted-foreground"
+                      )}
+                    >
+                      {country || "Select a country"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search country..." />
+                      <CommandEmpty>No country found.</CommandEmpty>
+                      <CommandGroup className="max-h-[300px] overflow-auto">
+                        {countries.map((countryName) => (
+                          <CommandItem
+                            key={countryName}
+                            value={countryName}
+                            onSelect={(currentValue) => {
+                              setCountry(currentValue === country ? "" : currentValue);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                country === countryName ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {countryName}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="state">State/Province</Label>
+                <Input
+                  id="state"
+                  type="text"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  required
+                  aria-required="true"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  required
+                  aria-required="true"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="zip">ZIP/Postal Code</Label>
+                <Input
+                  id="zip"
+                  type="text"
+                  value={zip}
+                  onChange={(e) => setZip(e.target.value)}
+                  required
+                  aria-required="true"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="address">Street Address</Label>
+              <Input
+                id="address"
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                required
+                aria-required="true"
+              />
+            </div>
+          </div>
+          
+          {/* Password */}
+          <div className="space-y-4">
+            <h3 className="font-medium">Password</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                  aria-required="true"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={togglePasswordVisibility}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">
+                    {showPassword ? "Hide password" : "Show password"}
+                  </span>
+                </Button>
+              </div>
+              
+              {password && (
+                <div className="mt-2 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full transition-all",
+                          getPasswordStrengthColor()
+                        )}
+                        style={{
+                          width: `${(passwordStrengthScore / 5) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      {getPasswordStrengthLabel()}
+                    </span>
+                  </div>
+                  <ul className="text-xs space-y-1 text-muted-foreground">
+                    <li className={passwordStrength.hasMinLength ? "text-success" : ""}>
+                      ✓ At least 8 characters
+                    </li>
+                    <li className={passwordStrength.hasUppercase ? "text-success" : ""}>
+                      ✓ At least one uppercase letter
+                    </li>
+                    <li className={passwordStrength.hasLowercase ? "text-success" : ""}>
+                      ✓ At least one lowercase letter
+                    </li>
+                    <li className={passwordStrength.hasNumber ? "text-success" : ""}>
+                      ✓ At least one number
+                    </li>
+                    <li className={passwordStrength.hasSpecialChar ? "text-success" : ""}>
+                      ✓ At least one special character
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type={showPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+                aria-required="true"
+              />
+              {password && confirmPassword && password !== confirmPassword && (
+                <p className="text-xs text-destructive mt-1">Passwords don't match</p>
+              )}
+            </div>
           </div>
           
           <div className="flex items-start space-x-2">

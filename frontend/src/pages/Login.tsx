@@ -20,20 +20,18 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email.trim() || !password.trim()) {
-      toast.error("Please enter your email and password");
-      return;
-    }
-
     setIsLoading(true);
-    
+
     try {
       await login(email, password);
       toast.success("Login successful");
       navigate("/dashboard");
-    } catch (error) {
-      toast.error("Invalid email or password");
+    } catch (error: any) {
+      if (error.response?.data?.message === "invalid credentials") {
+        toast.error("Invalid email or password");
+      } else {
+        toast.error("Failed to login");
+      }
       console.error("Login failed:", error);
     } finally {
       setIsLoading(false);

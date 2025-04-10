@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -57,7 +57,7 @@ api.interceptors.response.use(
         // Try to refresh the token
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
-          const response = await api.post('/auth/refresh', { refresh_token: refreshToken });
+          const response = await api.post('/recruiter/refresh', { refresh_token: refreshToken });
           const { access_token, refresh_token } = response.data;
           
           // Update tokens in localStorage
@@ -89,80 +89,55 @@ api.interceptors.response.use(
 
 export const authAPI = {
   login: async (email: string, password: string) => {
-    // Create form data for OAuth2 password flow
-    const formData = new URLSearchParams();
-    formData.append('username', email);
-    formData.append('password', password);
-
-    const response = await api.post('/auth/login', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+    const response = await api.post('/recruiter/login', {
+      email,
+      password
     });
     
-    const { access_token, refresh_token, ...userData } = response.data;
-    localStorage.setItem('token', access_token);
-    localStorage.setItem('refreshToken', refresh_token);
-    localStorage.setItem('user', JSON.stringify(userData));
+    const { access_token } = response.headers;
+    if (access_token) {
+      localStorage.setItem('token', access_token);
+    }
     
     return response.data;
   },
   register: async (userData: any) => {
     try {
-      // Split the name into first_name and last_name
-      const [first_name, ...lastNameParts] = userData.name.split(' ');
-      const last_name = lastNameParts.join(' ') || ''; // Ensure last_name is never null
-
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(userData.email)) {
-        throw new Error('Invalid email format');
-      }
-
-      // Validate password length
-      if (userData.password.length < 8) {
-        throw new Error('Password must be at least 8 characters long');
-      }
-
-      const response = await api.post('/auth/register', {
-        email: userData.email.trim(),
+      const response = await api.post('/recruiter', {
+        name: userData.name,
+        email: userData.email,
         password: userData.password,
-        first_name: first_name.trim(),
-        last_name: last_name.trim(),
-        company_name: userData.companyName.trim(),
-        company_logo: null,
-        phone: null,
-        website: null,
-        industry: null,
-        company_size: null,
-        is_profile_complete: userData.is_profile_complete || false
+        phone: userData.phone,
+        designation: userData.designation,
+        company_name: userData.company_name,
+        industry: userData.industry,
+        country: userData.country,
+        state: userData.state,
+        city: userData.city,
+        zip: userData.zip,
+        address: userData.address
       });
-      const { access_token, refresh_token } = response.data;
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('refreshToken', refresh_token);
       return response.data;
     } catch (error) {
-      // Log the error details for debugging
-      console.error('Registration error details:', error.response?.data);
-      
-      // If the error is from the API, throw it with the original message
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      
-      // For other errors, throw a generic message
-      throw new Error('Failed to create account. Please try again.');
+      throw error;
     }
   },
   getCurrentUser: async () => {
-    const response = await api.get('/auth/me');
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token available');
+    
+    // Decode the JWT token to get the user ID
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const userId = payload.uid;
+    
+    const response = await api.get(`/recruiter/?id=${userId}`);
     return response.data;
   },
   refreshToken: async () => {
     const refreshToken = localStorage.getItem('refreshToken');
     if (!refreshToken) throw new Error('No refresh token available');
     
-    const response = await api.post('/auth/refresh', { refresh_token: refreshToken });
+    const response = await api.post('/recruiter/refresh', { refresh_token: refreshToken });
     const { access_token, refresh_token } = response.data;
     localStorage.setItem('token', access_token);
     localStorage.setItem('refreshToken', refresh_token);
@@ -170,7 +145,7 @@ export const authAPI = {
   },
   logout: async () => {
     try {
-      await api.post('/auth/logout');
+      await api.post('/recruiter/logout');
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
@@ -182,7 +157,7 @@ export const authAPI = {
 
 export const userAPI = {
   updateProfile: async (data: any) => {
-    const response = await api.put('/users/me', data);
+    const response = await api.put('/recruiter/me', data);
     return response.data;
   },
 };
