@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app import database, models, schemas
+from app.dependencies.authorization import authorize_recruiter
 from app.models import Recruiter
 from app.utils import security
 from app.utils import jwt
@@ -11,9 +12,11 @@ from app.utils import jwt
 router = APIRouter()
 
 
-@router.get("/", response_model=schemas.Recruiter)
+@router.get("", response_model=schemas.Recruiter)
 async def get_recruiter(
-    request: Request, id: str, db: Session = Depends(database.get_db)
+    request: Request,
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
 ):
     stmt = select(Recruiter).where(Recruiter.id == int(id))
     result = db.execute(stmt)
@@ -70,7 +73,7 @@ async def login_recruiter(
 
     encoded_jwt = jwt.encode(
         {
-            "uid": recruiter.id,
+            "id": recruiter.id,
             "exp": datetime.datetime.now(tz=datetime.timezone.utc)
             + datetime.timedelta(days=1),
         }
@@ -78,3 +81,11 @@ async def login_recruiter(
 
     response.headers["Authorization"] = f"Bearer {encoded_jwt}"
     return recruiter
+
+
+@router.get("/verify-token")
+async def verify_recruiter_access_token(
+    request: Request,
+    recruiter_id=Depends(authorize_recruiter),
+):
+    return {"message": "successfull authentication"}
