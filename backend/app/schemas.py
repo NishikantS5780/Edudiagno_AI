@@ -110,9 +110,14 @@ class UpdateInterview(BaseModel):
     feedback: str
 
 
+class AnalyzeResume(BaseModel):
+    job_id: int
+    resume_data: str
+
+
 class CreateInterviewQuestionAndResponse(BaseModel):
-    question: str
-    question_type: str
-    order_number: int
-    answer: str
     interview_id: int
+
+
+class TextToSpeech(BaseModel):
+    text: str

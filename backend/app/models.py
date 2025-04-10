@@ -2,6 +2,7 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, f
 from sqlalchemy.orm import relationship
 from .database import Base
 
+
 class Recruiter(Base):
     __tablename__ = "recruiters"
 
@@ -28,6 +29,7 @@ class Recruiter(Base):
     # Relationships
     jobs = relationship("Job", back_populates="company")
 
+
 class Job(Base):
     __tablename__ = "jobs"
 
@@ -52,6 +54,7 @@ class Job(Base):
     # Relationships
     company = relationship("Recruiter", back_populates="jobs")
     interviews = relationship("Interview", back_populates="job")
+
 
 class Interview(Base):
     __tablename__ = "interviews"
@@ -80,18 +83,24 @@ class Interview(Base):
 
     # Relationships
     job = relationship("Job", back_populates="interviews")
-    question_and_responses = relationship("InterviewQuestionAndResponse", back_populates="interview", cascade="all, delete-orphan")
+    question_and_responses = relationship(
+        "InterviewQuestionAndResponse",
+        back_populates="interview",
+        cascade="all, delete-orphan",
+    )
+
 
 class InterviewQuestionAndResponse(Base):
     __tablename__ = "interview_question_and_responses"
 
-    id = Column(Integer, primary_key=True, index=True)
     question = Column(String, nullable=False)
-    question_type = Column(String, nullable=False)  # technical, behavioral, problem_solving, custom
-    order_number = Column(Integer, nullable=False)
+    question_type = Column(
+        String, nullable=False
+    )  # technical, behavioral, problem_solving, custom
+    order_number = Column(Integer, primary_key=True)
     answer = Column(String)
     created_at = Column(DateTime, default=func.now())
-    interview_id = Column(Integer, ForeignKey("interviews.id"), nullable=False)
+    interview_id = Column(Integer, ForeignKey("interviews.id"), primary_key=True, nullable=False)
 
     # Relationships
     interview = relationship("Interview", back_populates="question_and_responses")

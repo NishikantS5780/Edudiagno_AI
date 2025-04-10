@@ -23,6 +23,18 @@ async def get_job(
     return job
 
 
+@router.get("/all")
+async def get_all_job(
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
+):
+    stmt = select(Job).where(Job.company_id == recruiter_id)
+    result = db.execute(stmt)
+    job = result.scalars().all()
+
+    return job
+
+
 @router.get("/candidate-view")
 async def get_job_candidate_view(
     request: Request, id: str, db: Session = Depends(database.get_db)

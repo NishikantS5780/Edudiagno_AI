@@ -48,7 +48,7 @@ async def parse_resume(request: Request, file: UploadFile = File(...)):
     - All values must be strings
     """
 
-    response = openai.client.chat.completions.create(
+    response = await openai.client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {
