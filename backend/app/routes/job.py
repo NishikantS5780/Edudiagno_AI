@@ -4,12 +4,18 @@ from sqlalchemy import case, select
 
 from app import schemas, database
 from app.models import Job
+from app.dependencies.authorization import authorize_recruiter
 
 router = APIRouter()
 
 
-@router.get("/{id}", response_model=schemas.Job)
-async def get_job(request: Request, id: str, db: Session = Depends(database.get_db)):
+@router.get("", response_model=schemas.Job)
+async def get_job(
+    request: Request,
+    id: str,
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
+):
     stmt = select(Job).where(Job.id == int(id))
     result = db.execute(stmt)
     job = result.scalars().all()[0]
@@ -17,7 +23,7 @@ async def get_job(request: Request, id: str, db: Session = Depends(database.get_
     return job
 
 
-@router.get("/{id}")
+@router.get("/candidate-view")
 async def get_job_candidate_view(
     request: Request, id: str, db: Session = Depends(database.get_db)
 ):
@@ -47,6 +53,7 @@ async def create_job(
     request: Request,
     job_data: schemas.CreateJob,
     db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
 ):
     job = Job(
         title=job_data.title,
@@ -62,7 +69,7 @@ async def create_job(
         requirements=job_data.requirements,
         benefits=job_data.benefits,
         status=job_data.status,
-        company_id=job_data.company_id,
+        company_id=recruiter_id,
     )
     db.add(job)
     db.commit()

@@ -14,7 +14,9 @@ router = APIRouter()
 
 @router.get("", response_model=schemas.Recruiter)
 async def get_recruiter(
-    request: Request, id: str, db: Session = Depends(database.get_db)
+    request: Request,
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
 ):
     stmt = select(Recruiter).where(Recruiter.id == int(id))
     result = db.execute(stmt)

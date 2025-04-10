@@ -58,7 +58,6 @@ class CreateJob(BaseModel):
     requirements: str
     benefits: str
     status: str
-    company_id: int
 
 
 class Job(BaseModel):

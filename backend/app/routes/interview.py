@@ -8,7 +8,7 @@ from app.models import Interview
 router = APIRouter()
 
 
-@router.get("/{id}")
+@router.get("")
 async def get_interview(
     request: Request, id: str, db: Session = Depends(database.get_db)
 ):
