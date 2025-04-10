@@ -123,7 +123,14 @@ export const authAPI = {
     }
   },
   getCurrentUser: async () => {
-    const response = await api.get('/recruiter/me');
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token available');
+    
+    // Decode the JWT token to get the user ID
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const userId = payload.uid;
+    
+    const response = await api.get(`/recruiter/?id=${userId}`);
     return response.data;
   },
   refreshToken: async () => {

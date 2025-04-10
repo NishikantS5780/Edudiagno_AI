@@ -98,8 +98,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       const response = await authAPI.login(email, password);
-      const userData = await authAPI.getCurrentUser();
-      setUser(userData);
+      // Store the user data from the login response
+      setUser(response);
+      return response;
     } catch (error: any) {
       // Handle API errors
       if (error.response?.data?.detail) {

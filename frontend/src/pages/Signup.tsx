@@ -5,10 +5,41 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Check, ChevronsUpDown } from "lucide-react";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { cn } from "@/lib/utils";
+
+// List of countries
+const countries = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+  "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic",
+  "Denmark", "Djibouti", "Dominica", "Dominican Republic",
+  "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
+  "Fiji", "Finland", "France",
+  "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+  "Haiti", "Honduras", "Hungary",
+  "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Ivory Coast",
+  "Jamaica", "Japan", "Jordan",
+  "Kazakhstan", "Kenya", "Kiribati", "Korea, North", "Korea, South", "Kosovo", "Kuwait", "Kyrgyzstan",
+  "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
+  "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
+  "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Macedonia", "Norway",
+  "Oman",
+  "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+  "Qatar",
+  "Romania", "Russia", "Rwanda",
+  "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+  "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
+  "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan",
+  "Vanuatu", "Vatican City", "Venezuela", "Vietnam",
+  "Yemen",
+  "Zambia", "Zimbabwe"
+];
 
 const SignUp = () => {
   // Basic information
@@ -25,7 +56,7 @@ const SignUp = () => {
   const [phone, setPhone] = useState("");
   
   // Address information
-  const [country, setCountry] = useState("United States");
+  const [country, setCountry] = useState("");
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
   const [zip, setZip] = useState("");
@@ -70,6 +101,11 @@ const SignUp = () => {
         !designation.trim() || !industry.trim() || !phone.trim() || !country.trim() || 
         !state.trim() || !city.trim() || !zip.trim() || !address.trim()) {
       toast.error("All fields are required");
+      return;
+    }
+
+    if (!country) {
+      toast.error("Please select a country");
       return;
     }
 
@@ -153,24 +189,24 @@ const SignUp = () => {
                 <Input
                   id="name"
                   type="text"
-                  placeholder="John Smith"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="name"
                   required
+                  aria-required="true"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
                   required
+                  aria-required="true"
                 />
               </div>
               
@@ -179,11 +215,11 @@ const SignUp = () => {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+1 (555) 123-4567"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   autoComplete="tel"
                   required
+                  aria-required="true"
                 />
               </div>
             </div>
@@ -197,10 +233,10 @@ const SignUp = () => {
                 <Input
                   id="companyName"
                   type="text"
-                  placeholder="Acme Inc"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   required
+                  aria-required="true"
                 />
               </div>
               
@@ -209,10 +245,10 @@ const SignUp = () => {
                 <Input
                   id="designation"
                   type="text"
-                  placeholder="HR Manager"
                   value={designation}
                   onChange={(e) => setDesignation(e.target.value)}
                   required
+                  aria-required="true"
                 />
               </div>
               
@@ -221,10 +257,10 @@ const SignUp = () => {
                 <Input
                   id="industry"
                   type="text"
-                  placeholder="Technology"
                   value={industry}
                   onChange={(e) => setIndustry(e.target.value)}
                   required
+                  aria-required="true"
                 />
               </div>
             </div>
@@ -237,14 +273,46 @@ const SignUp = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  type="text"
-                  placeholder="United States"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  required
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between",
+                        !country && "text-muted-foreground"
+                      )}
+                    >
+                      {country || "Select a country"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search country..." />
+                      <CommandEmpty>No country found.</CommandEmpty>
+                      <CommandGroup className="max-h-[300px] overflow-auto">
+                        {countries.map((countryName) => (
+                          <CommandItem
+                            key={countryName}
+                            value={countryName}
+                            onSelect={(currentValue) => {
+                              setCountry(currentValue === country ? "" : currentValue);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                country === countryName ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {countryName}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               
               <div className="space-y-2">
@@ -252,10 +320,10 @@ const SignUp = () => {
                 <Input
                   id="state"
                   type="text"
-                  placeholder="California"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
                   required
+                  aria-required="true"
                 />
               </div>
               
@@ -264,10 +332,10 @@ const SignUp = () => {
                 <Input
                   id="city"
                   type="text"
-                  placeholder="San Francisco"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   required
+                  aria-required="true"
                 />
               </div>
               
@@ -276,10 +344,10 @@ const SignUp = () => {
                 <Input
                   id="zip"
                   type="text"
-                  placeholder="94105"
                   value={zip}
                   onChange={(e) => setZip(e.target.value)}
                   required
+                  aria-required="true"
                 />
               </div>
             </div>
@@ -289,10 +357,10 @@ const SignUp = () => {
               <Input
                 id="address"
                 type="text"
-                placeholder="123 Main St"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 required
+                aria-required="true"
               />
             </div>
           </div>
@@ -307,11 +375,11 @@ const SignUp = () => {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"
                   required
+                  aria-required="true"
                 />
                 <Button
                   type="button"
@@ -375,11 +443,11 @@ const SignUp = () => {
               <Input
                 id="confirmPassword"
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
                 required
+                aria-required="true"
               />
               {password && confirmPassword && password !== confirmPassword && (
                 <p className="text-xs text-destructive mt-1">Passwords don't match</p>
