@@ -91,10 +91,6 @@ class CreateInterview(BaseModel):
     portfolio_url: str
     resume_url: str
     resume_text: str
-    resume_match_score: int
-    resume_match_feedback: str
-    overall_score: int
-    feedback: str
     job_id: int
 
 
