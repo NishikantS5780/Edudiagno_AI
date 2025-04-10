@@ -14,7 +14,6 @@ export const api = axios.create({
   }
 });
 
-// Add request interceptor for logging
 api.interceptors.request.use((config) => {
   console.log('API Request:', {
     url: config.url,
@@ -24,13 +23,16 @@ api.interceptors.request.use((config) => {
     baseURL: config.baseURL
   });
   const token = localStorage.getItem('token');
+  console.log('Token from localStorage:', token);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    console.log('Request headers with token:', config.headers);
+  } else {
+    console.error('No token found in localStorage');
   }
   return config;
 });
 
-// Add response interceptor for logging
 api.interceptors.response.use(
   (response) => {
     console.log('API Response:', {
@@ -94,9 +96,17 @@ export const authAPI = {
       password
     });
     
-    const { access_token } = response.headers;
-    if (access_token) {
-      localStorage.setItem('token', access_token);
+    // Extract the Bearer token from the Authorization header
+    const authHeader = response.headers['authorization'];
+    console.log('Login Response Headers:', response.headers);
+    console.log('Authorization Header:', authHeader);
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      console.log('Storing token:', token);
+      localStorage.setItem('token', token);
+    } else {
+      console.error('No valid Authorization header found in response');
     }
     
     return response.data;
@@ -157,28 +167,29 @@ export const authAPI = {
 
 export const userAPI = {
   updateProfile: async (data: any) => {
-    const response = await api.put('/recruiter/me', data);
+    const response = await api.put('/recruiter', data);
     return response.data;
   },
 };
 
 export const jobAPI = {
-  getAll: () => api.get("/jobs"),
-  create: (data: any) => api.post("/jobs", data),
-  getById: (id: string) => api.get(`/jobs/${id}`),
-  update: (id: string, data: any) => api.put(`/jobs/${id}`, data),
+  getAll: () => api.get("/job/all"),
+  create: (data: any) => api.post("/job", data),
+  getById: (id: string) => api.get(`/job?id=${id}`),
+  getCandidateView: (id: string) => api.get(`/job/candidate-view?id=${id}`),
+  update: (id: string, data: any) => api.put(`/job?id=${id}`, data),
   delete: async (id: number) => {
-    const response = await api.delete(`/jobs/${id}`);
+    const response = await api.delete(`/job?id=${id}`);
     return response;
   },
-  getStats: (id: number) => api.get(`/jobs/${id}/stats`),
-  createCandidate: (data: any) => api.post("/candidates", data),
+  getStats: (id: number) => api.get(`/job/stats?id=${id}`),
+  createCandidate: (data: any) => api.post("/interview", data),
   createInterview: async (data: { job_id: number; candidate_id: number; scheduled_at: string | null }) => {
-    const response = await api.post("/interviews", data);
+    const response = await api.post("/interview", data);
     return response;
   },
   generateDescription: async (title: string, department: string, location: string) => {
-    const response = await api.post('/jobs/generate-description', {
+    const response = await api.post('/job/generate-description', {
       title,
       department,
       location
@@ -186,7 +197,7 @@ export const jobAPI = {
     return response.data;
   },
   generateRequirements: async (title: string, department: string, location: string, keywords: string = "") => {
-    const response = await api.post('/jobs/generate-requirements', {
+    const response = await api.post('/job/generate-requirements', {
       title,
       department,
       location,
@@ -195,7 +206,7 @@ export const jobAPI = {
     return response.data;
   },
   generateBenefits: async (title: string, department: string, location: string, keywords: string = "") => {
-    const response = await api.post('/jobs/generate-benefits', {
+    const response = await api.post('/job/generate-benefits', {
       title,
       department,
       location,
