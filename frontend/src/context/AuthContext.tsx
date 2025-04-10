@@ -26,11 +26,26 @@ interface User {
   is_profile_complete?: boolean;
 }
 
+interface RecruiterRegistrationData {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  designation: string;
+  company_name: string;
+  industry: string;
+  country: string;
+  state: string;
+  city: string;
+  zip: string;
+  address: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, companyName: string) => Promise<void>;
+  signup: (data: RecruiterRegistrationData) => Promise<void>;
   logout: () => Promise<void>;
   updateUserProfile: (data: Partial<User>) => Promise<void>;
   updateProfileProgress: (progress: number) => Promise<void>;
@@ -132,24 +147,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
 
-  const signup = async (email: string, password: string, name: string, companyName: string) => {
+  const signup = async (data: RecruiterRegistrationData) => {
     try {
       // Basic validation
-      if (!email || !password || !name || !companyName) {
+      if (!data.email || !data.password || !data.name || !data.company_name || 
+          !data.phone || !data.designation || !data.industry || !data.country || 
+          !data.state || !data.city || !data.zip || !data.address) {
         throw new Error('All fields are required');
       }
 
-      if (password.length < 8) {
+      if (data.password.length < 8) {
         throw new Error('Password must be at least 8 characters long');
       }
 
-      const response = await authAPI.register({
-        email,
-        password,
-        name,
-        companyName,
-        is_profile_complete: false,
-      });
+      const response = await authAPI.register(data);
       const userData = await authAPI.getCurrentUser();
       setUser(userData);
     } catch (error: any) {

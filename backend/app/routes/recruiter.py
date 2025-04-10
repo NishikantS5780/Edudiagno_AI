@@ -50,7 +50,7 @@ async def register_recruiter(
     return db_user
 
 
-@router.get("/login")
+@router.post("/login")
 async def login_recruiter(
     request: Request,
     response: Response,
