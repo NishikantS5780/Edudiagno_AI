@@ -63,9 +63,12 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "Something went wrong."})
 
 
-from .routes import recruiter
+from app.routes import interview_question_and_response, recruiter, job, interview
 
-app.include_router(recruiter.router, prefix="/api/v1/recruiter", tags=["Recruiter"])
+app.include_router(recruiter.router, prefix="/recruiter", tags=["Recruiter"])
+app.include_router(job.router, prefix="/job", tags=["Job"])
+app.include_router(interview.router, prefix="/interview", tags=["Interview"])
+app.include_router(interview_question_and_response.router, prefix="/interview-question-and-response", tags=["Interview Question"])
 
 
 @app.get("/", tags=["Health"])

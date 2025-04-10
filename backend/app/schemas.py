@@ -17,22 +17,107 @@ class RecruiterRegistration(BaseModel):
     address: str
 
 
-class Recruiter(BaseModel):
-    name: str
+class RecruiterLogin(BaseModel):
     email: str
-    phone: str
-    designation: str
-    company_name: str
-    company_logo: str
-    website: str
-    industry: str
-    min_company_size: int
-    max_company_size: int
-    country: str
-    state: str
-    city: str
-    zip: str
-    address: str
+    password: str
+
+
+class Recruiter(BaseModel):
+    id: int
+    name: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]
+    designation: Optional[str]
+    company_name: Optional[str]
+    company_logo: Optional[str]
+    website: Optional[str]
+    industry: Optional[str]
+    min_company_size: Optional[int]
+    max_company_size: Optional[int]
+    country: Optional[str]
+    state: Optional[str]
+    city: Optional[str]
+    zip: Optional[str]
+    address: Optional[str]
 
     class Config:
         orm_mode = True
+
+
+class CreateJob(BaseModel):
+    title: str
+    description: str
+    department: str
+    location: str
+    type: str
+    min_experience: int
+    max_experience: int
+    salary_min: int
+    salary_max: int
+    show_salary: bool
+    requirements: str
+    benefits: str
+    status: str
+    company_id: int
+
+
+class Job(BaseModel):
+    id: int
+    title: str
+    description: str
+    department: str
+    location: str
+    type: str
+    min_experience: int
+    max_experience: int
+    salary_min: int
+    salary_max: int
+    show_salary: bool
+    requirements: str
+    benefits: str
+    status: str
+    company_id: int
+
+
+class CreateInterview(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    phone: str
+    work_experience: int
+    education: str
+    skills: str
+    location: str
+    linkedin_url: str
+    portfolio_url: str
+    resume_url: str
+    resume_text: str
+    resume_match_score: int
+    resume_match_feedback: str
+    overall_score: int
+    feedback: str
+    job_id: int
+
+
+class UpdateInterview(BaseModel):
+    id: int
+    work_experience: int
+    education: str
+    skills: str
+    location: str
+    linkedin_url: str
+    portfolio_url: str
+    resume_url: str
+    resume_text: str
+    resume_match_score: int
+    resume_match_feedback: str
+    overall_score: int
+    feedback: str
+
+
+class CreateInterviewQuestionAndResponse(BaseModel):
+    question: str
+    question_type: str
+    order_number: int
+    answer: str
+    interview_id: int

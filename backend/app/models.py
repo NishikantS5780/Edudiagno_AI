@@ -62,9 +62,9 @@ class Interview(Base):
     last_name = Column(String, nullable=False)
     email = Column(String, nullable=False)
     phone = Column(String)
-    work_experience = Column(String)  # Store as JSON string
-    education = Column(String)  # Store as JSON string
-    skills = Column(String)  # Store as JSON string
+    work_experience = Column(Integer)
+    education = Column(String)
+    skills = Column(String)
     location = Column(String)
     linkedin_url = Column(String)
     portfolio_url = Column(String)
