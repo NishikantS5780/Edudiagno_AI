@@ -8,6 +8,11 @@ export interface JobData {
   description?: string;
   requirements?: string;
   benefits?: string;
+  maxExperience?: number;
+  minExperience?: number;
+  maxSalary?: number;
+  minSalary?: number;
+  showSalary?: boolean;
   createdAt?: string;
 
   totalCandidatesCount?: number;

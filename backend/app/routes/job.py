@@ -71,7 +71,6 @@ async def get_job_candidate_view(
 
 @router.post("", response_model=schemas.Job)
 async def create_job(
-    request: Request,
     job_data: schemas.CreateJob,
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),

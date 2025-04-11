@@ -1,4 +1,5 @@
 import { InterviewData } from "@/types/interview";
+import { JobData } from "@/types/job";
 import {
   RecruiterLoginData,
   RecruiterRegistrationData,
@@ -122,6 +123,28 @@ export const jobAPI = {
     const res = await api.get(`/job?id=${jobId}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
+    return res;
+  },
+  createJob: async (data: JobData) => {
+    const res = await api.post(
+      "/job",
+      {
+        title: data.title,
+        description: data.description,
+        department: data.department,
+        location: data.location,
+        type: data.type,
+        min_experience: data.minExperience,
+        max_experience: data.maxExperience,
+        salary_min: data.minSalary,
+        salary_max: data.maxSalary,
+        show_salary: data.showSalary,
+        requirements: data.requirements,
+        benefits: data.benefits,
+        status: data.status,
+      },
+      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+    );
     return res;
   },
   candidateGetJob: async (jobId: string) => {
