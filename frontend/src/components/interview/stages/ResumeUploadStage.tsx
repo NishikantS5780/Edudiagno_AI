@@ -7,7 +7,7 @@ import { ResumeUpload } from "@/components/common/ResumeUpload";
 import { useNavigate, useParams } from "react-router-dom";
 import { interviewAPI, resumeAPI } from "@/lib/api";
 import { Loader2 } from "lucide-react";
-import { CandidateData } from "@/types/candidate";
+import { InterviewData } from "@/types/interview";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -20,7 +20,7 @@ type FormValues = z.infer<typeof formSchema>;
 export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [candidateData, setCandidateData] = useState<CandidateData>();
+  const [candidateData, setCandidateData] = useState<InterviewData>();
   const [matchAnalysis, setMatchAnalysis] = useState<{
     matchScore: number;
     matchFeedback: string;
@@ -38,7 +38,8 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
       const res = await resumeAPI.extractResumeData(file);
       const data = res.data;
       setCandidateData({
-        name: data.first_name + " " + data.last_name,
+        firstName: data.first_name,
+        lastName: data.last_name,
         email: data.email,
         phone: data.phone,
         location: data.location,
@@ -72,7 +73,8 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
         const data = res.data;
         setCandidateData({
           id: data.id,
-          name: data.firstname + " " + data.last_name,
+          firstName: data.first_name,
+          lastName: data.last_name,
           email: data.email,
           phone: data.phone,
           location: data.location,
@@ -253,7 +255,7 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
                     Full Name
                   </label>
                   <Input
-                    value={candidateData.name}
+                    value={candidateData.firstName + candidateData.lastName}
                     placeholder="John Doe"
                     disabled={isSubmitting || isCompleted}
                   />
