@@ -23,6 +23,7 @@ class Recruiter(Base):
     city = Column(String)
     zip = Column(String)
     address = Column(String)
+    verified = Column(Boolean)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -100,7 +101,9 @@ class InterviewQuestionAndResponse(Base):
     order_number = Column(Integer, primary_key=True)
     answer = Column(String)
     created_at = Column(DateTime, default=func.now())
-    interview_id = Column(Integer, ForeignKey("interviews.id"), primary_key=True, nullable=False)
+    interview_id = Column(
+        Integer, ForeignKey("interviews.id"), primary_key=True, nullable=False
+    )
 
     # Relationships
     interview = relationship("Interview", back_populates="question_and_responses")

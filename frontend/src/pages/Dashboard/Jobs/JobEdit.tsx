@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import PageHeader from "@/components/common/PageHeader";
 import { Switch } from "@/components/ui/switch";
-import { jobAPI } from "@/lib/api";
 
 const JobEdit = () => {
   const { id } = useParams();

@@ -1,9 +1,3 @@
-
-/**
- * Utility functions for working with OpenAI APIs
- */
-
-// Function to generate job descriptions using OpenAI
 export const generateJobDescription = async (
   title: string,
   department: string,
@@ -11,8 +5,6 @@ export const generateJobDescription = async (
   apiKey: string
 ): Promise<string> => {
   try {
-    // This would be the real implementation with OpenAI API
-    // For now, return a placeholder response
     const prompt = `Create a professional job description for a ${title} position in the ${department} department. 
       The position is ${location === 'remote' ? 'fully remote' : location === 'hybrid' ? 'hybrid' : 'on-site'}.
       Include sections for:

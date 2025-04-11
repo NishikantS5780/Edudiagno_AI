@@ -1,362 +1,157 @@
-import axios from 'axios';
+import { InterviewData } from "@/types/interview";
+import {
+  RecruiterLoginData,
+  RecruiterRegistrationData,
+} from "@/types/recruiter";
+import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    "Content-Type": "application/json",
+    Accept: "application/json",
   },
-  withCredentials: true,  // Enable sending cookies in cross-origin requests
+  withCredentials: true, // Enable sending cookies in cross-origin requests
   validateStatus: function (status) {
-    return status >= 200 && status < 300 || status === 204;  // Accept 204 No Content
-  }
+    return (status >= 200 && status < 300) || status === 204; // Accept 204 No Content
+  },
 });
 
-api.interceptors.request.use((config) => {
-  console.log('API Request:', {
-    url: config.url,
-    method: config.method,
-    headers: config.headers,
-    data: config.data,
-    baseURL: config.baseURL
-  });
-  const token = localStorage.getItem('token');
-  console.log('Token from localStorage:', token);
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-    console.log('Request headers with token:', config.headers);
-  } else {
-    console.error('No token found in localStorage');
-  }
-  return config;
-});
-
-api.interceptors.response.use(
-  (response) => {
-    console.log('API Response:', {
-      status: response.status,
-      data: response.data,
-      headers: response.headers
+export const recruiterAPI = {
+  signup: async (data: RecruiterRegistrationData) => {
+    await api.post("/recruiter", data);
+  },
+  login: async (data: RecruiterLoginData) => {
+    const res = await api.post("/recruiter/login", data);
+    return res;
+  },
+  verifyLogin: async () => {
+    const res = await api.get("/recruiter/verify-token", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-    return response;
-  },
-  async (error) => {
-    console.error('API Error:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      config: error.config
-    });
-    const originalRequest = error.config;
-
-    // If the error is 401 and we haven't tried to refresh the token yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        // Try to refresh the token
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-          const response = await api.post('/recruiter/refresh', { refresh_token: refreshToken });
-          const { access_token, refresh_token } = response.data;
-          
-          // Update tokens in localStorage
-          localStorage.setItem('token', access_token);
-          localStorage.setItem('refreshToken', refresh_token);
-
-          // Update the original request with the new token
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-          return api(originalRequest);
-        }
-      } catch (refreshError) {
-        // If refresh fails, logout the user
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
-    }
-
-    // Handle other errors
-    if (error.response?.status === 403) {
-      window.location.href = '/unauthorized';
-    }
-
-    return Promise.reject(error);
-  }
-);
-
-export const authAPI = {
-  login: async (email: string, password: string) => {
-    const response = await api.post('/recruiter/login', {
-      email,
-      password
-    });
-    
-    // Extract the Bearer token from the Authorization header
-    const authHeader = response.headers['authorization'];
-    console.log('Login Response Headers:', response.headers);
-    console.log('Authorization Header:', authHeader);
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-      console.log('Storing token:', token);
-      localStorage.setItem('token', token);
-    } else {
-      console.error('No valid Authorization header found in response');
-    }
-    
-    return response.data;
-  },
-  register: async (userData: any) => {
-    try {
-      const response = await api.post('/recruiter', {
-        name: userData.name,
-        email: userData.email,
-        password: userData.password,
-        phone: userData.phone,
-        designation: userData.designation,
-        company_name: userData.company_name,
-        industry: userData.industry,
-        country: userData.country,
-        state: userData.state,
-        city: userData.city,
-        zip: userData.zip,
-        address: userData.address
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
-  getCurrentUser: async () => {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('No token available');
-    
-    // Decode the JWT token to get the user ID
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const userId = payload.uid;
-    
-    const response = await api.get(`/recruiter/?id=${userId}`);
-    return response.data;
-  },
-  refreshToken: async () => {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken) throw new Error('No refresh token available');
-    
-    const response = await api.post('/recruiter/refresh', { refresh_token: refreshToken });
-    const { access_token, refresh_token } = response.data;
-    localStorage.setItem('token', access_token);
-    localStorage.setItem('refreshToken', refresh_token);
-    return response.data;
-  },
-  logout: async () => {
-    try {
-      await api.post('/recruiter/logout');
-    } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      window.location.href = '/';  // Redirect to landing page instead of login
-    }
+    return res;
   },
 };
 
-export const userAPI = {
-  updateProfile: async (data: any) => {
-    const response = await api.put('/recruiter', data);
-    return response.data;
+export const interviewAPI = {
+  getInterviews: async () => {
+    const res = await api.get("/interview/recruiter-view/all", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    return res;
+  },
+  candidateGetInterview: async () => {
+    const res = await api.get("/interview", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+    });
+    return res;
+  },
+  createInterview: async (data: InterviewData, jobId: number) => {
+    const res = await api.post("/interview", {
+      first_name: data.firstName,
+      last_name: data.lastName,
+      email: data.email,
+      phone: data.phone,
+      work_experience: data.workExperience,
+      education: data.education,
+      skills: data.skills,
+      location: data.location,
+      linkedin_url: data.linkedinUrl,
+      portfolio_url: data.portfolioUrl,
+      resume_text: data.resumeText,
+      job_id: jobId,
+    });
+    return res;
+  },
+  analyzeCandidate: async () => {
+    const res = await api.post("/interview/analyze-resume", undefined, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+    });
+    return res;
+  },
+  uploadResume: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    await api.put("/interview/upload-resume", formData, {
+      headers: {
+        "Content-Type": "multipart/formdata",
+        Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+      },
+    });
+  },
+  generateQuestions: async () => {
+    const res = await api.post(
+      "/interview-question-and-response/generate-questions",
+      undefined,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+      }
+    );
+    return res;
+  },
+  submitAudioResponse: async (audioFile: File, question_order_number) => {
+    const formData = new FormData();
+    formData.append("audio_file", audioFile);
+    formData.append("question_id", question_order_number);
+
+    const res = await api.put(
+      "interview-question-and-response/submit-audio-response",
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return res;
   },
 };
 
 export const jobAPI = {
-  getAll: () => api.get("/job/all"),
-  create: (data: any) => api.post("/job", data),
-  getById: (id: string) => api.get(`/job?id=${id}`),
-  getCandidateView: (id: string) => api.get(`/job/candidate-view?id=${id}`),
-  update: (id: string, data: any) => api.put(`/job?id=${id}`, data),
-  delete: async (id: number) => {
-    const response = await api.delete(`/job?id=${id}`);
-    return response;
-  },
-  getStats: (id: number) => api.get(`/job/stats?id=${id}`),
-  createCandidate: (data: any) => api.post("/interview", data),
-  createInterview: async (data: { job_id: number; candidate_id: number; scheduled_at: string | null }) => {
-    const response = await api.post("/interview", data);
-    return response;
-  },
-  generateDescription: async (title: string, department: string, location: string) => {
-    const response = await api.post('/job/generate-description', {
-      title,
-      department,
-      location
+  recruiterGetAllJobs: async () => {
+    const res = await api.get("/job/all", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-    return response.data;
+    return res;
   },
-  generateRequirements: async (title: string, department: string, location: string, keywords: string = "") => {
-    const response = await api.post('/job/generate-requirements', {
-      title,
-      department,
-      location,
-      keywords
+  recruiterGetJob: async (jobId: string) => {
+    const res = await api.get(`/job?id=${jobId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-    return response.data;
+    return res;
   },
-  generateBenefits: async (title: string, department: string, location: string, keywords: string = "") => {
-    const response = await api.post('/job/generate-benefits', {
-      title,
-      department,
-      location,
-      keywords
+  candidateGetJob: async (jobId: string) => {
+    const res = await api.get(`/job/candidate-view?id=${jobId}`);
+    return res;
+  },
+  deleteJob: async (jobId: string) => {
+    const res = await api.delete(`/job?id=${jobId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-    return response.data;
-  }
+    return res;
+  },
 };
 
-export const interviewAPI = {
-  create: async (data: any) => {
-    const response = await api.post('/interviews', data);
-    return response.data;
+export const textAPI = {
+  textToSpeech: async (text: string) => {
+    const res = api.post("/text/to-speech", { text });
+    return res;
   },
-  getById: async (id: string) => {
-    const response = await api.get(`/interviews/${id}`);
-    return response.data;
-  },
-  getByAccessCode: (accessCode: string) => api.get(`/interviews/by-access-code/${accessCode}`),
 };
 
-export const videoAPI = {
-  upload: async (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await api.post('/videos/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+export const resumeAPI = {
+  extractResumeData: async (resume) => {
+    const formdata = new FormData();
+    formdata.append("file", resume);
+    const res = await api.post("/resume/parse", formdata, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
-    return response.data;
+    return res;
   },
 };
 
-// Interview API
-export const interviewApi = {
-  // Submit video response
-  submitVideoResponse: async (interviewId: number, videoBlob: Blob) => {
-    const formData = new FormData();
-    formData.append('video', videoBlob);
-    
-    const response = await api.post(`/videos/${interviewId}/submit`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  },
-
-  // Transcribe response
-  transcribeResponse: async (questionId: number) => {
-    const response = await api.post(`/videos/${questionId}/transcribe`);
-    return response.data;
-  },
-
-  // Analyze response
-  analyzeResponse: async (questionId: number) => {
-    const response = await api.post(`/videos/${questionId}/analyze`);
-    return response.data;
-  },
-
-  // Get interview transcript
-  getTranscript: async (interviewId: number) => {
-    const response = await api.get(`/videos/${interviewId}/transcript`);
-    return response.data;
-  },
-
-  // Generate follow-up questions
-  generateFollowUpQuestions: async (interviewId: number) => {
-    const response = await api.post(`/videos/${interviewId}/follow-up`);
-    return response.data;
-  },
-};
-
-// Resume API
-export const resumeApi = {
-  // Upload resume
-  uploadResume: async (file: File, jobId: number) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('job_id', jobId.toString());
-      
-      console.log('Uploading resume:', file.name);
-      const response = await api.post('/candidates/resume-upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      console.log('Resume upload successful:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Resume upload failed:', error);
-      throw error;
-    }
-  },
-
-  // Analyze resume
-  analyzeResume: async (resumePath: string, jobId: number) => {
-    try {
-      console.log('Analyzing resume:', resumePath);
-      const response = await api.post('/candidates/resume/analyze', {
-        resume_url: resumePath,
-        job_id: jobId
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log('Resume analysis successful:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Resume analysis failed:', error);
-      throw error;
-    }
-  },
-};
-
-// Interview Questions API
-export const questionsApi = {
-  // Get interview questions
-  getQuestions: async (interviewId: number) => {
-    const response = await api.get(`/interviews/${interviewId}/questions`);
-    return response.data;
-  },
-
-  // Generate questions
-  generateQuestions: async (jobId: number, resumeText: string) => {
-    const response = await api.post('/interviews/questions/generate', {
-      job_id: jobId,
-      resume_text: resumeText,
-    });
-    return response.data;
-  },
-};
-
-// Public Interview API
-export const publicInterviewApi = {
-  createLink: (jobId: number, data: { name: string; expiration?: number; is_active: boolean }) =>
-    api.post(`/interviews/public/${jobId}`, data),
-  getLinks: (jobId: number) =>
-    api.get(`/interviews/public/${jobId}`),
-  deleteLink: (jobId: number, linkId: string) =>
-    api.delete(`/interviews/public/${jobId}/${linkId}`),
-  toggleLinkStatus: (jobId: number, linkId: string, isActive: boolean) =>
-    api.patch(`/interviews/public/${jobId}/${linkId}`, { is_active: isActive }),
-  getByAccessCode: (accessCode: string) =>
-    api.get(`/interviews/public/access/${accessCode}`),
-  getJobDetails: (jobId: number) =>
-    api.get(`/jobs/${jobId}`)
-};
-
-export default api; 
+export default api;

@@ -85,7 +85,10 @@ async def login_recruiter(
 
 @router.get("/verify-token")
 async def verify_recruiter_access_token(
-    request: Request,
     recruiter_id=Depends(authorize_recruiter),
+    db: Session = Depends(database.get_db),
 ):
-    return {"message": "successfull authentication"}
+    stmt = select(Recruiter).where(Recruiter.id == recruiter_id)
+    recruiter = db.execute(stmt).scalars().all()[0]
+
+    return recruiter

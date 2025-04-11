@@ -35,22 +35,29 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { jobAPI } from "@/lib/api";
 import AIGeneratePopup from "@/components/jobs/AIGeneratePopup";
 
 const jobFormSchema = z.object({
-  title: z.string().min(3, { message: "Job title must be at least 3 characters" }),
+  title: z
+    .string()
+    .min(3, { message: "Job title must be at least 3 characters" }),
   department: z.string().min(1, { message: "Please select a department" }),
   location: z.string().min(1, { message: "Please select a location" }),
   type: z.string().min(1, { message: "Please select a job type" }),
-  experience: z.string().min(1, { message: "Please select a experience level" }),
+  experience: z
+    .string()
+    .min(1, { message: "Please select a experience level" }),
   salary: z.object({
     min: z.string(),
     max: z.string(),
     showSalary: z.boolean().default(false),
   }),
-  description: z.string().min(10, { message: "Description must be at least 10 characters" }),
-  requirements: z.string().min(10, { message: "Requirements must be at least 10 characters" }),
+  description: z
+    .string()
+    .min(10, { message: "Description must be at least 10 characters" }),
+  requirements: z
+    .string()
+    .min(10, { message: "Requirements must be at least 10 characters" }),
   benefits: z.string(),
   published: z.boolean().default(true),
 });
@@ -86,7 +93,7 @@ const NewJob = () => {
   const onSubmit = async (data: JobFormValues) => {
     try {
       setIsSubmitting(true);
-      
+
       const jobData = {
         title: data.title,
         department: data.department,
@@ -113,7 +120,10 @@ const NewJob = () => {
     }
   };
 
-  const handleGeneratedContent = (field: keyof JobFormValues, content: string) => {
+  const handleGeneratedContent = (
+    field: keyof JobFormValues,
+    content: string
+  ) => {
     form.setValue(field, content, { shouldValidate: true });
   };
 
@@ -124,7 +134,11 @@ const NewJob = () => {
           title="Create New Job"
           description="Add a new job posting to find the perfect candidate"
         >
-          <Button variant="outline" size="sm" onClick={() => navigate("/dashboard/jobs")}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/dashboard/jobs")}
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Jobs
           </Button>
@@ -142,7 +156,10 @@ const NewJob = () => {
                       <FormItem>
                         <FormLabel>Job Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. Senior Software Engineer" {...field} />
+                          <Input
+                            placeholder="e.g. Senior Software Engineer"
+                            {...field}
+                          />
                         </FormControl>
                         <FormDescription>
                           The title of the position you're hiring for
@@ -169,15 +186,25 @@ const NewJob = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="engineering">Engineering</SelectItem>
+                              <SelectItem value="engineering">
+                                Engineering
+                              </SelectItem>
                               <SelectItem value="product">Product</SelectItem>
                               <SelectItem value="design">Design</SelectItem>
-                              <SelectItem value="marketing">Marketing</SelectItem>
+                              <SelectItem value="marketing">
+                                Marketing
+                              </SelectItem>
                               <SelectItem value="sales">Sales</SelectItem>
-                              <SelectItem value="customer_support">Customer Support</SelectItem>
-                              <SelectItem value="hr">Human Resources</SelectItem>
+                              <SelectItem value="customer_support">
+                                Customer Support
+                              </SelectItem>
+                              <SelectItem value="hr">
+                                Human Resources
+                              </SelectItem>
                               <SelectItem value="finance">Finance</SelectItem>
-                              <SelectItem value="operations">Operations</SelectItem>
+                              <SelectItem value="operations">
+                                Operations
+                              </SelectItem>
                               <SelectItem value="legal">Legal</SelectItem>
                               <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
@@ -231,11 +258,19 @@ const NewJob = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="full_time">Full-time</SelectItem>
-                              <SelectItem value="part_time">Part-time</SelectItem>
+                              <SelectItem value="full_time">
+                                Full-time
+                              </SelectItem>
+                              <SelectItem value="part_time">
+                                Part-time
+                              </SelectItem>
                               <SelectItem value="contract">Contract</SelectItem>
-                              <SelectItem value="temporary">Temporary</SelectItem>
-                              <SelectItem value="internship">Internship</SelectItem>
+                              <SelectItem value="temporary">
+                                Temporary
+                              </SelectItem>
+                              <SelectItem value="internship">
+                                Internship
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -261,9 +296,15 @@ const NewJob = () => {
                             <SelectContent>
                               <SelectItem value="entry">Entry Level</SelectItem>
                               <SelectItem value="mid">Mid Level</SelectItem>
-                              <SelectItem value="senior">Senior Level</SelectItem>
-                              <SelectItem value="lead">Lead / Manager</SelectItem>
-                              <SelectItem value="executive">Executive</SelectItem>
+                              <SelectItem value="senior">
+                                Senior Level
+                              </SelectItem>
+                              <SelectItem value="lead">
+                                Lead / Manager
+                              </SelectItem>
+                              <SelectItem value="executive">
+                                Executive
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -337,7 +378,9 @@ const NewJob = () => {
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex items-center justify-between">
-                          <FormLabel className="text-base">Description</FormLabel>
+                          <FormLabel className="text-base">
+                            Description
+                          </FormLabel>
                           <AIGeneratePopup
                             title="Generate Job Description"
                             fieldLabel="Description"
@@ -345,7 +388,9 @@ const NewJob = () => {
                             department={form.getValues("department")}
                             location={form.getValues("location")}
                             jobType={form.getValues("type")}
-                            onGenerated={(content) => handleGeneratedContent("description", content)}
+                            onGenerated={(content) =>
+                              handleGeneratedContent("description", content)
+                            }
                             buttonText="Generate with AI"
                           />
                         </div>
@@ -367,7 +412,9 @@ const NewJob = () => {
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex items-center justify-between">
-                          <FormLabel className="text-base">Requirements</FormLabel>
+                          <FormLabel className="text-base">
+                            Requirements
+                          </FormLabel>
                           <AIGeneratePopup
                             title="Generate Job Requirements"
                             fieldLabel="Requirements"
@@ -375,7 +422,9 @@ const NewJob = () => {
                             department={form.getValues("department")}
                             location={form.getValues("location")}
                             jobType={form.getValues("type")}
-                            onGenerated={(content) => handleGeneratedContent("requirements", content)}
+                            onGenerated={(content) =>
+                              handleGeneratedContent("requirements", content)
+                            }
                             buttonText="Generate with AI"
                           />
                         </div>
@@ -397,7 +446,9 @@ const NewJob = () => {
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex items-center justify-between">
-                          <FormLabel className="text-base">Benefits (Optional)</FormLabel>
+                          <FormLabel className="text-base">
+                            Benefits (Optional)
+                          </FormLabel>
                           <AIGeneratePopup
                             title="Generate Job Benefits & Compensation"
                             fieldLabel="Benefits"
@@ -405,7 +456,9 @@ const NewJob = () => {
                             department={form.getValues("department")}
                             location={form.getValues("location")}
                             jobType={form.getValues("type")}
-                            onGenerated={(content) => handleGeneratedContent("benefits", content)}
+                            onGenerated={(content) =>
+                              handleGeneratedContent("benefits", content)
+                            }
                             buttonText="Generate with AI"
                           />
                         </div>
@@ -433,9 +486,7 @@ const NewJob = () => {
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                          <FormLabel className="text-base">
-                            Published
-                          </FormLabel>
+                          <FormLabel className="text-base">Published</FormLabel>
                           <FormDescription>
                             Make this job visible to candidates
                           </FormDescription>
@@ -452,7 +503,9 @@ const NewJob = () => {
 
                   <div className="rounded-lg border p-4">
                     <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-medium text-sm">AI Interview Setup</h4>
+                      <h4 className="font-medium text-sm">
+                        AI Interview Setup
+                      </h4>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -462,7 +515,8 @@ const NewJob = () => {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p>
-                              Configure how the AI will interview candidates for this job
+                              Configure how the AI will interview candidates for
+                              this job
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -509,7 +563,12 @@ const NewJob = () => {
                     </div>
 
                     <div className="mt-4">
-                      <Button variant="outline" size="sm" className="w-full" disabled>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled
+                      >
                         Configure Interview Settings
                       </Button>
                     </div>
@@ -551,7 +610,12 @@ const NewJob = () => {
                     </div>
 
                     <div className="mt-4">
-                      <Button variant="outline" size="sm" className="w-full" disabled>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled
+                      >
                         Advanced Screening Options
                       </Button>
                     </div>

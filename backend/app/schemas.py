@@ -89,7 +89,6 @@ class CreateInterview(BaseModel):
     location: str
     linkedin_url: str
     portfolio_url: str
-    resume_url: str
     resume_text: str
     job_id: int
 
@@ -108,15 +107,6 @@ class UpdateInterview(BaseModel):
     resume_match_feedback: str
     overall_score: int
     feedback: str
-
-
-class AnalyzeResume(BaseModel):
-    job_id: int
-    resume_data: str
-
-
-class CreateInterviewQuestionAndResponse(BaseModel):
-    interview_id: int
 
 
 class TextToSpeech(BaseModel):

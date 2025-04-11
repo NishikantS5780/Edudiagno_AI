@@ -1,40 +1,31 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Share, Trash2, Users, Clock, CheckCircle, XCircle, Video } from "lucide-react";
+import {
+  ArrowLeft,
+  Edit,
+  Trash2,
+  Users,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Video,
+  Copy,
+  Share2,
+} from "lucide-react";
 import { toast } from "sonner";
-import { jobAPI } from "@/lib/api";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
-import PublicInterviewLinkGenerator from "@/components/interview/PublicInterviewLinkGenerator";
-
-interface Job {
-  id: number;
-  title: string;
-  department: string;
-  location: string;
-  type: string;
-  description: string;
-  requirements: string;
-  benefits: string;
-  status: string;
-  created_at: string;
-  company_id: number;
-  company: {
-    id: number;
-    name: string;
-    logo: string;
-  };
-}
+import { jobAPI } from "@/lib/api";
+import { JobData } from "@/types/job";
 
 const JobDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [job, setJob] = useState<Job | null>(null);
+  const [job, setJob] = useState<JobData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -44,8 +35,20 @@ const JobDetail = () => {
 
   const fetchJobDetails = async () => {
     try {
-      const response = await jobAPI.getById(id);
-      setJob(response.data);
+      const response = await jobAPI.recruiterGetJob(id);
+      const data = response.data;
+      setJob({
+        id: data.id,
+        title: data.title,
+        department: data.department,
+        location: data.location,
+        type: data.type,
+        status: data.status,
+        description: data.description,
+        requirements: data.requirements,
+        benefits: data.benefits,
+        createdAt: data.created_at,
+      });
     } catch (error) {
       console.error("Error fetching job details:", error);
       toast.error("Failed to load job details");
@@ -56,10 +59,10 @@ const JobDetail = () => {
 
   const handleDelete = async () => {
     if (!job) return;
-    
+
     if (window.confirm("Are you sure you want to delete this job?")) {
       try {
-        await jobAPI.delete(job.id);
+        await jobAPI.deleteJob(job.id.toString());
         toast.success("Job deleted successfully");
         navigate("/dashboard/jobs");
       } catch (error) {
@@ -85,7 +88,10 @@ const JobDetail = () => {
         );
       case "closed":
         return (
-          <Badge variant="outline" className="bg-destructive/10 text-destructive">
+          <Badge
+            variant="outline"
+            className="bg-destructive/10 text-destructive"
+          >
             <XCircle className="h-3 w-3 mr-1" /> Closed
           </Badge>
         );
@@ -126,7 +132,11 @@ const JobDetail = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => navigate("/dashboard/jobs")}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate("/dashboard/jobs")}
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-2xl font-bold">{job.title}</h1>
@@ -138,11 +148,30 @@ const JobDetail = () => {
                 Edit
               </Link>
             </Button>
-            <Button variant="outline">
-              <Share className="h-4 w-4 mr-2" />
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                const link = `${window.location.origin}/interview?job_id=${job.id}`;
+                navigator.clipboard.writeText(link);
+                toast.success("Interview link copied to clipboard", {
+                  description: link,
+                });
+              }}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copy Shareable Link
+            </Button>
+            <Button variant="outline" onClick={() => {}}>
+              <Share2 className="h-4 w-4 mr-2" />
               Share
             </Button>
-            <Button variant="outline" className="text-destructive" onClick={handleDelete}>
+
+            <Button
+              variant="outline"
+              className="text-destructive"
+              onClick={handleDelete}
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </Button>
@@ -150,12 +179,14 @@ const JobDetail = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card className="md:col-span-2">
+          <Card className="md:col-span-3">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-xl">{job.title}</CardTitle>
-                  <p className="text-muted-foreground">{job.department} • {job.location}</p>
+                  <p className="text-muted-foreground">
+                    {job.department} • {job.location}
+                  </p>
                 </div>
                 {getStatusBadge(job.status)}
               </div>
@@ -170,15 +201,21 @@ const JobDetail = () => {
                 <TabsContent value="overview" className="space-y-6">
                   <div className="space-y-4">
                     <h3 className="font-medium">Job Description</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{job.description}</p>
+                    <p className="text-muted-foreground whitespace-pre-wrap">
+                      {job.description}
+                    </p>
                   </div>
                   <div className="space-y-4">
                     <h3 className="font-medium">Requirements</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{job.requirements}</p>
+                    <p className="text-muted-foreground whitespace-pre-wrap">
+                      {job.requirements}
+                    </p>
                   </div>
                   <div className="space-y-4">
                     <h3 className="font-medium">Benefits</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{job.benefits}</p>
+                    <p className="text-muted-foreground whitespace-pre-wrap">
+                      {job.benefits}
+                    </p>
                   </div>
                 </TabsContent>
                 <TabsContent value="candidates">
@@ -196,19 +233,10 @@ const JobDetail = () => {
               </Tabs>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Public Interview Links</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PublicInterviewLinkGenerator jobId={job.id} jobTitle={job.title} />
-            </CardContent>
-          </Card>
         </div>
       </div>
     </DashboardLayout>
   );
 };
 
-export default JobDetail; 
+export default JobDetail;

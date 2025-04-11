@@ -1,5 +1,5 @@
 import { useState } from "react";
-import LandingLayout from "@/components/layout/LandingLayout";
+import LandingLayout from "@/components/layout/RegularLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,9 @@ const Contact = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -64,7 +66,8 @@ const Contact = () => {
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Contact Us</h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Have questions about our AI-powered hiring platform? Our team is here to help.
+            Have questions about our AI-powered hiring platform? Our team is
+            here to help.
           </p>
         </div>
 
@@ -90,7 +93,10 @@ const Contact = () => {
             <p className="text-muted-foreground mb-4">
               Send us an email and we'll respond within 24 hours
             </p>
-            <a href="mailto:hello@edudiagno.ai" className="text-primary font-medium">
+            <a
+              href="mailto:hello@edudiagno.ai"
+              className="text-primary font-medium"
+            >
               hello@edudiagno.ai
             </a>
           </Card>
@@ -165,15 +171,22 @@ const Contact = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="interest">What are you interested in?</Label>
-                <Select value={formData.interest} onValueChange={handleSelectChange}>
+                <Select
+                  value={formData.interest}
+                  onValueChange={handleSelectChange}
+                >
                   <SelectTrigger id="interest">
                     <SelectValue placeholder="Select an option" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="product_demo">Product Demo</SelectItem>
                     <SelectItem value="pricing">Pricing Information</SelectItem>
-                    <SelectItem value="enterprise">Enterprise Solution</SelectItem>
-                    <SelectItem value="partnership">Partnership Opportunity</SelectItem>
+                    <SelectItem value="enterprise">
+                      Enterprise Solution
+                    </SelectItem>
+                    <SelectItem value="partnership">
+                      Partnership Opportunity
+                    </SelectItem>
                     <SelectItem value="support">Technical Support</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
@@ -203,8 +216,9 @@ const Contact = () => {
             <div>
               <h2 className="text-3xl font-bold mb-6">Schedule a Demo</h2>
               <p className="text-muted-foreground mb-8">
-                See how our AI-powered hiring platform can transform your recruitment
-                process with a personalized demo tailored to your company's needs.
+                See how our AI-powered hiring platform can transform your
+                recruitment process with a personalized demo tailored to your
+                company's needs.
               </p>
 
               <Card className="mb-8">
@@ -214,8 +228,9 @@ const Contact = () => {
                     <div>
                       <h3 className="text-xl font-bold mb-2">30-Minute Demo</h3>
                       <p className="text-muted-foreground mb-4">
-                        Our product specialists will walk you through the platform,
-                        show how our AI interviews work, and answer any questions.
+                        Our product specialists will walk you through the
+                        platform, show how our AI interviews work, and answer
+                        any questions.
                       </p>
                       <Button className="w-full">Schedule Now</Button>
                     </div>
@@ -225,24 +240,35 @@ const Contact = () => {
             </div>
 
             <div className="bg-muted rounded-lg p-6">
-              <h3 className="text-xl font-bold mb-4">Frequently Asked Questions</h3>
+              <h3 className="text-xl font-bold mb-4">
+                Frequently Asked Questions
+              </h3>
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium mb-1">How quickly can we implement EduDiagno?</h4>
+                  <h4 className="font-medium mb-1">
+                    How quickly can we implement EduDiagno?
+                  </h4>
                   <p className="text-sm text-muted-foreground">
-                    Most customers are up and running within 1-2 weeks, depending on integration needs.
+                    Most customers are up and running within 1-2 weeks,
+                    depending on integration needs.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-medium mb-1">Is your platform GDPR and CCPA compliant?</h4>
+                  <h4 className="font-medium mb-1">
+                    Is your platform GDPR and CCPA compliant?
+                  </h4>
                   <p className="text-sm text-muted-foreground">
-                    Yes, we maintain compliance with global data protection regulations.
+                    Yes, we maintain compliance with global data protection
+                    regulations.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-medium mb-1">Can we customize the AI interview questions?</h4>
+                  <h4 className="font-medium mb-1">
+                    Can we customize the AI interview questions?
+                  </h4>
                   <p className="text-sm text-muted-foreground">
-                    Absolutely! You can create custom questions or use our industry-specific templates.
+                    Absolutely! You can create custom questions or use our
+                    industry-specific templates.
                   </p>
                 </div>
               </div>

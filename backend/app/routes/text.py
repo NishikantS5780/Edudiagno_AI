@@ -19,7 +19,7 @@ async def text_to_speech(text_to_speech_data: schemas.TextToSpeech):
 
         speech_file = io.BytesIO()
 
-        for chunk in response.iter_bytes():
+        async for chunk in response.iter_bytes():
             speech_file.write(chunk)
 
         speech_file.seek(0)

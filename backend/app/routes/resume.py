@@ -22,30 +22,36 @@ async def parse_resume(request: Request, file: UploadFile = File(...)):
     if not text:
         raise ValueError("No text could be extracted from the PDF")
 
-    prompt = f"""Extract the following structured information from this resume text.
+    prompt = f"""Extract the following structured information from this resume text.  
     Return ONLY a JSON object with these exact fields (all fields should be strings, arrays should not be empty):
+
+    ```json
     {{
-        "name": "Full name",
+        "first_name": "First name",
+        "last_name": "Last name",
         "email": "Email address",
         "phone": "Phone number",
-        "location": "Location/City",
+        "location": "Location or City or state",
+        "linkedin_url": "LinkedIn profile URL",
+        "portfolio_url": "Portfolio URL",
         "resume_text": "Full resume text",
-        "work_experience": ["List of work experiences"],
-        "education": ["List of education details"],
-        "skills": {{
-            "technical": ["List of technical skills"],
-            "soft": ["List of soft skills"]
-        }}
+        "work_experience": years of experience ex. 1,
+        "education": highest qualification,
+        "skills": ["List of technical skills"],
     }}
+    ```
 
-    Resume text:
+    Resume text:  
     {text}
 
     Important:
-    - Return ONLY the JSON object, no other text
-    - All fields must be present
-    - Arrays should not be empty (use empty string if no data)
-    - All values must be strings
+    - Return ONLY the JSON object, no other text  
+    - All fields must be present  
+    - Arrays must not be empty — if no data is found, use a single empty string in the array (`[""]`)  
+    - All values must be strings  
+    - Split the name into `first_name` and `last_name` based on the most likely parsing (first word = first name, last word = last name)  
+    - If any value is missing, unclear, or not found, return an empty string for that field (e.g., `"linkedin_url": ""`)  
+    - Do not remove fields or return null values — always return the full structure with valid string content
     """
 
     response = await openai.client.chat.completions.create(

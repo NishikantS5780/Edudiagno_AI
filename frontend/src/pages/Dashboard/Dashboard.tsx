@@ -1,8 +1,13 @@
-
-import React from "react";
+import { useContext } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/common/PageHeader";
 import {
@@ -27,14 +32,11 @@ import {
   Calendar,
   CheckCircle,
   Clock,
-  LineChart,
 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { UserContext } from "@/context/UserContext";
 
 const Dashboard = () => {
-  const { user } = useAuth();
-
-  // Sample data for charts
+  const { recruiter } = useContext(UserContext);
   const activityData = [
     { name: "Mon", interviews: 5, screenings: 12 },
     { name: "Tue", interviews: 8, screenings: 18 },
@@ -111,9 +113,8 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      {/* Welcome message */}
-      <PageHeader 
-        title={`Welcome back, ${user?.name}`} 
+      <PageHeader
+        title={`Welcome back, ${recruiter && recruiter.name}`}
         description="Here's what's happening with your hiring activities"
       >
         <div className="flex space-x-2">
@@ -126,14 +127,14 @@ const Dashboard = () => {
         </div>
       </PageHeader>
 
-      {/* Stats overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Active Jobs */}
         <Card className="border-border/50">
           <CardContent className="pt-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Jobs</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Active Jobs
+                </p>
                 <h3 className="text-3xl font-bold">12</h3>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10">
@@ -143,17 +144,20 @@ const Dashboard = () => {
             <div className="mt-2 flex items-center text-sm">
               <ArrowUp className="h-4 w-4 text-success mr-1" />
               <span className="text-success font-medium">3</span>
-              <span className="text-muted-foreground ml-1">from last month</span>
+              <span className="text-muted-foreground ml-1">
+                from last month
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Candidates */}
         <Card className="border-border/50">
           <CardContent className="pt-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Candidates</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Candidates
+                </p>
                 <h3 className="text-3xl font-bold">145</h3>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10">
@@ -163,17 +167,20 @@ const Dashboard = () => {
             <div className="mt-2 flex items-center text-sm">
               <ArrowUp className="h-4 w-4 text-success mr-1" />
               <span className="text-success font-medium">28</span>
-              <span className="text-muted-foreground ml-1">from last month</span>
+              <span className="text-muted-foreground ml-1">
+                from last month
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Interviews */}
         <Card className="border-border/50">
           <CardContent className="pt-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Interviews Conducted</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Interviews Conducted
+                </p>
                 <h3 className="text-3xl font-bold">87</h3>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10">
@@ -183,17 +190,20 @@ const Dashboard = () => {
             <div className="mt-2 flex items-center text-sm">
               <ArrowDown className="h-4 w-4 text-destructive mr-1" />
               <span className="text-destructive font-medium">5</span>
-              <span className="text-muted-foreground ml-1">from last month</span>
+              <span className="text-muted-foreground ml-1">
+                from last month
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Time Saved */}
         <Card className="border-border/50">
           <CardContent className="pt-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Time Saved</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Time Saved
+                </p>
                 <h3 className="text-3xl font-bold">42h</h3>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10">
@@ -203,19 +213,21 @@ const Dashboard = () => {
             <div className="mt-2 flex items-center text-sm">
               <ArrowUp className="h-4 w-4 text-success mr-1" />
               <span className="text-success font-medium">8h</span>
-              <span className="text-muted-foreground ml-1">from last month</span>
+              <span className="text-muted-foreground ml-1">
+                from last month
+              </span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Activity Chart */}
         <Card className="border-border/50">
           <CardHeader>
             <CardTitle>Weekly Activity</CardTitle>
-            <CardDescription>Interviews and screenings conducted this week</CardDescription>
+            <CardDescription>
+              Interviews and screenings conducted this week
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-80">
@@ -235,7 +247,11 @@ const Dashboard = () => {
                   <XAxis dataKey="name" />
                   <YAxis />
                   <RechartsTooltip />
-                  <Bar dataKey="screenings" fill="#8884d8" name="Resume Screenings" />
+                  <Bar
+                    dataKey="screenings"
+                    fill="#8884d8"
+                    name="Resume Screenings"
+                  />
                   <Bar dataKey="interviews" fill="#82ca9d" name="Interviews" />
                 </BarChart>
               </ResponsiveContainer>
@@ -243,11 +259,12 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Pipeline Chart */}
         <Card className="border-border/50">
           <CardHeader>
             <CardTitle>Hiring Pipeline</CardTitle>
-            <CardDescription>Current state of candidates in your pipeline</CardDescription>
+            <CardDescription>
+              Current state of candidates in your pipeline
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-80">
@@ -261,10 +278,15 @@ const Dashboard = () => {
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) =>
+                      `${name}: ${(percent * 100).toFixed(0)}%`
+                    }
                   >
                     {pipelineData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
                     ))}
                   </Pie>
                   <RechartsTooltip />
@@ -276,7 +298,6 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Jobs */}
         <Card className="border-border/50">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -293,9 +314,15 @@ const Dashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {recentJobs.map((job) => (
-                <div key={job.id} className="flex items-center justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0">
+                <div
+                  key={job.id}
+                  className="flex items-center justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0"
+                >
                   <div>
-                    <Link to={`/dashboard/jobs/${job.id}`} className="font-medium hover:underline">
+                    <Link
+                      to={`/dashboard/jobs/${job.id}`}
+                      className="font-medium hover:underline"
+                    >
                       {job.title}
                     </Link>
                     <div className="flex items-center text-sm text-muted-foreground">
@@ -319,7 +346,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Upcoming Interviews */}
         <Card className="border-border/50">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -336,9 +362,15 @@ const Dashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {upcomingInterviews.map((interview) => (
-                <div key={interview.id} className="flex items-center justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0">
+                <div
+                  key={interview.id}
+                  className="flex items-center justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0"
+                >
                   <div>
-                    <Link to={`/dashboard/interviews/${interview.id}`} className="font-medium hover:underline">
+                    <Link
+                      to={`/dashboard/interviews/${interview.id}`}
+                      className="font-medium hover:underline"
+                    >
                       {interview.candidate}
                     </Link>
                     <div className="text-sm text-muted-foreground mt-1">

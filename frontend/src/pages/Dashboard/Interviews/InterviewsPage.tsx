@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/common/PageHeader";
@@ -52,179 +51,47 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { interviewAPI } from "@/lib/api";
+import { InterviewData } from "@/types/interview";
 
-// Mock interview data
-const interviewsData = [
-  {
-    id: "int-1",
-    candidate: {
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      avatar: "",
-    },
-    job: "Senior Frontend Developer",
-    department: "Engineering",
-    score: 87,
-    status: "completed",
-    date: "Apr 5, 2023",
-    duration: "32 min",
-  },
-  {
-    id: "int-2",
-    candidate: {
-      name: "Michael Johnson",
-      email: "michael.johnson@example.com",
-      avatar: "",
-    },
-    job: "Product Marketing Manager",
-    department: "Marketing",
-    score: 92,
-    status: "completed",
-    date: "Apr 4, 2023",
-    duration: "28 min",
-  },
-  {
-    id: "int-3",
-    candidate: {
-      name: "David Lee",
-      email: "david.lee@example.com",
-      avatar: "",
-    },
-    job: "UX Designer",
-    department: "Design",
-    score: 79,
-    status: "completed",
-    date: "Apr 3, 2023",
-    duration: "35 min",
-  },
-  {
-    id: "int-4",
-    candidate: {
-      name: "Sarah Miller",
-      email: "sarah.miller@example.com",
-      avatar: "",
-    },
-    job: "DevOps Engineer",
-    department: "Engineering",
-    score: 0,
-    status: "scheduled",
-    date: "Apr 8, 2023",
-    duration: "Not started",
-  },
-  {
-    id: "int-5",
-    candidate: {
-      name: "Robert Wilson",
-      email: "robert.wilson@example.com",
-      avatar: "",
-    },
-    job: "Account Executive",
-    department: "Sales",
-    score: 0,
-    status: "scheduled",
-    date: "Apr 10, 2023",
-    duration: "Not started",
-  },
-  {
-    id: "int-6",
-    candidate: {
-      name: "Emily Davis",
-      email: "emily.davis@example.com",
-      avatar: "",
-    },
-    job: "Content Writer",
-    department: "Marketing",
-    score: 68,
-    status: "completed",
-    date: "Apr 2, 2023",
-    duration: "29 min",
-  },
-  {
-    id: "int-7",
-    candidate: {
-      name: "James Brown",
-      email: "james.brown@example.com",
-      avatar: "",
-    },
-    job: "Backend Developer",
-    department: "Engineering",
-    score: 90,
-    status: "completed",
-    date: "Apr 1, 2023",
-    duration: "40 min",
-  },
-  {
-    id: "int-8",
-    candidate: {
-      name: "Jennifer Martinez",
-      email: "jennifer.martinez@example.com",
-      avatar: "",
-    },
-    job: "HR Specialist",
-    department: "Human Resources",
-    score: 0,
-    status: "cancelled",
-    date: "Mar 31, 2023",
-    duration: "Cancelled",
-  },
-  {
-    id: "int-9",
-    candidate: {
-      name: "Daniel Taylor",
-      email: "daniel.taylor@example.com",
-      avatar: "",
-    },
-    job: "Financial Analyst",
-    department: "Finance",
-    score: 0,
-    status: "pending",
-    date: "Apr 15, 2023",
-    duration: "Waiting for candidate",
-  },
-  {
-    id: "int-10",
-    candidate: {
-      name: "Lisa Anderson",
-      email: "lisa.anderson@example.com",
-      avatar: "",
-    },
-    job: "Mobile Developer",
-    department: "Engineering",
-    score: 85,
-    status: "completed",
-    date: "Mar 30, 2023",
-    duration: "33 min",
-  },
-];
-
-const InterviewsIndex = () => {
+const InterviewsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
+  const [interviewsData, setInterviewsData] = useState<InterviewData[]>();
 
-  // Filter interviews based on search query and filters
-  const filteredInterviews = interviewsData.filter((interview) => {
-    // Search filter
-    const matchesSearch = interview.candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      interview.candidate.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      interview.job.toLowerCase().includes(searchQuery.toLowerCase());
-
-    // Status filter
-    const matchesStatus = statusFilter === "all" || interview.status === statusFilter;
-
-    // Department filter
-    const matchesDepartment = departmentFilter === "all" || interview.department === departmentFilter;
-
-    // Job filter
-    const matchesJob = jobFilter === "all" || interview.job === jobFilter;
-
-    return matchesSearch && matchesStatus && matchesDepartment && matchesJob;
-  });
-
-  // Get unique departments and jobs for filter dropdowns
-  const departments = Array.from(new Set(interviewsData.map(interview => interview.department)));
-  const jobs = Array.from(new Set(interviewsData.map(interview => interview.job)));
+  useEffect(() => {
+    const getInterviewData = async () => {
+      const res = await interviewAPI.getInterviews();
+      setInterviewsData(() =>
+        res.data.map((interview) => {
+          return {
+            id: interview.id,
+            status: interview.status,
+            firstName: interview.first_name,
+            lastName: interview.last_name,
+            email: interview.email,
+            phone: interview.phone,
+            workExperience: interview.work_experience,
+            education: interview.education,
+            skills: interview.skills,
+            location: interview.location,
+            linkedinUrl: interview.linkedin_url,
+            portfolioUrl: interview.portfolio_url,
+            resumeUrl: interview.resume_url,
+            resumeMatchScore: interview.resume_match_score,
+            resumeMatchFeedback: interview.resume_match_feedback,
+            overallScore: interview.overall_score,
+            feedback: interview.feedback,
+            createdAt: interview.created_at,
+            jobId: interview.job_id,
+          };
+        })
+      );
+    };
+    getInterviewData();
+  }, []);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -248,7 +115,10 @@ const InterviewsIndex = () => {
         );
       case "cancelled":
         return (
-          <Badge variant="outline" className="bg-destructive/10 text-destructive">
+          <Badge
+            variant="outline"
+            className="bg-destructive/10 text-destructive"
+          >
             <XCircle className="h-3 w-3 mr-1" /> Cancelled
           </Badge>
         );
@@ -266,12 +136,11 @@ const InterviewsIndex = () => {
 
   return (
     <DashboardLayout>
-      <PageHeader 
-        title="AI Interviews" 
+      <PageHeader
+        title="AI Interviews"
         description="Manage and review AI-conducted candidate interviews"
       />
 
-      {/* Filters */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -304,9 +173,11 @@ const InterviewsIndex = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-              ))}
+              {/* {departments.map((dept) => (
+                <SelectItem key={dept} value={dept}>
+                  {dept}
+                </SelectItem>
+              ))} */}
             </SelectContent>
           </Select>
 
@@ -317,9 +188,11 @@ const InterviewsIndex = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Jobs</SelectItem>
-              {jobs.map((job) => (
-                <SelectItem key={job} value={job}>{job}</SelectItem>
-              ))}
+              {/* {jobs.map((job) => (
+                <SelectItem key={job} value={job}>
+                  {job}
+                </SelectItem>
+              ))} */}
             </SelectContent>
           </Select>
         </div>
@@ -331,51 +204,45 @@ const InterviewsIndex = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Candidate</TableHead>
-              <TableHead>Job Position</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Duration</TableHead>
               <TableHead>Score</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredInterviews.length > 0 ? (
-              filteredInterviews.map((interview) => (
+            {interviewsData && interviewsData.length > 0 ? (
+              interviewsData.map((interview) => (
                 <TableRow key={interview.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={interview.candidate.avatar} alt={interview.candidate.name} />
+                        <AvatarImage src={null} alt={interview.firstName} />
                         <AvatarFallback>
-                          {interview.candidate.name.split(" ").map(n => n[0]).join("")}
+                          {interview.firstName[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <Link to={`/dashboard/interviews/${interview.id}`} className="font-medium hover:underline">
-                          {interview.candidate.name}
+                        <Link
+                          to={`/dashboard/interviews/${interview.id}`}
+                          className="font-medium hover:underline"
+                        >
+                          {interview.firstName} {interview.lastName}
                         </Link>
                         <div className="text-xs text-muted-foreground">
-                          {interview.candidate.email}
+                          {interview.email}
                         </div>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div>
-                      {interview.job}
-                      <div className="text-xs text-muted-foreground">
-                        {interview.department}
-                      </div>
-                    </div>
-                  </TableCell>
                   <TableCell>{getStatusBadge(interview.status)}</TableCell>
-                  <TableCell>{interview.date}</TableCell>
-                  <TableCell>{interview.duration}</TableCell>
+                  <TableCell>
+                    {new Date(interview.createdAt).toLocaleDateString()}
+                  </TableCell>
                   <TableCell>
                     {interview.status === "completed" ? (
-                      <span className={getScoreColor(interview.score)}>
-                        {interview.score}%
+                      <span className={getScoreColor(interview.overallScore)}>
+                        {interview.overallScore}%
                       </span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
@@ -401,13 +268,17 @@ const InterviewsIndex = () => {
                         {interview.status === "completed" && (
                           <>
                             <DropdownMenuItem asChild>
-                              <Link to={`/dashboard/interviews/${interview.id}/report`}>
+                              <Link
+                                to={`/dashboard/interviews/${interview.id}/report`}
+                              >
                                 <BarChart3 className="h-4 w-4 mr-2" />
                                 View Report
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link to={`/dashboard/interviews/${interview.id}/transcript`}>
+                              <Link
+                                to={`/dashboard/interviews/${interview.id}/transcript`}
+                              >
                                 <FileText className="h-4 w-4 mr-2" />
                                 View Transcript
                               </Link>
@@ -430,7 +301,10 @@ const InterviewsIndex = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center py-10 text-muted-foreground"
+                >
                   No interviews found matching your criteria
                 </TableCell>
               </TableRow>
@@ -446,7 +320,9 @@ const InterviewsIndex = () => {
             <PaginationPrevious href="#" />
           </PaginationItem>
           <PaginationItem>
-            <PaginationLink href="#" isActive>1</PaginationLink>
+            <PaginationLink href="#" isActive>
+              1
+            </PaginationLink>
           </PaginationItem>
           <PaginationItem>
             <PaginationLink href="#">2</PaginationLink>
@@ -463,4 +339,4 @@ const InterviewsIndex = () => {
   );
 };
 
-export default InterviewsIndex;
+export default InterviewsPage;

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import api from "@/lib/api";
+import api, { interviewAPI } from "@/lib/api";
 
 interface GenerateQuestionParams {
   jobDescription: string;
@@ -20,14 +20,7 @@ interface ProcessResponseParams {
 export function useInterviewResponseProcessor() {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const generateQuestion = async ({
-    jobDescription,
-    resumeText,
-    questionTypes,
-    maxQuestions,
-    interviewId,
-    conversationHistory = [],
-  }: GenerateQuestionParams): Promise<
+  const generateQuestion = async (): Promise<
     | {
         question: string;
         type: string;
@@ -36,14 +29,7 @@ export function useInterviewResponseProcessor() {
   > => {
     try {
       setIsProcessing(true);
-      const response = await api.post("/interview-ai/generate-question", {
-        job_description: jobDescription,
-        resume_text: resumeText,
-        question_types: questionTypes,
-        max_questions: maxQuestions,
-        interview_id: interviewId,
-        conversation_history: conversationHistory,
-      });
+      const response = await interviewAPI.generateQuestions();
       return response.data;
     } catch (error) {
       console.error("Error generating question:", error);

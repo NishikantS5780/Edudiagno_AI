@@ -1,16 +1,15 @@
-
-import React from "react";
+import React, { useContext } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
 import LoadingSpinner from "./LoadingSpinner";
+import { UserContext } from "@/context/UserContext";
 
 interface RequireAuthProps {
   children: React.ReactNode;
 }
 
 const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
-  const { user, isLoading } = useAuth();
   const location = useLocation();
+  const { recruiter, isLoading } = useContext(UserContext);
 
   if (isLoading) {
     return (
@@ -20,8 +19,7 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
     );
   }
 
-  if (!user) {
-    // Redirect to login but save the page they tried to visit
+  if (!recruiter) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,29 +33,30 @@ import { toast } from "sonner";
 import AIAvatar from "../../components/interview/AIAvatar";
 import RecordingButton from "../../components/interview/RecordingButton";
 import { useInterviewResponseProcessor } from "../../components/interview/InterviewResponseProcessor";
-import api from "@/lib/api";
+import api, { interviewAPI, textAPI } from "@/lib/api";
 import axios from "axios";
+import { InterviewData } from "@/types/interview";
+import { RecruiterData } from "@/types/recruiter";
+import { JobData } from "@/types/job";
 
-interface VideoInterviewProps {
-  jobTitle: string;
-  companyName: string;
-  interviewId: number;
-  candidate: any;
-  jobDescription: string;
-  resumeText: string;
-  onComplete: () => void;
-}
+// const VideoInterviewWrapper = () => {
+//   return (
+//     <VideoInterview
+//       jobTitle={interviewData.job.title}
+//       companyName={interviewData.job.company.name}
+//       interviewId={interviewData.id}
+//       candidate={interviewData.candidate}
+//       jobDescription={interviewData.job.description || ""}
+//       resumeText={interviewData.candidate?.resume_text || ""}
+//       onComplete={() => navigate(`/interview/${accessCode}/complete`)}
+//     />
+//   );
+// };
 
-export default function VideoInterview({
-  jobTitle,
-  companyName,
-  interviewId,
-  candidate,
-  jobDescription,
-  resumeText,
-  onComplete,
-}: VideoInterviewProps) {
-  const { accessCode } = useParams<{ accessCode: string }>();
+export default function VideoInterview() {
+  const [interviewData, setInterviewData] = useState<InterviewData>();
+  const [companyData, setCompanyData] = useState<RecruiterData>();
+  const [jobData, setJobData] = useState<JobData>();
   const navigate = useNavigate();
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -131,15 +132,13 @@ export default function VideoInterview({
   }, [speech]);
 
   useEffect(() => {
-    const text_to_speech = async () => {
-      console.log(currentQuestion);
-      const response = await api.post("/audio/text-to-speech", {
-        text: currentQuestion,
-      });
-
-      setSpeech(response.data.audio_base64);
-    };
-    text_to_speech();
+    if (currentQuestion.length) {
+      const text_to_speech = async () => {
+        const response = await textAPI.textToSpeech(currentQuestion);
+        setSpeech(response.data.audio_base64);
+      };
+      text_to_speech();
+    }
   }, [currentQuestion]);
 
   useEffect(() => {
@@ -158,7 +157,27 @@ export default function VideoInterview({
   }, [isInterviewActive]);
 
   useEffect(() => {
-    // Initialize video stream
+    const getCandidateData = async () => {
+      const res = await interviewAPI.candidateGetInterview();
+      const data = res.data;
+      setInterviewData({
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        location: data.location,
+        workExperience: data.work_experience,
+        education: data.education,
+        skills: data.skills,
+        linkedinUrl: data.linkedin_url,
+        portfolioUrl: data.portfolio_url,
+      });
+      setCompanyData({ name: data.company_name });
+      setJobData({ title: data.title });
+    };
+    getCandidateData();
+
     const initializeVideo = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -217,7 +236,6 @@ export default function VideoInterview({
           }
         };
 
-        // Set up error handler
         mediaRecorder.onerror = (error) => {
           console.error("MediaRecorder error:", error);
           toast.error("Recording error occurred");
@@ -398,7 +416,6 @@ export default function VideoInterview({
         audioChunks.push(event.data);
       };
 
-      // Create a promise to handle the transcription result
       const transcriptionPromise = new Promise<string>((resolve, reject) => {
         mediaRecorder.onstop = async () => {
           const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
@@ -407,34 +424,14 @@ export default function VideoInterview({
             type: audioBlob.type,
           });
 
-          // Create audio file
           const audioFile = new File([audioBlob], "audio.webm", {
             type: "audio/webm",
           });
 
-          // Log the file details before appending
-          console.log("Audio file details:", {
-            name: audioFile.name,
-            type: audioFile.type,
-            size: audioFile.size,
-          });
-
-          // Append data to FormData with the exact field names expected by the server
-          formData.append("audio_file", audioFile);
-          formData.append("interview_id", interviewId.toString());
-          formData.append("question_id", `question-${currentQuestionIndex}`);
-
           try {
-            // Make the API request
-            const response = await api.post(
-              "interview-ai/transcribe",
-              formData,
-              {
-                headers: {
-                  "Content-Type": "multipart/form-data",
-                },
-                timeout: 30000,
-              }
+            const response = await interviewAPI.submitAudioResponse(
+              audioFile,
+              currentQuestionIndex
             );
 
             console.log("Transcription response:", {
@@ -511,7 +508,7 @@ export default function VideoInterview({
     console.warn("Current question index:", currentQuestionIndex);
     console.warn("Interview flow length:", interviewFlow.length);
 
-    if (currentQuestionIndex < interviewFlow.length-1) {
+    if (currentQuestionIndex < interviewFlow.length - 1) {
       const nextIndex = currentQuestionIndex + 1;
       console.log("Moving to next question index:", nextIndex);
 
@@ -575,7 +572,6 @@ export default function VideoInterview({
       return newConversation;
     });
 
-    // Scroll to the bottom of the transcript
     if (transcriptEndRef.current) {
       transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
@@ -586,30 +582,13 @@ export default function VideoInterview({
     setIsPreparing(true);
 
     try {
-      // Generate all questions during preparation
-      const questions = await generateQuestion({
-        jobDescription,
-        resumeText,
-        questionTypes: ["behavioral", "resume", "job"],
-        maxQuestions: 8,
-        interviewId,
-        conversationHistory: [],
-      });
+      const questions = await generateQuestion();
 
-      // Handle both single question and array responses
       if (!questions || questions.length === 0) {
         throw new Error("Failed to generate questions");
       }
 
-      // Set up the interview flow with proper question types
-      const interviewFlow = [
-        {
-          type: "greeting",
-          question:
-            "Hello! I'm Alex, your AI interviewer. Could you please introduce yourself and tell me a bit about your background?",
-        },
-        ...questions,
-      ];
+      const interviewFlow = questions;
 
       // Log the interview flow for debugging
       console.log("Interview Flow:", interviewFlow);
@@ -760,7 +739,7 @@ export default function VideoInterview({
             </div>
             <CardTitle className="text-2xl">Interview Completed!</CardTitle>
             <CardDescription>
-              Thank you for completing your interview with {companyName}
+              Thank you for completing your interview with {companyData.name}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -781,11 +760,11 @@ export default function VideoInterview({
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Position</p>
-                    <p className="font-medium">{jobTitle}</p>
+                    <p className="font-medium">{jobData.title}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Company</p>
-                    <p className="font-medium">{companyName}</p>
+                    <p className="font-medium">{companyData.name}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Questions</p>
@@ -873,11 +852,11 @@ export default function VideoInterview({
       <header className="border-b bg-background/95 backdrop-blur-sm p-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
-            {companyName.charAt(0)}
+            {companyData.name[0]}
           </div>
           <div>
-            <h1 className="font-semibold">{jobTitle}</h1>
-            <p className="text-sm text-muted-foreground">{companyName}</p>
+            <h1 className="font-semibold">{jobData.title}</h1>
+            <p className="text-sm text-muted-foreground">{companyData.name}</p>
           </div>
         </div>
 

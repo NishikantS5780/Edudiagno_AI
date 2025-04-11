@@ -53,73 +53,37 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { jobAPI } from "@/lib/api";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import { jobAPI } from "@/lib/api";
+import { JobData } from "@/types/job";
 
-interface Job {
-  id: number;
-  title: string;
-  department: string;
-  location: string;
-  status: string;
-  created_at: string;
-  company_id: number;
-}
-
-interface JobStats {
-  candidates: {
-    total: number;
-    new: number;
-    reviewing: number;
-    interviewing: number;
-    hired: number;
-    rejected: number;
-  };
-  interviews: {
-    total: number;
-    pending: number;
-    completed: number;
-  };
-}
-
-const JobsIndex = () => {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [jobStats, setJobStats] = useState<Record<number, JobStats>>({});
+const JobsPage = () => {
+  const [jobs, setJobs] = useState<JobData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+  const departments = ["IT", "Healthcare"];
+  const locations = ["Mumbai", "Delhi"];
 
   const fetchJobs = async () => {
     try {
-      const response = await jobAPI.getAll();
+      const response = await jobAPI.recruiterGetAllJobs();
       const data = response.data;
-      setJobs(data);
-      // Fetch stats for each job
-      const statsPromises = data.map(async (job: Job) => {
-        try {
-          const statsResponse = await jobAPI.getStats(job.id);
-          return { jobId: job.id, stats: statsResponse.data };
-        } catch (error) {
-          console.error(`Error fetching stats for job ${job.id}:`, error);
-          return null;
-        }
-      });
-      const statsResults = await Promise.all(statsPromises);
-      const statsMap = statsResults.reduce((acc, result) => {
-        if (result) {
-          acc[result.jobId] = result.stats;
-        }
-        return acc;
-      }, {} as Record<number, JobStats>);
-      setJobStats(statsMap);
+      setJobs(
+        data.map((jobData) => {
+          return {
+            id: jobData.id,
+            title: jobData.title,
+            department: jobData.department,
+            location: jobData.location,
+            status: jobData.status,
+            createdAt: new Date(jobData.created_at),
+          };
+        })
+      );
     } catch (error) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to fetch jobs");
@@ -128,40 +92,9 @@ const JobsIndex = () => {
     }
   };
 
-  // Filter jobs based on search query and filters
-  const filteredJobs = jobs.filter((job) => {
-    // Search filter
-    const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.location.toLowerCase().includes(searchQuery.toLowerCase());
-
-    // Status filter
-    const matchesStatus = statusFilter === "all" || job.status === statusFilter;
-
-    // Department filter
-    const matchesDepartment = departmentFilter === "all" || job.department === departmentFilter;
-
-    // Location filter
-    const matchesLocation = locationFilter === "all" || job.location === locationFilter;
-
-    return matchesSearch && matchesStatus && matchesDepartment && matchesLocation;
-  });
-
-  // Logic for pagination
-  const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
-
-  // Handle pagination
-  const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  // Get unique departments and locations for filter dropdowns
-  const departments = Array.from(new Set(jobs.map(job => job.department)));
-  const locations = Array.from(new Set(jobs.map(job => job.location)));
+  useEffect(() => {
+    fetchJobs();
+  }, []);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -179,7 +112,10 @@ const JobsIndex = () => {
         );
       case "closed":
         return (
-          <Badge variant="outline" className="bg-destructive/10 text-destructive">
+          <Badge
+            variant="outline"
+            className="bg-destructive/10 text-destructive"
+          >
             <XCircle className="h-3 w-3 mr-1" /> Closed
           </Badge>
         );
@@ -190,10 +126,10 @@ const JobsIndex = () => {
 
   const handleDeleteJob = async (jobId: number) => {
     try {
-      const response = await jobAPI.delete(jobId);
+      const response = await jobAPI.deleteJob(jobId.toString());
       if (response.status === 204) {
         toast.success("Job deleted successfully");
-        fetchJobs(); // Refresh the jobs list
+        fetchJobs();
       } else {
         throw new Error("Failed to delete job");
       }
@@ -218,33 +154,7 @@ const JobsIndex = () => {
 
   const copyInterviewLink = async (jobId: number) => {
     try {
-      // Create a temporary candidate for the interview
-      const candidateData = {
-        first_name: "Temporary",
-        last_name: "Candidate",
-        email: "temp@example.com",
-        job_id: jobId
-      };
-      
-      // Create the candidate first
-      const candidateResponse = await jobAPI.createCandidate(candidateData);
-      const candidate = candidateResponse.data;
-      
-      // Create the interview with the temporary candidate
-      const interviewResponse = await jobAPI.createInterview({
-        job_id: jobId,
-        candidate_id: candidate.id,
-        scheduled_at: null
-      });
-      
-      // Check if we have a valid access code
-      if (!interviewResponse.data?.access_code) {
-        throw new Error("Failed to generate interview access code");
-      }
-      
-      // Generate the interview link using the access code
-      const interviewLink = `${window.location.origin}/interview/${interviewResponse.data.access_code}`;
-      
+      const interviewLink = `${window.location.origin}/interview?job_id=${jobId}`;
       await navigator.clipboard.writeText(interviewLink);
       toast.success("Interview link copied to clipboard", {
         description: interviewLink,
@@ -252,31 +162,6 @@ const JobsIndex = () => {
     } catch (error) {
       console.error("Error creating interview link:", error);
       toast.error("Failed to create interview link");
-    }
-  };
-
-  const handleDuplicateJob = async (jobId: number) => {
-    try {
-      const job = jobs.find(j => j.id === jobId);
-      if (!job) {
-        toast.error("Job not found");
-        return;
-      }
-
-      // Create a new job with the same data but with "(Copy)" appended to the title
-      const newJob = {
-        ...job,
-        title: `${job.title} (Copy)`,
-        status: "draft" // Set as draft by default
-      };
-      delete newJob.id; // Remove the ID so a new one is generated
-
-      await jobAPI.create(newJob);
-      toast.success("Job duplicated successfully");
-      fetchJobs(); // Refresh the jobs list
-    } catch (error) {
-      console.error("Error duplicating job:", error);
-      toast.error("Failed to duplicate job");
     }
   };
 
@@ -292,10 +177,7 @@ const JobsIndex = () => {
 
   return (
     <DashboardLayout>
-      <PageHeader 
-        title="Jobs" 
-        description="Create and manage job postings"
-      >
+      <PageHeader title="Jobs" description="Create and manage job postings">
         <Link to="/dashboard/jobs/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
@@ -337,7 +219,9 @@ const JobsIndex = () => {
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
               {departments.map((dept) => (
-                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                <SelectItem key={dept} value={dept}>
+                  {dept}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -350,7 +234,9 @@ const JobsIndex = () => {
             <SelectContent>
               <SelectItem value="all">All Locations</SelectItem>
               {locations.map((loc) => (
-                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                <SelectItem key={loc} value={loc}>
+                  {loc}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -372,11 +258,14 @@ const JobsIndex = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedJobs.length > 0 ? (
-              paginatedJobs.map((job) => (
+            {jobs.length > 0 ? (
+              jobs.map((job) => (
                 <TableRow key={job.id}>
                   <TableCell className="font-medium">
-                    <Link to={`/dashboard/jobs/${job.id}`} className="hover:underline">
+                    <Link
+                      to={`/dashboard/jobs/${job.id}`}
+                      className="hover:underline"
+                    >
                       {job.title}
                     </Link>
                   </TableCell>
@@ -385,9 +274,9 @@ const JobsIndex = () => {
                   <TableCell>{getStatusBadge(job.status)}</TableCell>
                   <TableCell className="flex items-center">
                     <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                    {jobStats[job.id]?.candidates.total || 0}
+                    {job.totalCandidatesCount || 0}
                   </TableCell>
-                  <TableCell>{formatDate(job.created_at)}</TableCell>
+                  <TableCell>{formatDate(job.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -411,16 +300,14 @@ const JobsIndex = () => {
                             Edit
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicateJob(job.id)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => copyInterviewLink(job.id)}>
+                        <DropdownMenuItem
+                          onClick={() => copyInterviewLink(job.id)}
+                        >
                           <Share className="h-4 w-4 mr-2" />
                           Share Interview Link
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => handleDeleteJob(job.id)}
                         >
@@ -434,7 +321,10 @@ const JobsIndex = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center py-10 text-muted-foreground"
+                >
                   No jobs found matching your criteria
                 </TableCell>
               </TableRow>
@@ -442,82 +332,8 @@ const JobsIndex = () => {
           </TableBody>
         </Table>
       </div>
-
-      {/* Pagination */}
-      {filteredJobs.length > 0 && (
-        <Pagination className="mt-6">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious 
-                onClick={() => goToPage(currentPage - 1)}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-            
-            {/* First page */}
-            {currentPage > 2 && (
-              <PaginationItem>
-                <PaginationLink onClick={() => goToPage(1)}>1</PaginationLink>
-              </PaginationItem>
-            )}
-            
-            {/* Ellipsis if needed */}
-            {currentPage > 3 && (
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-            )}
-            
-            {/* Page before current */}
-            {currentPage > 1 && (
-              <PaginationItem>
-                <PaginationLink onClick={() => goToPage(currentPage - 1)}>
-                  {currentPage - 1}
-                </PaginationLink>
-              </PaginationItem>
-            )}
-            
-            {/* Current page */}
-            <PaginationItem>
-              <PaginationLink isActive>{currentPage}</PaginationLink>
-            </PaginationItem>
-            
-            {/* Page after current */}
-            {currentPage < totalPages && (
-              <PaginationItem>
-                <PaginationLink onClick={() => goToPage(currentPage + 1)}>
-                  {currentPage + 1}
-                </PaginationLink>
-              </PaginationItem>
-            )}
-            
-            {/* Ellipsis if needed */}
-            {currentPage < totalPages - 2 && (
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-            )}
-            
-            {/* Last page */}
-            {currentPage < totalPages - 1 && totalPages > 1 && (
-              <PaginationItem>
-                <PaginationLink onClick={() => goToPage(totalPages)}>
-                  {totalPages}
-                </PaginationLink>
-              </PaginationItem>
-            )}
-            
-            <PaginationItem>
-              <PaginationNext 
-                onClick={() => goToPage(currentPage + 1)}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
     </DashboardLayout>
   );
 };
 
-export default JobsIndex;
+export default JobsPage;

@@ -17,29 +17,64 @@ from sqlalchemy import select, update
 
 from app import database, schemas
 from app.configs import openai
-from app.models import Interview, Job
+from app.models import Interview, Job, Recruiter
 from app.utils import jwt
-from app.dependencies.authorization import authorize_candidate
+from app.dependencies.authorization import authorize_candidate, authorize_recruiter
 
 router = APIRouter()
 
 
 @router.get("")
 async def get_interview(
-    request: Request,
-    id: str,
     db: Session = Depends(database.get_db),
     interview_id=Depends(authorize_candidate),
 ):
-    stmt = select(Interview).where(Interview.id == int(id))
+    stmt = (
+        select(
+            Interview.id,
+            Interview.status,
+            Interview.first_name,
+            Interview.last_name,
+            Interview.email,
+            Interview.phone,
+            Interview.work_experience,
+            Interview.education,
+            Interview.skills,
+            Interview.location,
+            Interview.linkedin_url,
+            Interview.portfolio_url,
+            Interview.resume_url,
+            Interview.resume_text,
+            Interview.resume_match_score,
+            Interview.resume_match_feedback,
+            Interview.overall_score,
+            Interview.feedback,
+            Job.title,
+            Recruiter.company_name,
+        )
+        .join(Job, Interview.job_id == Job.id)
+        .join(Recruiter, Job.company_id == Recruiter.id)
+        .where(Interview.id == interview_id)
+    )
     result = db.execute(stmt)
-    interview = result.scalars().all()[0]
+    interview = result.all()[0]._mapping
     return interview
+
+
+@router.get("/recruiter-view/all")
+async def get_interview(
+    request: Request,
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
+):
+    stmt = select(Interview).join(Job).where(Job.company_id == recruiter_id)
+    result = db.execute(stmt)
+    interviews = result.scalars().all()
+    return interviews
 
 
 @router.post("")
 async def create_interview(
-    request: Request,
     response: Response,
     interview_data: schemas.CreateInterview,
     db: Session = Depends(database.get_db),
@@ -55,7 +90,6 @@ async def create_interview(
         location=interview_data.location,
         linkedin_url=interview_data.linkedin_url,
         portfolio_url=interview_data.portfolio_url,
-        resume_url=interview_data.resume_url,
         resume_text=interview_data.resume_text,
         job_id=interview_data.job_id,
     )
@@ -87,7 +121,8 @@ async def upload_resume(
             status_code=status.HTTP_400_BAD_REQUEST, detail="No file provided"
         )
 
-    file_path = os.path.join("uploads", "resume", interview_id)
+    file_path = os.path.join("uploads", "resume", str(interview_id))
+    os.makedirs("uploads/resume", exist_ok=True)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -141,13 +176,17 @@ async def update_interview(
 @router.post("/analyze-resume")
 async def analyze_resume(
     request: Request,
-    data: schemas.AnalyzeResume,
     db: Session = Depends(database.get_db),
+    interview_id=Depends(authorize_candidate),
 ):
-    stmt = select(Job).where(Job.id == data.job_id)
-    job = db.execute(stmt).scalars().all()[0]
+    stmt = (
+        select(Job.description, Job.requirements, Interview.resume_text)
+        .join(Interview)
+        .where(Interview.id == interview_id)
+    )
+    data = db.execute(stmt).all()[0]
 
-    if not job:
+    if not data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
@@ -155,20 +194,18 @@ async def analyze_resume(
     prompt = f"""Analyze how well this resume matches the job description and requirements.
     Return ONLY a JSON object with these exact fields:
     {{
-        "match_score": number between 0 and 100,
-        "strengths": ["List of strengths"],
-        "improvements": ["List of areas for improvement"],
-        "feedback": "Detailed feedback about the match"
+        "resume_match_score": number between 0 and 100,
+        "resume_match_feedback": "Detailed feedback about the match"
     }}
 
     Resume Text:
-    {data.resume_data}
+    {data.resume_text}
 
     Job Description:
-    {job.description}
+    {data.description}
 
     Job Requirements:
-    {job.requirements}
+    {data.requirements}
 
     Important:
     - Return ONLY the JSON object, no other text
@@ -194,11 +231,15 @@ async def analyze_resume(
     match_analysis = response.choices[0].message.content
     match_data = json.loads(match_analysis)
 
-    return {
-        "match_analysis": {
-            "match_score": match_data.get("match_score", 0),
-            "strengths": match_data.get("strengths", []),
-            "improvements": match_data.get("improvements", []),
-            "feedback": match_data.get("feedback", ""),
-        },
-    }
+    stmt = (
+        update(Interview)
+        .values(
+            resume_match_score=int(match_data["resume_match_score"]),
+            resume_match_feedback=match_data["resume_match_feedback"],
+        )
+        .returning(Interview)
+    )
+
+    interview = db.execute(stmt).scalars().all()[0]
+
+    return interview

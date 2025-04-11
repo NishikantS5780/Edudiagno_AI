@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Wand2, Copy, ArrowRight, Sparkles, PenBox, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
-import { jobAPI } from "@/lib/api";
 
 interface AIGeneratePopupProps {
   title: string;

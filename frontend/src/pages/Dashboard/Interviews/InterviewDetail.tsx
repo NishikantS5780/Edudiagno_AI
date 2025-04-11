@@ -2,7 +2,13 @@ import React, { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,7 +29,7 @@ import {
   ThumbsDown,
   AlertTriangle,
   ArrowRight,
-  Play
+  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -117,7 +123,8 @@ const interviewData = {
     problemSolving: 88,
     culturalFit: 83,
   },
-  aiNotes: "Jane demonstrated strong technical knowledge, particularly in React and modern JavaScript. She articulated complex concepts clearly and showed good problem-solving skills. Her experience aligns well with the role requirements. She could improve slightly on explaining her approach to team collaboration.",
+  aiNotes:
+    "Jane demonstrated strong technical knowledge, particularly in React and modern JavaScript. She articulated complex concepts clearly and showed good problem-solving skills. Her experience aligns well with the role requirements. She could improve slightly on explaining her approach to team collaboration.",
   transcript: [
     {
       speaker: "AI",
@@ -208,28 +215,28 @@ const interviewData = {
       analysis: "Sample analysis 5",
       score: 91,
       videoUrl: "https://example.com/recordings/q5.webm",
-    }
+    },
   ],
   questions: [
     {
       id: "q1",
       text: "Tell me about your experience with educational assessment tools.",
       type: "behavioral",
-      category: "experience"
+      category: "experience",
     },
     {
       id: "q2",
       text: "How would you handle a situation where a student disagrees with their assessment results?",
       type: "situational",
-      category: "conflict resolution"
+      category: "conflict resolution",
     },
     {
       id: "q3",
       text: "What metrics do you consider most important when evaluating educational outcomes?",
       type: "technical",
-      category: "assessment"
-    }
-  ]
+      category: "assessment",
+    },
+  ],
 };
 
 const getInterviewData = (id: string): Interview => {
@@ -247,11 +254,11 @@ const InterviewDetail = () => {
   const interview = getInterviewData(id);
 
   const copyInterviewLink = () => {
-    const link = `${window.location.origin}/interviews/share/${id}`;
+    const link = `${window.location.origin}/interviews?job_id=${id}`;
     navigator.clipboard.writeText(link);
     setIsLinkCopied(true);
     toast.success("Interview link copied to clipboard");
-    
+
     setTimeout(() => {
       setIsLinkCopied(false);
     }, 3000);
@@ -291,10 +298,12 @@ const InterviewDetail = () => {
   const playVideo = (index: number) => {
     setCurrentVideoIndex(index);
     setIsPlaying(true);
-    
-    const videoElement = document.getElementById(`video-response-${index}`) as HTMLVideoElement;
+
+    const videoElement = document.getElementById(
+      `video-response-${index}`
+    ) as HTMLVideoElement;
     if (videoElement) {
-      videoElement.play().catch(err => {
+      videoElement.play().catch((err) => {
         console.error("Error playing video:", err);
         toast.error("Error playing video");
       });
@@ -305,7 +314,11 @@ const InterviewDetail = () => {
     <DashboardLayout>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => navigate("/dashboard/interviews")}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate("/dashboard/interviews")}
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold">Interview Details</h1>
@@ -329,18 +342,26 @@ const InterviewDetail = () => {
           </Button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card className="md:col-span-2">
           <CardHeader className="flex flex-row items-center gap-4 pb-2">
             <Avatar className="h-14 w-14">
-              <AvatarImage src={interview.candidate.avatar} alt={interview.candidate.name} />
+              <AvatarImage
+                src={interview.candidate.avatar}
+                alt={interview.candidate.name}
+              />
               <AvatarFallback className="text-lg">
-                {interview.candidate.name.split(" ").map(n => n[0]).join("")}
+                {interview.candidate.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-xl">{interview.candidate.name}</CardTitle>
+              <CardTitle className="text-xl">
+                {interview.candidate.name}
+              </CardTitle>
               <CardDescription>{interview.candidate.email}</CardDescription>
             </div>
           </CardHeader>
@@ -349,16 +370,25 @@ const InterviewDetail = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Interview for</p>
                 <p className="font-medium">
-                  <Link to={`/dashboard/jobs/${interview.job.id}`} className="hover:underline">
+                  <Link
+                    to={`/dashboard/jobs/${interview.job.id}`}
+                    className="hover:underline"
+                  >
                     {interview.job.title}
                   </Link>
                 </p>
-                <p className="text-sm text-muted-foreground">{interview.job.department}</p>
+                <p className="text-sm text-muted-foreground">
+                  {interview.job.department}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Resume</p>
                 <Button variant="link" className="p-0 h-auto" asChild>
-                  <a href={interview.candidate.resume} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={interview.candidate.resume}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     View Resume <ArrowRight className="h-4 w-4 ml-1" />
                   </a>
                 </Button>
@@ -366,7 +396,7 @@ const InterviewDetail = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Interview Summary</CardTitle>
@@ -396,15 +426,23 @@ const InterviewDetail = () => {
             </div>
             <div className="flex items-center justify-between">
               <span>Overall Score:</span>
-              <span className={`text-xl font-bold ${getScoreColor(interview.score)}`}>
+              <span
+                className={`text-xl font-bold ${getScoreColor(
+                  interview.score
+                )}`}
+              >
                 {interview.score}%
               </span>
             </div>
           </CardContent>
         </Card>
       </div>
-      
-      <Tabs value={interviewTab} onValueChange={setInterviewTab} className="space-y-4">
+
+      <Tabs
+        value={interviewTab}
+        onValueChange={setInterviewTab}
+        className="space-y-4"
+      >
         <TabsList className="grid grid-cols-4">
           <TabsTrigger value="overview">
             <BarChart3 className="h-4 w-4 mr-2" />
@@ -423,56 +461,86 @@ const InterviewDetail = () => {
             AI Insights
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="overview" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Score Breakdown</CardTitle>
-              <CardDescription>Detailed assessment of candidate performance</CardDescription>
+              <CardDescription>
+                Detailed assessment of candidate performance
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span>Technical Skills</span>
-                  <span className={getScoreColor(interview.scoreBreakdown.technicalSkills)}>
+                  <span
+                    className={getScoreColor(
+                      interview.scoreBreakdown.technicalSkills
+                    )}
+                  >
                     {interview.scoreBreakdown.technicalSkills}%
                   </span>
                 </div>
-                <Progress value={interview.scoreBreakdown.technicalSkills} className="h-2" />
+                <Progress
+                  value={interview.scoreBreakdown.technicalSkills}
+                  className="h-2"
+                />
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span>Communication</span>
-                  <span className={getScoreColor(interview.scoreBreakdown.communication)}>
+                  <span
+                    className={getScoreColor(
+                      interview.scoreBreakdown.communication
+                    )}
+                  >
                     {interview.scoreBreakdown.communication}%
                   </span>
                 </div>
-                <Progress value={interview.scoreBreakdown.communication} className="h-2" />
+                <Progress
+                  value={interview.scoreBreakdown.communication}
+                  className="h-2"
+                />
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span>Problem Solving</span>
-                  <span className={getScoreColor(interview.scoreBreakdown.problemSolving)}>
+                  <span
+                    className={getScoreColor(
+                      interview.scoreBreakdown.problemSolving
+                    )}
+                  >
                     {interview.scoreBreakdown.problemSolving}%
                   </span>
                 </div>
-                <Progress value={interview.scoreBreakdown.problemSolving} className="h-2" />
+                <Progress
+                  value={interview.scoreBreakdown.problemSolving}
+                  className="h-2"
+                />
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span>Cultural Fit</span>
-                  <span className={getScoreColor(interview.scoreBreakdown.culturalFit)}>
+                  <span
+                    className={getScoreColor(
+                      interview.scoreBreakdown.culturalFit
+                    )}
+                  >
                     {interview.scoreBreakdown.culturalFit}%
                   </span>
                 </div>
-                <Progress value={interview.scoreBreakdown.culturalFit} className="h-2" />
+                <Progress
+                  value={interview.scoreBreakdown.culturalFit}
+                  className="h-2"
+                />
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">AI Recommendations</CardTitle>
@@ -490,12 +558,14 @@ const InterviewDetail = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="transcript" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Interview Transcript</CardTitle>
-              <CardDescription>Complete conversation between AI and candidate</CardDescription>
+              <CardDescription>
+                Complete conversation between AI and candidate
+              </CardDescription>
             </CardHeader>
             <CardContent className="max-h-[600px] overflow-y-auto">
               <div className="space-y-6">
@@ -513,16 +583,22 @@ const InterviewDetail = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Key Terms</CardTitle>
-              <CardDescription>Frequently mentioned terms and sentiment analysis</CardDescription>
+              <CardDescription>
+                Frequently mentioned terms and sentiment analysis
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 {interview.keywords.map((keyword, index) => (
-                  <Badge key={index} variant="outline" className="flex items-center gap-1 p-2">
+                  <Badge
+                    key={index}
+                    variant="outline"
+                    className="flex items-center gap-1 p-2"
+                  >
                     {keyword.term} ({keyword.count})
                     {getSentimentIcon(keyword.sentiment)}
                   </Badge>
@@ -531,20 +607,25 @@ const InterviewDetail = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="video" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Interview Recordings</CardTitle>
-              <CardDescription>Candidate's recorded responses to each question</CardDescription>
+              <CardDescription>
+                Candidate's recorded responses to each question
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
                 <div className="aspect-video bg-muted rounded-md flex items-center justify-center relative">
-                  {interview.recordedResponses && interview.recordedResponses.length > 0 ? (
+                  {interview.recordedResponses &&
+                  interview.recordedResponses.length > 0 ? (
                     <video
                       id={`video-response-${currentVideoIndex}`}
-                      src={interview.recordedResponses[currentVideoIndex].videoUrl}
+                      src={
+                        interview.recordedResponses[currentVideoIndex].videoUrl
+                      }
                       className="w-full h-full rounded-md"
                       controls
                       onEnded={() => setIsPlaying(false)}
@@ -554,64 +635,83 @@ const InterviewDetail = () => {
                   ) : (
                     <div className="text-center p-10">
                       <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground">No recordings available</p>
+                      <p className="text-muted-foreground">
+                        No recordings available
+                      </p>
                     </div>
                   )}
-                  
-                  {!isPlaying && interview.recordedResponses && interview.recordedResponses.length > 0 && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-16 w-16 rounded-full bg-background/80 hover:bg-background/100"
-                        onClick={() => playVideo(currentVideoIndex)}
-                      >
-                        <Play className="h-8 w-8" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                
-                {interview.recordedResponses && interview.recordedResponses.length > 0 && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                      {interview.questions.map((question, index) => (
-                        <Card 
-                          key={question.id} 
-                          className={`cursor-pointer transition-all hover:border-primary ${currentVideoIndex === index ? 'border-primary bg-primary/5' : ''}`}
-                          onClick={() => setCurrentVideoIndex(index)}
+
+                  {!isPlaying &&
+                    interview.recordedResponses &&
+                    interview.recordedResponses.length > 0 && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-16 w-16 rounded-full bg-background/80 hover:bg-background/100"
+                          onClick={() => playVideo(currentVideoIndex)}
                         >
-                          <CardContent className="p-4 flex flex-col items-center">
-                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mb-2">
-                              {index + 1}
-                            </div>
-                            <p className="text-xs text-center line-clamp-2">
-                              {question.text}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setCurrentVideoIndex(prev => Math.max(0, prev - 1))}
-                        disabled={currentVideoIndex === 0}
-                      >
-                        Previous Answer
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        onClick={() => setCurrentVideoIndex(prev => Math.min(interview.questions.length - 1, prev + 1))}
-                        disabled={currentVideoIndex === interview.questions.length - 1}
-                      >
-                        Next Answer
-                      </Button>
-                    </div>
-                  </>
-                )}
-                
+                          <Play className="h-8 w-8" />
+                        </Button>
+                      </div>
+                    )}
+                </div>
+
+                {interview.recordedResponses &&
+                  interview.recordedResponses.length > 0 && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        {interview.questions.map((question, index) => (
+                          <Card
+                            key={question.id}
+                            className={`cursor-pointer transition-all hover:border-primary ${
+                              currentVideoIndex === index
+                                ? "border-primary bg-primary/5"
+                                : ""
+                            }`}
+                            onClick={() => setCurrentVideoIndex(index)}
+                          >
+                            <CardContent className="p-4 flex flex-col items-center">
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mb-2">
+                                {index + 1}
+                              </div>
+                              <p className="text-xs text-center line-clamp-2">
+                                {question.text}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-between">
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            setCurrentVideoIndex((prev) =>
+                              Math.max(0, prev - 1)
+                            )
+                          }
+                          disabled={currentVideoIndex === 0}
+                        >
+                          Previous Answer
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            setCurrentVideoIndex((prev) =>
+                              Math.min(interview.questions.length - 1, prev + 1)
+                            )
+                          }
+                          disabled={
+                            currentVideoIndex === interview.questions.length - 1
+                          }
+                        >
+                          Next Answer
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
                 <div className="flex justify-end mt-4">
                   <Button variant="outline">
                     <Download className="h-4 w-4 mr-2" />
@@ -622,48 +722,62 @@ const InterviewDetail = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="insights" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">AI Interview Notes</CardTitle>
-              <CardDescription>Detailed observations from the AI interviewer</CardDescription>
+              <CardDescription>
+                Detailed observations from the AI interviewer
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-relaxed">{interview.aiNotes}</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
                 <AlertTriangle className="h-5 w-5 mr-2 text-yellow-500" />
                 Areas for Follow-up
               </CardTitle>
-              <CardDescription>Topics that may require additional discussion</CardDescription>
+              <CardDescription>
+                Topics that may require additional discussion
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2">
                   <ArrowRight className="h-4 w-4 mt-1 flex-shrink-0" />
-                  <span>Probe further on experience with large-scale applications</span>
+                  <span>
+                    Probe further on experience with large-scale applications
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <ArrowRight className="h-4 w-4 mt-1 flex-shrink-0" />
-                  <span>Ask for specific examples of leadership in challenging situations</span>
+                  <span>
+                    Ask for specific examples of leadership in challenging
+                    situations
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <ArrowRight className="h-4 w-4 mt-1 flex-shrink-0" />
-                  <span>Verify knowledge of latest frontend testing methodologies</span>
+                  <span>
+                    Verify knowledge of latest frontend testing methodologies
+                  </span>
                 </li>
               </ul>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       <div className="mt-8 flex justify-end gap-4">
-        <Button variant="outline" onClick={() => navigate("/dashboard/interviews")}>
+        <Button
+          variant="outline"
+          onClick={() => navigate("/dashboard/interviews")}
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Interviews
         </Button>
