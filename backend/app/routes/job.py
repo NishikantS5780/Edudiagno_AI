@@ -5,6 +5,7 @@ from sqlalchemy import case, delete, select
 from app import schemas, database
 from app.models import Job, Recruiter
 from app.dependencies.authorization import authorize_recruiter
+from app.configs import openai
 
 router = APIRouter()
 
@@ -95,6 +96,72 @@ async def create_job(
     db.commit()
     db.refresh(job)
     return job
+
+
+@router.post("/generate-description")
+async def generate_description(generate_jd_data: schemas.GenerateJobDescription):
+    prompt = f"""
+    Create a comprehensive job description for a {generate_jd_data.title} position in the {generate_jd_data.department} department.
+    The position is {generate_jd_data.location}-based.
+    
+    Include the following sections:
+    1. Overview of the role and responsibilities
+    2. Requirements and qualifications
+    3. Benefits and perks
+    
+    Format the content with markdown, using ## for section headers.
+    """
+
+    print(f"Making OpenAI API call with model: gpt-4")
+    response = await openai.client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a professional HR assistant specializing in creating compelling job descriptions.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.7,
+        max_tokens=1000,
+    )
+    description = response.choices[0].message.content
+
+    return {"description": description}
+
+
+@router.post("/generate-requirements")
+async def generate_requirements(generate_jr_data: schemas.GenerateJobRequirement):
+    """Generate job requirements using OpenAI"""
+    prompt = f"""
+    Create a comprehensive list of requirements for a {generate_jr_data.title} position in the {generate_jr_data.department} department.
+    The position is {generate_jr_data.location}-based.
+    
+    {f"Additional keywords to consider: {generate_jr_data.keywords}" if generate_jr_data.keywords else ""}
+    
+    Include:
+    1. Required qualifications and education
+    2. Required experience and skills
+    3. Technical requirements
+    4. Soft skills and personal attributes
+    
+    Format the content with bullet points.
+    """
+
+    response = await openai.client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a professional HR assistant specializing in creating detailed job requirements.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.7,
+        max_tokens=1000,
+    )
+    requirements = response.choices[0].message.content
+    return {"requirements": requirements}
 
 
 @router.delete("", status_code=204)

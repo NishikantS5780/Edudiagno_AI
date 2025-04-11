@@ -20,6 +20,7 @@ import { JobData } from "@/types/job";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import AIGeneratePopup from "@/components/jobs/AIGeneratePopup";
 
 const jobFormSchema = z.object({
   title: z
@@ -261,8 +262,22 @@ const NewJob = () => {
             </div>
 
             <div className="col-span-1 lg:col-span-3">
-              <Label>Description</Label>
+              <div className="flex justify-between items-center">
+                <Label>Description</Label>
+                <AIGeneratePopup
+                  title={"Generate Description for Job"}
+                  fieldLabel={"Description"}
+                  jobTitle={jobData.title}
+                  department={jobData.department}
+                  location={jobData.location}
+                  jobType={jobData.type}
+                  onGenerated={function (content: string): void {
+                    setJobData({ ...jobData, description: content });
+                  }}
+                />
+              </div>
               <Textarea
+                className="min-h-52"
                 onChange={(e) =>
                   setJobData({ ...jobData, description: e.target.value })
                 }
@@ -271,8 +286,22 @@ const NewJob = () => {
             </div>
 
             <div className="col-span-1 lg:col-span-3">
-              <Label>Requirements</Label>
+              <div className="flex justify-between items-center">
+                <Label>Requirements</Label>
+                <AIGeneratePopup
+                  title={"Generate Description for Job"}
+                  fieldLabel={"Requirements"}
+                  jobTitle={jobData.title}
+                  department={jobData.department}
+                  location={jobData.location}
+                  jobType={jobData.type}
+                  onGenerated={function (content: string): void {
+                    setJobData({ ...jobData, requirements: content });
+                  }}
+                />
+              </div>
               <Textarea
+                className="min-h-52"
                 onChange={(e) =>
                   setJobData({ ...jobData, requirements: e.target.value })
                 }
@@ -283,6 +312,7 @@ const NewJob = () => {
             <div className="col-span-1 lg:col-span-3">
               <Label>Benefits</Label>
               <Textarea
+                className="min-h-52"
                 onChange={(e) =>
                   setJobData({ ...jobData, benefits: e.target.value })
                 }

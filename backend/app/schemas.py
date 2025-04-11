@@ -111,3 +111,16 @@ class UpdateInterview(BaseModel):
 
 class TextToSpeech(BaseModel):
     text: str
+
+
+class GenerateJobDescription(BaseModel):
+    title: str
+    department: str
+    location: str
+
+
+class GenerateJobRequirement(BaseModel):
+    title: str
+    department: str
+    location: str
+    keywords: str

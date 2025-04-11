@@ -38,6 +38,7 @@ import axios from "axios";
 import { InterviewData } from "@/types/interview";
 import { RecruiterData } from "@/types/recruiter";
 import { JobData } from "@/types/job";
+import { flushSync } from "react-dom";
 
 // const VideoInterviewWrapper = () => {
 //   return (
@@ -913,13 +914,7 @@ export default function VideoInterview() {
                     Take a moment to gather your thoughts. The interview will
                     start automatically when the timer ends.
                   </p>
-                  <Button
-                    className="mt-8"
-                    onClick={() => {
-                      setIsPreparing(false);
-                      startInterview();
-                    }}
-                  >
+                  <Button className="mt-8" onClick={startInterview}>
                     Skip Preparation
                   </Button>
                 </div>

@@ -1,13 +1,27 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Wand2, Copy, ArrowRight, Sparkles, PenBox, Lightbulb } from "lucide-react";
+import {
+  Wand2,
+  Copy,
+  ArrowRight,
+  Sparkles,
+  PenBox,
+  Lightbulb,
+} from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import { jobAPI } from "@/lib/api";
 
 interface AIGeneratePopupProps {
   title: string;
@@ -48,8 +62,6 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
         return <PenBox className="mr-2 h-4 w-4" />;
       case "Requirements":
         return <Lightbulb className="mr-2 h-4 w-4" />;
-      case "Benefits":
-        return <Sparkles className="mr-2 h-4 w-4" />;
       default:
         return <Wand2 className="mr-2 h-4 w-4" />;
     }
@@ -58,6 +70,16 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
   const handleGenerate = async () => {
     if (!jobTitle) {
       toast.error("Please enter a job title first");
+      return;
+    }
+
+    if (!department) {
+      toast.error("Please select department first");
+      return;
+    }
+
+    if (!location) {
+      toast.error("Please select department first");
       return;
     }
 
@@ -72,21 +94,27 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
     }
 
     setIsGenerating(true);
-    
+
     try {
       let content = "";
-      
+
       if (fieldLabel === "Description") {
-        const response = await jobAPI.generateDescription(jobTitle, department, location);
-        content = response.description;
+        const response = await jobAPI.generateDescription(
+          jobTitle,
+          department,
+          location
+        );
+        content = response.data.description;
       } else if (fieldLabel === "Requirements") {
-        const response = await jobAPI.generateRequirements(jobTitle, department, location, keywords);
-        content = response.requirements;
-      } else if (fieldLabel === "Benefits") {
-        const response = await jobAPI.generateBenefits(jobTitle, department, location, keywords);
-        content = response.benefits;
+        const response = await jobAPI.generateRequirements(
+          jobTitle,
+          department,
+          location,
+          keywords
+        );
+        content = response.data.requirements;
       }
-      
+
       setGeneratedContent(content);
       toast.success(`${fieldLabel} generated successfully`);
     } catch (error) {
@@ -102,7 +130,7 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
       onGenerated(generatedContent);
       setOpen(false);
       toast.success(`${fieldLabel} applied successfully`);
-      
+
       // Reset state for next time
       setGeneratedContent("");
       setKeywords("");
@@ -112,17 +140,21 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(generatedContent)
+    navigator.clipboard
+      .writeText(generatedContent)
       .then(() => toast.success("Copied to clipboard"))
       .catch(() => toast.error("Failed to copy"));
   };
 
   return (
     <>
-      <Button 
+      <Button
         variant={buttonVariant}
-        size={buttonSize}
-        onClick={() => setOpen(true)}
+        size={"sm"}
+        onClick={(e) => {
+          e.preventDefault();
+          setOpen(true);
+        }}
         className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 hover:from-blue-600 hover:to-purple-600 hover:text-white transition-all shadow-sm hover:shadow-md"
       >
         {getButtonIcon()}
@@ -149,30 +181,44 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Title:</span>
-                      <span className="font-medium">{jobTitle || "Not specified"}</span>
+                      <span className="font-medium">
+                        {jobTitle || "Not specified"}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Department:</span>
-                      <span className="font-medium">{department || "Not specified"}</span>
+                      <span className="font-medium">
+                        {department || "Not specified"}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Location:</span>
-                      <span className="font-medium">{location || "Not specified"}</span>
+                      <span className="font-medium">
+                        {location || "Not specified"}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Type:</span>
-                      <span className="font-medium">{jobType || "Not specified"}</span>
+                      <span className="font-medium">
+                        {jobType || "Not specified"}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 <Tabs value={tabValue} onValueChange={setTabValue}>
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="keywords" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                    <TabsTrigger
+                      value="keywords"
+                      className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+                    >
                       <Sparkles className="h-4 w-4 mr-2" />
                       Keywords
                     </TabsTrigger>
-                    <TabsTrigger value="custom" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+                    <TabsTrigger
+                      value="custom"
+                      className="data-[state=active]:bg-purple-500 data-[state=active]:text-white"
+                    >
                       <PenBox className="h-4 w-4 mr-2" />
                       Custom Prompt
                     </TabsTrigger>
@@ -219,13 +265,20 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
                     <Lightbulb className="h-4 w-4 text-amber-500" />
                     Generated {fieldLabel}
                   </h3>
-                  <Button variant="outline" size="sm" onClick={copyToClipboard} className="hover:bg-slate-100 border-slate-300">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyToClipboard}
+                    className="hover:bg-slate-100 border-slate-300"
+                  >
                     <Copy className="mr-1.5 h-3.5 w-3.5" />
                     Copy
                   </Button>
                 </div>
                 <div className="border rounded-md p-4 min-h-[200px] max-h-[300px] overflow-y-auto bg-white/50 backdrop-blur-sm shadow-inner">
-                  <pre className="whitespace-pre-wrap font-sans text-sm">{generatedContent}</pre>
+                  <pre className="whitespace-pre-wrap font-sans text-sm">
+                    {generatedContent}
+                  </pre>
                 </div>
               </div>
             )}
@@ -233,8 +286,8 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
 
           <DialogFooter>
             {!generatedContent ? (
-              <Button 
-                onClick={handleGenerate} 
+              <Button
+                onClick={handleGenerate}
                 disabled={isGenerating}
                 className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
               >
@@ -251,7 +304,7 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
                 )}
               </Button>
             ) : (
-              <Button 
+              <Button
                 onClick={handleApply}
                 className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white"
               >

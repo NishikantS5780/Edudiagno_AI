@@ -157,6 +157,32 @@ export const jobAPI = {
     });
     return res;
   },
+  generateDescription: async (
+    jobTitle: string,
+    department: string,
+    location: string
+  ) => {
+    const res = await api.post("/job/generate-description", {
+      title: jobTitle,
+      department: department,
+      location: location,
+    });
+    return res;
+  },
+  generateRequirements: async (
+    jobTitle: string,
+    department: string,
+    location: string,
+    keywords: string
+  ) => {
+    const res = await api.post("/job/generate-requirements", {
+      title: jobTitle,
+      department: department,
+      location: location,
+      keywords: keywords,
+    });
+    return res;
+  },
 };
 
 export const textAPI = {
