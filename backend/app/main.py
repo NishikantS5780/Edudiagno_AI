@@ -72,19 +72,19 @@ from app.routes import (
     text,
 )
 
-app.include_router(recruiter.router, prefix="/recruiter", tags=["Recruiter"])
-app.include_router(job.router, prefix="/job", tags=["Job"])
-app.include_router(interview.router, prefix="/interview", tags=["Interview"])
+app.include_router(recruiter.router, prefix="/api/recruiter", tags=["Recruiter"])
+app.include_router(job.router, prefix="/api/job", tags=["Job"])
+app.include_router(interview.router, prefix="/api/interview", tags=["Interview"])
 app.include_router(
     interview_question_and_response.router,
-    prefix="/interview-question-and-response",
+    prefix="/api/interview-question-and-response",
     tags=["Interview Question"],
 )
-app.include_router(resume.router, prefix="/resume", tags=["Resume"])
-app.include_router(text.router, prefix="/text", tags=["Text"])
+app.include_router(resume.router, prefix="/api/resume", tags=["Resume"])
+app.include_router(text.router, prefix="/api/text", tags=["Text"])
 
 
-@app.get("/", tags=["Health"])
+@app.get("/api", tags=["Health"])
 def read_root():
     return {"status": "healthy", "version": "1.0.0"}
 
