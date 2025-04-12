@@ -1,31 +1,64 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Calendar, ArrowRight, Download, Star } from "lucide-react";
-import { Link } from "react-router-dom";
-import { TranscriptItem } from "@/types/candidate";
+import { CheckCircle2, Calendar, Download, Star } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 
 interface ThankYouStageProps {
   companyName: string;
-  transcript?: TranscriptItem[];
-  score?: number;
-  feedback?: string;
-  jobTitle?: string;
+  jobTitle: string;
+  transcript: Array<{
+    speaker: string;
+    text: string;
+    timestamp: string;
+  }>;
+  feedback?: {
+    score: number;
+    feedback: string;
+    suggestions: string[];
+    scoreBreakdown: {
+      technicalSkills: number;
+      communication: number;
+      problemSolving: number;
+      culturalFit: number;
+    };
+  } | null;
 }
 
-const ThankYouStage: React.FC<ThankYouStageProps> = ({ 
-  companyName, 
-  transcript, 
-  score,
+const ThankYouStage: React.FC<ThankYouStageProps> = ({
+  companyName,
+  jobTitle,
+  transcript,
   feedback,
-  jobTitle
 }) => {
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState("");
+
   const handleDownloadTranscript = () => {
     if (!transcript || transcript.length === 0) return;
     
     // Format transcript for download
-    const textContent = transcript.map(item => {
+    let textContent = transcript.map(item => {
       return `[${new Date(item.timestamp).toLocaleTimeString()}] ${item.speaker === 'ai' ? 'Interviewer' : 'You'}: ${item.text}`;
     }).join('\n\n');
+
+    // Add feedback section if available
+    if (feedback) {
+      textContent += "\n\n=== Interview Feedback ===\n\n";
+      textContent += `Overall Score: ${feedback.score}/10\n\n`;
+      textContent += `Feedback:\n${feedback.feedback}\n\n`;
+      textContent += `Suggestions for Improvement:\n${feedback.suggestions.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+    }
     
     // Create downloadable file
     const blob = new Blob([textContent], { type: 'text/plain' });
@@ -35,10 +68,36 @@ const ThankYouStage: React.FC<ThankYouStageProps> = ({
     a.download = `${companyName.replace(/\s+/g, '-').toLowerCase()}-interview-transcript.txt`;
     document.body.appendChild(a);
     a.click();
-    
+
     // Clean up
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleRatingSubmit = () => {
+    // Here you would typically send the rating and feedback to your backend
+    toast.success("Thank you for your feedback!");
+    setShowRatingModal(false);
+    setRating(0);
+    setFeedbackText("");
+  };
+
+  const renderStars = () => {
+    return [1, 2, 3, 4, 5].map((star) => (
+      <button
+        key={star}
+        className="focus:outline-none"
+        onClick={() => setRating(star)}
+        onMouseEnter={() => setHoverRating(star)}
+        onMouseLeave={() => setHoverRating(0)}
+      >
+        {(hoverRating || rating) >= star ? (
+          <Star className="h-8 w-8 text-yellow-400 fill-yellow-400" />
+        ) : (
+          <Star className="h-8 w-8 text-yellow-400" />
+        )}
+      </button>
+    ));
   };
 
   return (
@@ -48,32 +107,64 @@ const ThankYouStage: React.FC<ThankYouStageProps> = ({
       </div>
       
       <div className="space-y-2 max-w-xl">
-        <h2 className="text-2xl font-bold">Thank You for Completing Your Interview!</h2>
+        <h2 className="text-2xl font-bold">Interview Completed!</h2>
         <p className="text-muted-foreground">
-          Your interview for the {jobTitle || "open position"} with {companyName} has been successfully recorded and submitted for review.
-          We appreciate your time and interest in joining our team.
+          Thank you for completing the interview with {companyName} for the {jobTitle} position.
         </p>
       </div>
       
-      {score !== undefined && (
-        <div className="bg-muted/50 rounded-xl p-4 w-full max-w-md">
-          <h3 className="font-medium text-left mb-2">Performance Summary</h3>
-          <div className="flex items-center justify-between mb-3">
-            <span>Overall Match:</span>
-            <div className="flex items-center">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star 
-                  key={star}
-                  className={`h-5 w-5 ${star <= Math.round(score * 5) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
-                />
-              ))}
+      {feedback && (
+        <div className="w-full max-w-2xl space-y-6">
+          <div className="bg-card rounded-lg p-6 shadow-sm">
+            <h3 className="text-xl font-semibold mb-4">Interview Feedback</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-center space-x-2">
+                <span className="text-3xl font-bold">{feedback.score}/10</span>
+                <div className="flex">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-5 w-5 ${
+                        i < Math.floor(feedback.score / 2)
+                          ? "text-yellow-400 fill-yellow-400"
+                          : "text-gray-300"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Technical Skills</p>
+                  <Progress value={feedback.scoreBreakdown.technicalSkills} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Communication</p>
+                  <Progress value={feedback.scoreBreakdown.communication} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Problem Solving</p>
+                  <Progress value={feedback.scoreBreakdown.problemSolving} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Cultural Fit</p>
+                  <Progress value={feedback.scoreBreakdown.culturalFit} />
+                </div>
+              </div>
+              <div className="text-left">
+                <p className="font-medium mb-2">Overall Assessment:</p>
+                <p className="text-muted-foreground">{feedback.feedback}</p>
+              </div>
+              <div className="text-left">
+                <p className="font-medium mb-2">Suggestions for Improvement:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  {feedback.suggestions.map((suggestion, index) => (
+                    <li key={index}>{suggestion}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
-          {feedback && (
-            <div className="text-sm text-left p-3 bg-background rounded-md">
-              <p>{feedback}</p>
-            </div>
-          )}
         </div>
       )}
       
@@ -116,7 +207,7 @@ const ThankYouStage: React.FC<ThankYouStageProps> = ({
           </div>
         </div>
       </div>
-      
+
       <div className="pt-4 w-full max-w-md">
         <div className="bg-muted/30 rounded-lg p-4 flex items-center gap-3 mb-6">
           <Calendar className="h-5 w-5 text-muted-foreground" />
@@ -124,31 +215,54 @@ const ThankYouStage: React.FC<ThankYouStageProps> = ({
             Please allow up to one week for us to review your interview.
           </p>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <Button variant="outline" className="flex-1" asChild>
-            <Link to="/">
-              Return to Home
-            </Link>
+
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button onClick={handleDownloadTranscript} variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Download Transcript
           </Button>
-          <Button className="flex-1" asChild>
-            <Link to="/jobs">
-              Browse More Opportunities <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
+          <Button onClick={() => setShowRatingModal(true)}>
+            <Star className="mr-2 h-4 w-4" />
+            Rate Your Experience
           </Button>
         </div>
-        
-        {transcript && transcript.length > 0 && (
-          <Button 
-            variant="outline" 
-            className="w-full" 
-            onClick={handleDownloadTranscript}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Download Interview Transcript
-          </Button>
-        )}
       </div>
+
+      <Dialog open={showRatingModal} onOpenChange={setShowRatingModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rate Your Interview Experience</DialogTitle>
+            <DialogDescription>
+              Your feedback helps us improve the interview process.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-6 py-4">
+            <div className="flex space-x-2">{renderStars()}</div>
+            <Textarea
+              placeholder="Share your thoughts about the interview experience..."
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              className="min-h-[100px]"
+            />
+            <div className="flex gap-2 w-full">
+              <Button
+                variant="outline"
+                onClick={() => setShowRatingModal(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRatingSubmit}
+                className="flex-1"
+                disabled={rating === 0}
+              >
+                Submit Feedback
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import ResumeUpload from "@/components/common/ResumeUpload";
 import { toast } from "sonner";
+import api from "@/lib/api";
 
 interface CandidatePreCheckProps {
   onReady: () => void;
@@ -48,6 +49,7 @@ const CandidatePreCheck = () => {
   const [isTestingDevices, setIsTestingDevices] = useState(false);
   const [isDeviceTestComplete, setIsDeviceTestComplete] = useState(false);
   const [micVolume, setMicVolume] = useState(0);
+  const [companyName, setCompanyName] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStream = useRef<MediaStream | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
@@ -57,6 +59,25 @@ const CandidatePreCheck = () => {
   const animationFrame = useRef<number | null>(null);
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchInterviewData = async () => {
+      try {
+        const response = await api.get("/interview", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+        });
+        if (response.data && response.data.company_name) {
+          setCompanyName(response.data.company_name);
+        }
+      } catch (error) {
+        console.error("Error fetching interview data:", error);
+        // Set a default company name if the fetch fails
+        setCompanyName("the Company");
+      }
+    };
+
+    fetchInterviewData();
+  }, []);
 
   useEffect(() => {
     let newProgress = 0;
@@ -237,10 +258,10 @@ const CandidatePreCheck = () => {
       <div className="flex-1 container max-w-screen-lg py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
-            Prepare for your EduDiagno Interview
+            Interview Preparation for {companyName}
           </h1>
           <p className="text-muted-foreground">
-            Complete the following steps before starting your interview
+            Complete the following steps to ensure a smooth interview experience
           </p>
         </div>
 
@@ -252,7 +273,7 @@ const CandidatePreCheck = () => {
           <Progress value={progress} className="h-2" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <Card
             className={`border ${
               activeStep === "device" ? "border-brand" : ""
@@ -265,7 +286,7 @@ const CandidatePreCheck = () => {
                     isDeviceTestComplete ? "bg-brand text-white" : "bg-muted"
                   }`}
                 >
-                  {isDeviceTestComplete ? <Check className="h-4 w-4" /> : "2"}
+                  {isDeviceTestComplete ? <Check className="h-4 w-4" /> : "1"}
                 </div>
                 Device Setup
               </CardTitle>
@@ -289,7 +310,7 @@ const CandidatePreCheck = () => {
                     isAgreementChecked ? "bg-brand text-white" : "bg-muted"
                   }`}
                 >
-                  {isAgreementChecked ? <Check className="h-4 w-4" /> : "3"}
+                  {isAgreementChecked ? <Check className="h-4 w-4" /> : "2"}
                 </div>
                 Final Preparation
               </CardTitle>
@@ -311,26 +332,25 @@ const CandidatePreCheck = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
+              <div className="space-y-6 max-h-[calc(100vh-400px)] overflow-y-auto">
                 {!isTestingDevices && !isDeviceTestComplete && (
-                  <div className="text-center py-8">
-                    <div className="bg-muted rounded-full p-4 inline-flex mb-4">
-                      <Mic className="h-8 w-8 text-brand" />
+                  <div className="text-center py-6">
+                    <div className="bg-muted rounded-full p-3 inline-flex mb-3">
+                      <Mic className="h-6 w-6 text-brand" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-2">
+                    <h3 className="text-lg font-semibold mb-2">
                       Device Check Required
                     </h3>
-                    <p className="mb-6 max-w-md mx-auto text-muted-foreground">
-                      We need to check your microphone to ensure it works
-                      properly for the interview
+                    <p className="mb-4 max-w-md mx-auto text-muted-foreground">
+                      We need to check your microphone to ensure it works properly for the interview
                     </p>
                     <Button onClick={startDeviceTest}>Start Device Test</Button>
                   </div>
                 )}
 
                 {isTestingDevices && (
-                  <div className="space-y-6">
-                    <div className="aspect-video bg-muted rounded-lg overflow-hidden relative">
+                  <div className="space-y-4">
+                    <div className="aspect-video bg-muted rounded-lg overflow-hidden relative max-w-2xl mx-auto">
                       <video
                         ref={videoRef}
                         autoPlay
@@ -340,7 +360,7 @@ const CandidatePreCheck = () => {
                       />
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-w-2xl mx-auto">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <div
@@ -430,7 +450,7 @@ const CandidatePreCheck = () => {
                       </div>
                     </div>
 
-                    <div className="flex justify-end">
+                    <div className="flex justify-end max-w-2xl mx-auto">
                       <Button onClick={stopDeviceTest}>
                         Complete Device Test
                       </Button>
@@ -439,17 +459,17 @@ const CandidatePreCheck = () => {
                 )}
 
                 {isDeviceTestComplete && (
-                  <div className="text-center py-8">
-                    <div className="bg-success/10 rounded-full p-4 inline-flex mb-4">
-                      <CheckCircle className="h-8 w-8 text-success" />
+                  <div className="text-center py-6">
+                    <div className="bg-success/10 rounded-full p-3 inline-flex mb-3">
+                      <CheckCircle className="h-6 w-6 text-success" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-2">
+                    <h3 className="text-lg font-semibold mb-2">
                       Device Test Complete
                     </h3>
                     <p className="mb-2 max-w-md mx-auto">
                       Your devices are ready for the interview
                     </p>
-                    <ul className="space-y-2 mb-6 max-w-md mx-auto text-sm">
+                    <ul className="space-y-2 mb-4 max-w-md mx-auto text-sm">
                       <li className="flex items-center">
                         <Check className="h-4 w-4 text-success mr-2" />
                         Microphone is detected and functioning

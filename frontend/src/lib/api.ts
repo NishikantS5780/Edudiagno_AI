@@ -7,7 +7,7 @@ import {
 import axios from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -92,6 +92,16 @@ export const interviewAPI = {
       }
     );
     return res;
+  },
+  analyzeTranscript: async (transcript: string, jobContext: any) => {
+    const res = await api.post(
+      "/interview/analyze-transcript",
+      { transcript, jobContext },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+      }
+    );
+    return res.data;
   },
   submitAudioResponse: async (audioFile: File, question_order_number) => {
     const formData = new FormData();

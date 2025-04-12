@@ -28,6 +28,10 @@ import {
   Clock,
   Check,
   AlertTriangle,
+  Brain,
+  Sparkles,
+  BookOpen,
+  Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
 import AIAvatar from "../../components/interview/AIAvatar";
@@ -39,6 +43,8 @@ import { InterviewData } from "@/types/interview";
 import { RecruiterData } from "@/types/recruiter";
 import { JobData } from "@/types/job";
 import { flushSync } from "react-dom";
+import ThankYouStage from "../../components/interview/stages/ThankYouStage";
+import VoiceAnimation from "@/components/interview/VoiceAnimation";
 
 export default function VideoInterview() {
   const [interviewData, setInterviewData] = useState<InterviewData>();
@@ -72,7 +78,7 @@ export default function VideoInterview() {
   const [showNextQuestionDialog, setShowNextQuestionDialog] = useState(false);
   const [currentResponse, setCurrentResponse] = useState<string | null>(null);
   const [conversation, setConversation] = useState<
-    Array<{ sender: string; message: string; timestamp: string }>
+    Array<{ sender: string; message: string; timestamp: string; isTyping?: boolean }>
   >([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const { generateQuestion, processResponse } = useInterviewResponseProcessor();
@@ -90,6 +96,18 @@ export default function VideoInterview() {
   const [speech, setSpeech] = useState("");
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isDevicesInitialized, setIsDevicesInitialized] = useState(false);
+  const [isAiTyping, setIsAiTyping] = useState(false);
+  const [interviewFeedback, setInterviewFeedback] = useState<{
+    score: number;
+    feedback: string;
+    suggestions: string[];
+    scoreBreakdown: {
+      technicalSkills: number;
+      communication: number;
+      problemSolving: number;
+      culturalFit: number;
+    };
+  } | null>(null);
 
   // Add ref to track processing state
   const isProcessingRef = useRef(false);
@@ -113,6 +131,16 @@ export default function VideoInterview() {
         currentAudioRef.current.currentTime = 0;
       }
       const newAudio = new Audio("data:audio/mpeg;base64," + speech);
+      
+      // Add event listeners for audio playback
+      newAudio.onplay = () => {
+        setIsAiSpeaking(true);
+      };
+      
+      newAudio.onended = () => {
+        setIsAiSpeaking(false);
+      };
+      
       newAudio.play();
       currentAudioRef.current = newAudio;
     }
@@ -490,6 +518,42 @@ export default function VideoInterview() {
     });
   };
 
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const analyzeInterview = async () => {
+    try {
+      // Combine all user responses into a single transcript
+      const userTranscript = conversation
+        .filter((msg) => msg.sender === "user")
+        .map((msg) => msg.message)
+        .join("\n");
+
+      // Get the job details for context
+      const jobContext = {
+        title: jobData?.title,
+        description: jobData?.description,
+        requirements: jobData?.requirements,
+      };
+
+      // Call the API to analyze the transcript
+      const feedback = await interviewAPI.analyzeTranscript(userTranscript, jobContext);
+      setInterviewFeedback(feedback);
+    } catch (error) {
+      console.error("Error analyzing transcript:", error);
+      toast.error("Failed to analyze interview performance");
+    }
+  };
+
   const handleNextQuestion = () => {
     console.warn("Current question index:", currentQuestionIndex);
     console.warn("Interview flow length:", interviewFlow.length);
@@ -525,12 +589,18 @@ export default function VideoInterview() {
       // Clear recorded chunks for the next recording
       recordedChunksRef.current = [];
 
-      // Show AI speaking animation
-      setIsAiSpeaking(true);
-      setTimeout(() => setIsAiSpeaking(false), 3000);
+      // Show typing animation first
+      setIsAiTyping(true);
+      setTimeout(() => {
+        setIsAiTyping(false);
+        setIsAiSpeaking(true);
+        setTimeout(() => setIsAiSpeaking(false), 3000);
+      }, 2000);
     } else {
       console.log("Interview completed");
       mediaRecorderRef.current.stop();
+      stopCamera();
+      analyzeInterview();
       setShowCompletionScreen(true);
     }
   };
@@ -538,26 +608,52 @@ export default function VideoInterview() {
   const addMessage = (sender: "ai" | "user", message: string) => {
     console.log("addMessage called with:", { sender, message });
     if (sender === "ai") {
-      setIsAiSpeaking(true);
+      // First add a placeholder with typing animation
+      setConversation((prev) => {
+        const newConversation = [
+          ...prev,
+          {
+            sender,
+            message: "",
+            timestamp: new Date().toISOString(),
+            isTyping: true
+          },
+        ];
+        console.log("Updated conversation state with typing:", newConversation);
+        return newConversation;
+      });
 
-      const speakingDuration = Math.max(2000, message.length * 50);
+      // Show typing animation for 2 seconds
+      setIsAiTyping(true);
       setTimeout(() => {
-        setIsAiSpeaking(false);
-      }, speakingDuration);
+        setIsAiTyping(false);
+        
+        // Update the message in conversation
+        setConversation((prev) => {
+          const newConversation = [...prev];
+          const lastMessage = newConversation[newConversation.length - 1];
+          if (lastMessage.isTyping) {
+            lastMessage.message = message;
+            delete lastMessage.isTyping;
+          }
+          console.log("Updated conversation state with message:", newConversation);
+          return newConversation;
+        });
+      }, 2000);
+    } else {
+      setConversation((prev) => {
+        const newConversation = [
+          ...prev,
+          {
+            sender,
+            message,
+            timestamp: new Date().toISOString(),
+          },
+        ];
+        console.log("Updated conversation state:", newConversation);
+        return newConversation;
+      });
     }
-
-    setConversation((prev) => {
-      const newConversation = [
-        ...prev,
-        {
-          sender,
-          message,
-          timestamp: new Date().toISOString(),
-        },
-      ];
-      console.log("Updated conversation state:", newConversation);
-      return newConversation;
-    });
 
     if (transcriptEndRef.current) {
       transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -590,11 +686,16 @@ export default function VideoInterview() {
       // Store the interview flow
       setInterviewFlow(interviewFlow);
 
+      // Show AI preparation animation for 3 seconds
       setTimeout(() => {
         setIsPreparing(false);
-        setIsAiSpeaking(true);
+        setIsAiTyping(true);
         addMessage("ai", interviewFlow[0].question);
-        setTimeout(() => setIsAiSpeaking(false), 3000);
+        setTimeout(() => {
+          setIsAiTyping(false);
+          setIsAiSpeaking(true);
+          setTimeout(() => setIsAiSpeaking(false), 3000);
+        }, 2000);
       }, 3000);
     } catch (error) {
       console.error("Error starting interview:", error);
@@ -629,6 +730,9 @@ export default function VideoInterview() {
 
   const initializeDevices = async () => {
     try {
+      // Stop any existing stream first
+      stopCamera();
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: true,
@@ -660,8 +764,7 @@ export default function VideoInterview() {
 
       // Set up stop handler
       mediaRecorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
-        videoRef.current.srcObject = null;
+        stopCamera(); // Stop camera when recording stops
         const videoBlob = new Blob(recordedChunksRef.current, {
           type: "video/webm",
         });
@@ -704,6 +807,43 @@ export default function VideoInterview() {
     }
   };
 
+  // Add cleanup effect
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  const handleDownloadTranscript = () => {
+    if (conversation.length === 0) return;
+
+    // Format the conversation with timestamps
+    const formattedConversation = conversation.map((msg) => {
+      const timestamp = new Date(msg.timestamp).toLocaleTimeString();
+      return `[${timestamp}] ${msg.sender === "ai" ? "Interviewer" : "You"}: ${msg.message}`;
+    });
+
+    // Add feedback section if available
+    let transcriptContent = formattedConversation.join("\n\n");
+    if (interviewFeedback) {
+      transcriptContent += "\n\n=== Interview Feedback ===\n\n";
+      transcriptContent += `Overall Score: ${interviewFeedback.score}/10\n\n`;
+      transcriptContent += `Feedback:\n${interviewFeedback.feedback}\n\n`;
+      transcriptContent += `Suggestions for Improvement:\n${interviewFeedback.suggestions.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+    }
+
+    // Create and download the file
+    const blob = new Blob([transcriptContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${jobData?.title?.replace(/\s+/g, "-").toLowerCase()}-interview-transcript.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-background/80">
@@ -720,118 +860,59 @@ export default function VideoInterview() {
 
   if (showCompletionScreen) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-background/80 p-4">
-        <Card className="max-w-2xl w-full">
-          <CardHeader className="text-center">
-            <div className="mx-auto bg-success/10 p-3 rounded-full mb-4">
-              <CheckCircle className="h-12 w-12 text-success" />
+      <ThankYouStage
+        companyName={companyData?.name || "the company"}
+        jobTitle={jobData?.title || "the position"}
+        transcript={conversation.map(msg => ({
+          speaker: msg.sender,
+          text: msg.message,
+          timestamp: msg.timestamp
+        }))}
+        feedback={interviewFeedback}
+      />
+    );
+  }
+
+  if (isPreparing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-background/80">
+        <div className="max-w-2xl w-full p-8 text-center">
+          <div className="relative mb-8">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-24 h-24 border-4 border-brand/20 rounded-full animate-ping" />
             </div>
-            <CardTitle className="text-2xl">Interview Completed!</CardTitle>
-            <CardDescription>
-              Thank you for completing your interview with {companyData.name}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div className="text-center space-y-2">
-                <p className="text-lg">
-                  Your responses have been recorded and will be reviewed by the
-                  hiring team.
-                </p>
-                <p className="text-muted-foreground">
-                  You'll receive an email notification when your results are
-                  ready.
-                </p>
-              </div>
-
-              <div className="bg-muted/50 p-4 rounded-md">
-                <h3 className="font-medium mb-2">Interview Summary</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Position</p>
-                    <p className="font-medium">{jobData.title}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Company</p>
-                    <p className="font-medium">{companyData.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Questions</p>
-                    <p className="font-medium">9 questions</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Duration</p>
-                    <p className="font-medium">25-30 minutes</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-center space-y-4">
-                <p className="font-medium">What's Next?</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="border rounded-md p-4 text-center">
-                    <div className="mb-2 font-medium">1</div>
-                    <p className="text-sm">AI analysis of your responses</p>
-                  </div>
-                  <div className="border rounded-md p-4 text-center">
-                    <div className="mb-2 font-medium">2</div>
-                    <p className="text-sm">Review by hiring team</p>
-                  </div>
-                  <div className="border rounded-md p-4 text-center">
-                    <div className="mb-2 font-medium">3</div>
-                    <p className="text-sm">Feedback and next steps</p>
-                  </div>
-                </div>
+            <div className="relative flex items-center justify-center">
+              <div className="w-24 h-24 bg-brand/10 rounded-full flex items-center justify-center">
+                <Brain className="h-12 w-12 text-brand animate-pulse" />
               </div>
             </div>
-          </CardContent>
-          <CardFooter className="flex justify-center gap-4">
-            <Button variant="outline" onClick={() => navigate("/")}>
-              Close Window
-            </Button>
-            <Button
-              onClick={() => {
-                const transcriptText = conversation
-                  .map(
-                    (msg) =>
-                      `${msg.sender === "ai" ? "AI Interviewer" : "You"}: ${
-                        msg.message
-                      }`
-                  )
-                  .join("\n\n");
+          </div>
+          
+          <h2 className="text-2xl font-semibold mb-4">Preparing Your Interview</h2>
+          
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <BookOpen className="h-6 w-6 text-brand mb-2 mx-auto" />
+              <p className="text-sm">Analyzing your resume</p>
+            </div>
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <Briefcase className="h-6 w-6 text-brand mb-2 mx-auto" />
+              <p className="text-sm">Reviewing job requirements</p>
+            </div>
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <Sparkles className="h-6 w-6 text-brand mb-2 mx-auto" />
+              <p className="text-sm">Crafting personalized questions</p>
+            </div>
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <Brain className="h-6 w-6 text-brand mb-2 mx-auto" />
+              <p className="text-sm">Optimizing AI responses</p>
+            </div>
+          </div>
 
-                const blob = new Blob([transcriptText], { type: "text/plain" });
-                const url = URL.createObjectURL(blob);
-
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `interview-transcript-${new Date()
-                  .toISOString()
-                  .slice(0, 10)}.txt`;
-                document.body.appendChild(a);
-                a.click();
-
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                setDownloadComplete(true);
-                toast.success("Transcript downloaded successfully");
-              }}
-            >
-              {downloadComplete ? (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Downloaded
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Transcript
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
+          <p className="text-muted-foreground">
+            Our AI is preparing a tailored interview experience based on your background and the position requirements.
+          </p>
+        </div>
       </div>
     );
   }
@@ -915,7 +996,7 @@ export default function VideoInterview() {
                     autoPlay
                     playsInline
                     muted={true}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover aspect-video"
                   />
 
                   {/* AI Interviewer Avatar */}
@@ -923,9 +1004,10 @@ export default function VideoInterview() {
                     <div className="bg-background/80 backdrop-blur-sm p-4 rounded-full">
                       <AIAvatar isSpeaking={isAiSpeaking} size="lg" />
                     </div>
-                    <span className="text-sm mt-2 bg-background/80 backdrop-blur-sm px-3 py-1 rounded-full text-white">
-                      AI Interviewer
-                    </span>
+                    <div className="flex items-center gap-2 mt-2 bg-background/80 backdrop-blur-sm px-3 py-1 rounded-full">
+                      <span className="text-sm text-white">AI Interviewer</span>
+                      {isAiSpeaking && <VoiceAnimation isSpeaking={isAiSpeaking} />}
+                    </div>
                   </div>
 
                   {/* Recording Indicator */}
@@ -1011,16 +1093,17 @@ export default function VideoInterview() {
                 </div>
               ) : (
                 <div className="text-center p-10">
-                  <div className="mx-auto bg-brand/10 p-3 rounded-full mb-4">
-                    <AIAvatar isSpeaking={isAiSpeaking} size="lg" />
+                  <div className="flex items-center justify-center gap-6 mb-8">
+                    <div className="bg-brand/10 p-4 rounded-full">
+                      <AIAvatar isSpeaking={isAiSpeaking} size="lg" />
+                    </div>
+                    <div className="text-left max-w-md">
+                      <h3 className="text-xl font-semibold mb-2">Hi, I'm Arya!</h3>
+                      <p className="text-muted-foreground">
+                        I'll be your interviewer for the {jobData?.title} position at {companyData?.name}. Take a deep breath and relax - I'll help you showcase your skills and experience. When you're ready, click the button below to begin.
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">
-                    Start Your Interview
-                  </h3>
-                  <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                    When you're ready to begin, click the button below to start
-                    your AI interview experience
-                  </p>
                   <Button
                     size="lg"
                     onClick={startInterview}
@@ -1073,7 +1156,15 @@ export default function VideoInterview() {
                         <div className="text-xs mb-1">
                           {message.sender === "ai" ? "AI Interviewer" : "You"}
                         </div>
-                        <p>{message.message}</p>
+                        {message.isTyping ? (
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 rounded-full bg-brand animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-2 h-2 rounded-full bg-brand animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-2 h-2 rounded-full bg-brand animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                        ) : (
+                          <p>{message.message}</p>
+                        )}
                       </div>
                     </div>
                   ))}
