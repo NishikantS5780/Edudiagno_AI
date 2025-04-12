@@ -40,20 +40,6 @@ import { RecruiterData } from "@/types/recruiter";
 import { JobData } from "@/types/job";
 import { flushSync } from "react-dom";
 
-// const VideoInterviewWrapper = () => {
-//   return (
-//     <VideoInterview
-//       jobTitle={interviewData.job.title}
-//       companyName={interviewData.job.company.name}
-//       interviewId={interviewData.id}
-//       candidate={interviewData.candidate}
-//       jobDescription={interviewData.job.description || ""}
-//       resumeText={interviewData.candidate?.resume_text || ""}
-//       onComplete={() => navigate(`/interview/${accessCode}/complete`)}
-//     />
-//   );
-// };
-
 export default function VideoInterview() {
   const [interviewData, setInterviewData] = useState<InterviewData>();
   const [companyData, setCompanyData] = useState<RecruiterData>();
@@ -466,12 +452,11 @@ export default function VideoInterview() {
       await videoElement.play();
 
       // Record until video ends
-      await new Promise((resolve) => {
-        videoElement.onended = () => {
-          mediaRecorder.stop();
-          resolve(null);
-        };
-      });
+      // await new Promise((resolve) => {
+      videoElement.onended = () => {
+        mediaRecorder.stop();
+      };
+      // });
 
       // Wait for the transcription to complete
       const transcript = await transcriptionPromise;
@@ -545,6 +530,7 @@ export default function VideoInterview() {
       setTimeout(() => setIsAiSpeaking(false), 3000);
     } else {
       console.log("Interview completed");
+      mediaRecorderRef.current.stop();
       setShowCompletionScreen(true);
     }
   };
@@ -674,6 +660,8 @@ export default function VideoInterview() {
 
       // Set up stop handler
       mediaRecorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
         const videoBlob = new Blob(recordedChunksRef.current, {
           type: "video/webm",
         });

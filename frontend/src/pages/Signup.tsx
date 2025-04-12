@@ -1,6 +1,5 @@
 import React, { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -137,7 +136,7 @@ const SignUp = () => {
         address,
       });
       toast.success("Account created successfully");
-      navigate("/dashboard/profile");
+      navigate("/dashboard");
     } catch (error: any) {
       alert(error);
     } finally {
