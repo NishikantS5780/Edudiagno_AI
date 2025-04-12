@@ -136,7 +136,7 @@ const SignUp = () => {
         address,
       });
       toast.success("Account created successfully");
-      navigate("/dashboard");
+      navigate("/login");
     } catch (error: any) {
       alert(error);
     } finally {
