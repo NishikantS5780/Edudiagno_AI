@@ -105,7 +105,8 @@ const NewJob = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-6 border rounded-lg">
             <div className="col-span-1 lg:col-span-2">
               <Label htmlFor="job-title">Job Title</Label>
-              The title of the position you're hiring for
+              The title of the position you're hiring for{" "}
+              <span className="text-red-500">*</span>
               <Input
                 id="job-title"
                 placeholder="e.g. Senior Software Engineer"
@@ -117,7 +118,10 @@ const NewJob = () => {
             </div>
 
             <div className="col-span-1 lg:col-span-1">
-              <Label>Department</Label>
+              <Label>
+                Department
+                <span className="text-red-500">*</span>
+              </Label>
               <Select
                 onValueChange={(val: string) =>
                   setJobData({ ...jobData, department: val })
@@ -146,7 +150,10 @@ const NewJob = () => {
             </div>
 
             <div>
-              <Label>Location</Label>
+              <Label>
+                Location
+                <span className="text-red-500">*</span>
+              </Label>
               <Select
                 onValueChange={(val: string) =>
                   setJobData({ ...jobData, location: val })
@@ -165,7 +172,10 @@ const NewJob = () => {
             </div>
 
             <div className="">
-              <Label>Min Experience</Label>
+              <Label>
+                Min Experience
+                <span className="text-red-500">*</span>
+              </Label>
               <Select
                 onValueChange={(val: string) =>
                   setJobData({ ...jobData, minExperience: Number(val) })
@@ -186,7 +196,10 @@ const NewJob = () => {
             </div>
 
             <div className="">
-              <Label>Max Experience</Label>
+              <Label>
+                Max Experience
+                <span className="text-red-500">*</span>
+              </Label>
               <Select
                 onValueChange={(val: string) =>
                   setJobData({ ...jobData, maxExperience: Number(val) })
@@ -207,7 +220,10 @@ const NewJob = () => {
             </div>
 
             <div className="">
-              <Label>Min Salary</Label>
+              <Label>
+                Min Salary
+                <span className="text-red-500">*</span>
+              </Label>
               <Input
                 placeholder="Min salary"
                 type="number"
@@ -219,7 +235,10 @@ const NewJob = () => {
             </div>
 
             <div className="">
-              <Label>Max Salary</Label>
+              <Label>
+                Max Salary
+                <span className="text-red-500">*</span>
+              </Label>
               <Input
                 placeholder="Min salary"
                 type="number"
@@ -241,7 +260,10 @@ const NewJob = () => {
             </div>
 
             <div className="">
-              <Label>Job Type</Label>
+              <Label>
+                Job Type
+                <span className="text-red-500">*</span>
+              </Label>
               <Select
                 onValueChange={(val: string) =>
                   setJobData({ ...jobData, type: val })
@@ -263,7 +285,10 @@ const NewJob = () => {
 
             <div className="col-span-1 lg:col-span-3">
               <div className="flex justify-between items-center">
-                <Label>Description</Label>
+                <Label>
+                  Description
+                  <span className="text-red-500">*</span>
+                </Label>
                 <AIGeneratePopup
                   title={"Generate Description for Job"}
                   fieldLabel={"Description"}
@@ -287,7 +312,10 @@ const NewJob = () => {
 
             <div className="col-span-1 lg:col-span-3">
               <div className="flex justify-between items-center">
-                <Label>Requirements</Label>
+                <Label>
+                  Requirements
+                  <span className="text-red-500">*</span>
+                </Label>
                 <AIGeneratePopup
                   title={"Generate Description for Job"}
                   fieldLabel={"Requirements"}
@@ -310,7 +338,10 @@ const NewJob = () => {
             </div>
 
             <div className="col-span-1 lg:col-span-3">
-              <Label>Benefits</Label>
+              <Label>
+                Benefits
+                <span className="text-red-500">*</span>
+              </Label>
               <Textarea
                 className="min-h-52"
                 onChange={(e) =>
