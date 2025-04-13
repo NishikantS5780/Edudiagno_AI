@@ -3,7 +3,7 @@ import json
 import tempfile
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
-from sqlalchemy import select, update
+from sqlalchemy import and_, select, update
 
 from app import database, schemas
 from app.configs import openai
@@ -137,43 +137,36 @@ Return the questions as a JSON array of objects with "question" and "type" field
     return interview_questions_and_responses
 
 
-@router.put("/submit-audio-response")
-async def update_answer(
-    audio_file: UploadFile = File(...),
-    question_id: int = Form(...),
+@router.put("/submit-text-response")
+async def text_update_answer(
+    data: schemas.UpdateInterviewQuestionResponse,
     db: Session = Depends(database.get_db),
     interview_id=Depends(authorize_candidate),
 ):
-    if not audio_file.content_type or not (
-        audio_file.content_type.startswith("audio/")
-        or audio_file.content_type == "application/octet-stream"
-    ):
-        raise HTTPException(
-            status_code=400, detail="Invalid file type. Please upload an audio file."
-        )
-
-    if not audio_file.size or audio_file.size == 0:
-        raise HTTPException(status_code=400, detail="Empty audio file")
-
-    contents = await audio_file.read()
-    audio_file_obj = BytesIO(contents)
-    audio_file_obj.name = "audio.webm"
-
-    result = await openai.client.audio.transcriptions.create(
-        model="whisper-1", file=audio_file_obj, language="en"
-    )
-
-    if not result or not result.text:
-        raise HTTPException(status_code=500, detail="Failed to transcribe audio")
-
     stmt = (
         update(InterviewQuestionAndResponse)
-        .values(answer=result.text)
+        .values(answer=data.answer)
         .where(
-            InterviewQuestionAndResponse.interview_id == interview_id
-            and InterviewQuestionAndResponse.order_number == question_id
+            and_(
+                InterviewQuestionAndResponse.interview_id == interview_id,
+                InterviewQuestionAndResponse.order_number == data.question_order,
+                InterviewQuestionAndResponse.answer.is_(None),
+            )
+        )
+        .returning(
+            InterviewQuestionAndResponse.question,
+            InterviewQuestionAndResponse.question_type,
+            InterviewQuestionAndResponse.order_number,
+            InterviewQuestionAndResponse.answer,
         )
     )
-    db.execute(stmt)
+    result = db.execute(stmt)
+    db.commit()
+    questions_and_responses = result.all()
 
-    return {"transcript": result.text}
+    if len(questions_and_responses) < 1:
+        raise HTTPException(status_code=500, detail="no unanswered question found")
+
+    question_and_response = questions_and_responses[0]._mapping
+
+    return question_and_response

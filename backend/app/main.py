@@ -70,6 +70,7 @@ from app.routes import (
     interview,
     resume,
     text,
+    audio,
 )
 
 app.include_router(recruiter.router, prefix="/api/recruiter", tags=["Recruiter"])
@@ -82,6 +83,7 @@ app.include_router(
 )
 app.include_router(resume.router, prefix="/api/resume", tags=["Resume"])
 app.include_router(text.router, prefix="/api/text", tags=["Text"])
+app.include_router(audio.router, prefix="/api/audio", tags=["Audio"])
 
 
 @app.get("/api", tags=["Health"])

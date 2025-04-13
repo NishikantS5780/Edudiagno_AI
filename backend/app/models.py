@@ -1,4 +1,13 @@
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    func,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -59,6 +68,7 @@ class Job(Base):
 
 class Interview(Base):
     __tablename__ = "interviews"
+    __table_args__ = (UniqueConstraint("email", "job_id", name="uq_email_job"),)
 
     id = Column(Integer, primary_key=True, index=True)
     status = Column(String, default="pending")  # pending, completed, cancelled
@@ -82,7 +92,6 @@ class Interview(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
 
-    # Relationships
     job = relationship("Job", back_populates="interviews")
     question_and_responses = relationship(
         "InterviewQuestionAndResponse",

@@ -16,7 +16,22 @@ async def get_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    stmt = select(Job).where(Job.id == int(id))
+    stmt = select(
+        Job.id,
+        Job.title,
+        Job.description,
+        Job.department,
+        Job.location,
+        Job.type,
+        Job.min_experience,
+        Job.max_experience,
+        Job.salary_min,
+        Job.salary_max,
+        Job.show_salary,
+        Job.requirements,
+        Job.benefits,
+        Job.status,
+    ).where(Job.id == int(id))
     result = db.execute(stmt)
     job = result.scalars().all()[0]
 
@@ -28,11 +43,26 @@ async def get_all_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    stmt = select(Job).where(Job.company_id == recruiter_id)
+    stmt = select(
+        Job.id,
+        Job.title,
+        Job.description,
+        Job.department,
+        Job.location,
+        Job.type,
+        Job.min_experience,
+        Job.max_experience,
+        Job.salary_min,
+        Job.salary_max,
+        Job.show_salary,
+        Job.requirements,
+        Job.benefits,
+        Job.status,
+    ).where(Job.company_id == recruiter_id)
     result = db.execute(stmt)
-    job = result.scalars().all()
+    jobs = result.all()
 
-    return job
+    return [job._mapping for job in jobs]
 
 
 @router.get("/candidate-view")

@@ -124,3 +124,8 @@ class GenerateJobRequirement(BaseModel):
     department: str
     location: str
     keywords: str
+
+
+class UpdateInterviewQuestionResponse(BaseModel):
+    question_order: int
+    answer: str

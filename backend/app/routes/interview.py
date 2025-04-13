@@ -17,7 +17,7 @@ from sqlalchemy import select, update
 
 from app import database, schemas
 from app.configs import openai
-from app.models import Interview, Job, Recruiter
+from app.models import Interview, InterviewQuestionAndResponse, Job, Recruiter
 from app.utils import jwt
 from app.dependencies.authorization import authorize_candidate, authorize_recruiter
 
@@ -243,3 +243,87 @@ async def analyze_resume(
     interview = db.execute(stmt).scalars().all()[0]
 
     return interview
+
+
+@router.put("/generate-feedback")
+async def generate_feedback(
+    db: Session = Depends(database.get_db),
+    interview_id=Depends(authorize_candidate),
+):
+    stmt = (
+        select(Job.description, Job.requirements, Interview.resume_text)
+        .join(Interview)
+        .where(Interview.id == interview_id)
+    )
+    data = db.execute(stmt).all()[0]
+
+    stmt = select(
+        InterviewQuestionAndResponse.question,
+        InterviewQuestionAndResponse.question_type,
+        InterviewQuestionAndResponse.answer,
+    ).where(InterviewQuestionAndResponse.interview_id == interview_id)
+    questions_and_responses = db.execute(stmt).all()
+    questions_and_responses = [q_a._mapping for q_a in questions_and_responses]
+
+    conversation = ""
+    for question_and_response in questions_and_responses:
+        conversation += f"""
+            Recruiter: {question_and_response.question} (question type: {question_and_response.question_type})
+
+            Candidate: {question_and_response.answer}
+        """
+
+    prompt = f"""Analyze how well the answers are given to the questions and evaluate the candidate based on conversation and answers as per job description and requirements
+
+    Return ONLY a JSON object with these exact fields:
+    {{
+        "feedback_for_candidate": "General feedback about interview for candidate",
+        "feedback_for_recruiter": "Detailed feedback about the interview",
+        "score": "number between 0 and 100 based on correctness of answers"
+    }}
+
+    Conversation:
+    {conversation}
+
+    Job Description:
+    {data.description}
+
+    Job Requirements:
+    {data.requirements}
+
+    Important:
+    - Return ONLY the JSON object, no other text
+    - All fields must be present
+    - match_score must be a number between 0 and 100
+    - Arrays should not be empty (use empty string if no data)
+    - All other values must be strings
+    """
+
+    response = await openai.client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a helpful assistant that interviews candidates for job posting. You must return a valid JSON object.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.1,
+        response_format={"type": "json_object"},
+    )
+
+    interview_analysis = response.choices[0].message.content
+    interview_data = json.loads(interview_analysis)
+
+    stmt = (
+        update(Interview)
+        .values(
+            overall_score=int(interview_data["score"]),
+            feedback=interview_data["feedback_for_recruiter"],
+        )
+        .returning(Interview)
+    )
+
+    db.execute(stmt).scalars().all()[0]
+
+    return {"feedback": interview_data["feedback_for_candidate"]}
