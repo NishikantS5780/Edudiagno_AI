@@ -39,15 +39,91 @@ import RecordingButton from "../../components/interview/RecordingButton";
 import { useInterviewResponseProcessor } from "../../components/interview/InterviewResponseProcessor";
 import api, { interviewAPI, textAPI } from "@/lib/api";
 import axios from "axios";
-import { InterviewData } from "@/types/interview";
+import { InterviewData as ImportedInterviewData } from "@/types/interview";
 import { RecruiterData } from "@/types/recruiter";
 import { JobData } from "@/types/job";
 import { flushSync } from "react-dom";
-import ThankYouStage from "../../components/interview/stages/ThankYouStage";
+import { ThankYouStage } from "./ThankYouStage";
 import VoiceAnimation from "@/components/interview/VoiceAnimation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+
+interface InterviewFeedback {
+  feedback: string;
+  score: number;
+  scoreBreakdown: {
+    technicalSkills: number;
+    communication: number;
+    problemSolving: number;
+    culturalFit: number;
+  };
+  suggestions: string[];
+  keywords: Array<{
+    term: string;
+    count: number;
+    sentiment: "positive" | "neutral" | "negative";
+  }>;
+}
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  isTyping?: boolean;
+  sender?: "user" | "ai";  // For backward compatibility
+  message?: string;        // For backward compatibility
+}
+
+interface TranscriptEntry {
+  speaker: string;
+  text: string;
+  timestamp: string;
+}
+
+interface InterviewData {
+  job_requirements: string;
+  questions: string[];
+  title: string;
+  description: string;
+  company_name: string;
+  linkedin_url?: string;
+  portfolio_url?: string;
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  workExperience?: string;
+  education?: string;
+  skills?: string;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
+}
+
+interface ThankYouStageProps {
+  feedback: {
+    suggestions: string[];
+    keywords: string[];
+  };
+  transcript: TranscriptEntry[];
+}
 
 export default function VideoInterview() {
-  const [interviewData, setInterviewData] = useState<InterviewData>();
+  const [interviewData, setInterviewData] = useState<InterviewData>({
+    job_requirements: "",
+    questions: [],
+    title: "",
+    description: "",
+    company_name: "",
+  });
   const [companyData, setCompanyData] = useState<RecruiterData>();
   const [jobData, setJobData] = useState<JobData>();
   const navigate = useNavigate();
@@ -77,9 +153,7 @@ export default function VideoInterview() {
     useState(false);
   const [showNextQuestionDialog, setShowNextQuestionDialog] = useState(false);
   const [currentResponse, setCurrentResponse] = useState<string | null>(null);
-  const [conversation, setConversation] = useState<
-    Array<{ sender: string; message: string; timestamp: string; isTyping?: boolean }>
-  >([]);
+  const [conversation, setConversation] = useState<Message[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const { generateQuestion, processResponse } = useInterviewResponseProcessor();
   const [currentQuestion, setCurrentQuestion] = useState<string>("");
@@ -97,17 +171,10 @@ export default function VideoInterview() {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isDevicesInitialized, setIsDevicesInitialized] = useState(false);
   const [isAiTyping, setIsAiTyping] = useState(false);
-  const [interviewFeedback, setInterviewFeedback] = useState<{
-    score: number;
-    feedback: string;
-    suggestions: string[];
-    scoreBreakdown: {
-      technicalSkills: number;
-      communication: number;
-      problemSolving: number;
-      culturalFit: number;
-    };
-  } | null>(null);
+  const [feedback, setFeedback] = useState<InterviewFeedback | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editedResponse, setEditedResponse] = useState("");
+  const [currentStage, setCurrentStage] = useState<string>("");
 
   // Add ref to track processing state
   const isProcessingRef = useRef(false);
@@ -187,90 +254,16 @@ export default function VideoInterview() {
         skills: data.skills,
         linkedinUrl: data.linkedin_url,
         portfolioUrl: data.portfolio_url,
-      });
+        job_requirements: data.job_requirements,
+        questions: data.questions,
+        title: data.title || "",
+        description: data.description || "",
+        company_name: data.company_name || ""
+      } as InterviewData);
       setCompanyData({ name: data.company_name });
       setJobData({ title: data.title });
     };
     getCandidateData();
-
-    const initializeVideo = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: true,
-        });
-
-        streamRef.current = stream;
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch((error) => {
-            console.error("Error playing video:", error);
-            toast.error("Failed to start video feed");
-          });
-        }
-
-        // Set up media recorder
-        const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: "video/webm;codecs=vp9,opus",
-        });
-
-        mediaRecorderRef.current = mediaRecorder;
-
-        // Set up data handler
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            recordedChunksRef.current.push(e.data);
-          }
-        };
-
-        // Set up stop handler
-        mediaRecorder.onstop = () => {
-          const videoBlob = new Blob(recordedChunksRef.current, {
-            type: "video/webm",
-          });
-          if (videoBlob.size > 0) {
-            setRecordedVideos((prev) => [
-              ...prev,
-              {
-                questionId: `question-${currentQuestionIndex}`,
-                blob: videoBlob,
-              },
-            ]);
-
-            transcribeVideo(videoBlob)
-              .then((transcript) => {
-                if (transcript) {
-                  handleResponseRecorded(transcript);
-                }
-              })
-              .catch((error) => {
-                console.error("Error transcribing video:", error);
-                toast.error("Failed to transcribe video");
-              });
-          }
-        };
-
-        mediaRecorder.onerror = (error) => {
-          console.error("MediaRecorder error:", error);
-          toast.error("Recording error occurred");
-          setIsRecording(false);
-        };
-
-        return () => {
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach((track) => track.stop());
-          }
-        };
-      } catch (error) {
-        console.error("Error initializing video:", error);
-        toast.error(
-          "Failed to initialize video. Please check your camera and microphone permissions."
-        );
-      }
-    };
-
-    initializeVideo();
   }, []);
 
   useEffect(() => {
@@ -404,9 +397,6 @@ export default function VideoInterview() {
         type: videoBlob.type,
       });
 
-      // Create FormData and append data
-      const formData = new FormData();
-
       // Convert video blob to audio blob
       const audioContext = new AudioContext();
       const videoElement = document.createElement("video");
@@ -439,20 +429,41 @@ export default function VideoInterview() {
             type: audioBlob.type,
           });
 
-          const audioFile = new File([audioBlob], "audio.webm", {
-            type: "audio/webm",
-          });
+          if (audioBlob.size < 1000) {
+            console.warn("Audio blob is too small:", audioBlob.size);
+            resolve(null);
+            return;
+          }
 
           try {
-            const response = await interviewAPI.submitAudioResponse(
-              audioFile,
-              currentQuestionIndex
-            );
+            // Create a File object from the audio blob
+            const audioFile = new File([audioBlob], "audio.webm", {
+              type: "audio/webm;codecs=opus",
+            });
+
+            // Create a new FormData instance
+            const formData = new FormData();
+            formData.append("audio_file", audioFile);
+
+            console.log("Sending request to /audio/to-text with:", {
+              fileSize: audioFile.size,
+              fileType: audioFile.type,
+              formDataKeys: Array.from(formData.keys()),
+            });
+
+            // Use the new /audio/to-text endpoint
+            const response = await api.post("/audio/to-text", formData, {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+                "Content-Type": "multipart/form-data",
+              },
+            });
 
             console.log("Transcription response:", {
               status: response.status,
               hasData: !!response.data,
               hasTranscript: !!response.data?.transcript,
+              responseData: response.data,
             });
 
             if (response.data && response.data.transcript) {
@@ -468,6 +479,7 @@ export default function VideoInterview() {
               message: error.message,
               response: error.response?.data,
               status: error.response?.status,
+              headers: error.response?.headers,
             });
             toast.error("Failed to transcribe audio");
             reject(error);
@@ -480,11 +492,9 @@ export default function VideoInterview() {
       await videoElement.play();
 
       // Record until video ends
-      // await new Promise((resolve) => {
       videoElement.onended = () => {
         mediaRecorder.stop();
       };
-      // });
 
       // Wait for the transcription to complete
       const transcript = await transcriptionPromise;
@@ -504,18 +514,19 @@ export default function VideoInterview() {
   const handleResponseRecorded = async (transcript: string) => {
     console.log("handleResponseRecorded called with transcript:", transcript);
     setCurrentResponse(transcript);
+    setEditedResponse(transcript);
+    setShowEditDialog(true);
+  };
+
+  const handleSubmitEditedResponse = () => {
     setHasRecordedCurrentQuestion(true);
-
-    // Add the transcribed text to the conversation
-    console.log("Adding message to conversation:", transcript);
-    addMessage("user", transcript);
-
-    // Update conversation history with user's response
+    addUserMessage(editedResponse);
     setConversationHistory((prev) => {
-      const newHistory = [...prev, { role: "user", content: transcript }];
+      const newHistory = [...prev, { role: "user", content: editedResponse }];
       console.log("Updated conversation history:", newHistory);
       return newHistory;
     });
+    setShowEditDialog(false);
   };
 
   const stopCamera = () => {
@@ -534,23 +545,51 @@ export default function VideoInterview() {
     try {
       // Combine all user responses into a single transcript
       const userTranscript = conversation
-        .filter((msg) => msg.sender === "user")
-        .map((msg) => msg.message)
+        .filter((msg: Message) => msg.role === "user")
+        .map((msg: Message) => msg.content)
         .join("\n");
 
       // Get the job details for context
       const jobContext = {
-        title: jobData?.title,
-        description: jobData?.description,
-        requirements: jobData?.requirements,
+        title: jobData?.title || "Unknown Position",
+        description: jobData?.description || "",
+        requirements: jobData?.requirements || "",
       };
 
       // Call the API to analyze the transcript
-      const feedback = await interviewAPI.analyzeTranscript(userTranscript, jobContext);
-      setInterviewFeedback(feedback);
+      // Use PUT instead of POST for the generate-feedback endpoint
+      const response = await api.put("/interview/generate-feedback", {
+        transcript: userTranscript,
+        job_requirements: jobData?.requirements || ""
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` }
+      });
+      
+      // Set the feedback state with the response data
+      setFeedback(response.data);
+      
+      // Make sure to set showCompletionScreen to true
+      setShowCompletionScreen(true);
     } catch (error) {
       console.error("Error analyzing transcript:", error);
       toast.error("Failed to analyze interview performance");
+      
+      // Create a default feedback object to prevent null reference errors
+      setFeedback({
+        suggestions: ["Unable to generate feedback due to an error."],
+        keywords: [{ term: "Error", count: 1, sentiment: "negative" }],
+        score: 0,
+        scoreBreakdown: {
+          technicalSkills: 0,
+          communication: 0,
+          problemSolving: 0,
+          culturalFit: 0
+        },
+        feedback: "There was an error analyzing your interview responses."
+      });
+      
+      // Even if analysis fails, still show the completion screen
+      setShowCompletionScreen(true);
     }
   };
 
@@ -574,7 +613,7 @@ export default function VideoInterview() {
       setCurrentQuestion(nextQuestion);
 
       // Add the AI's question to the conversation
-      addMessage("ai", nextQuestion);
+      addAssistantMessage(nextQuestion);
 
       // Update conversation history
       setConversationHistory((prev) => [
@@ -605,59 +644,21 @@ export default function VideoInterview() {
     }
   };
 
-  const addMessage = (sender: "ai" | "user", message: string) => {
-    console.log("addMessage called with:", { sender, message });
-    if (sender === "ai") {
-      // First add a placeholder with typing animation
-      setConversation((prev) => {
-        const newConversation = [
-          ...prev,
-          {
-            sender,
-            message: "",
-            timestamp: new Date().toISOString(),
-            isTyping: true
-          },
-        ];
-        console.log("Updated conversation state with typing:", newConversation);
-        return newConversation;
-      });
+  const addAssistantMessage = (content: string) => {
+    setConversation(prev => [...prev, {
+      role: "assistant",
+      content,
+      timestamp: new Date().toISOString(),
+      isTyping: false
+    }]);
+  };
 
-      // Show typing animation for 2 seconds
-      setIsAiTyping(true);
-      setTimeout(() => {
-        setIsAiTyping(false);
-        
-        // Update the message in conversation
-        setConversation((prev) => {
-          const newConversation = [...prev];
-          const lastMessage = newConversation[newConversation.length - 1];
-          if (lastMessage.isTyping) {
-            lastMessage.message = message;
-            delete lastMessage.isTyping;
-          }
-          console.log("Updated conversation state with message:", newConversation);
-          return newConversation;
-        });
-      }, 2000);
-    } else {
-      setConversation((prev) => {
-        const newConversation = [
-          ...prev,
-          {
-            sender,
-            message,
-            timestamp: new Date().toISOString(),
-          },
-        ];
-        console.log("Updated conversation state:", newConversation);
-        return newConversation;
-      });
-    }
-
-    if (transcriptEndRef.current) {
-      transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+  const addUserMessage = (content: string) => {
+    setConversation(prev => [...prev, {
+      role: "user",
+      content,
+      timestamp: new Date().toISOString()
+    }]);
   };
 
   const startInterview = async () => {
@@ -687,10 +688,16 @@ export default function VideoInterview() {
       setInterviewFlow(interviewFlow);
 
       // Show AI preparation animation for 3 seconds
-      setTimeout(() => {
+      setTimeout(async () => {
         setIsPreparing(false);
         setIsAiTyping(true);
-        addMessage("ai", interviewFlow[0].question);
+        addAssistantMessage(interviewFlow[0].question);
+        
+        // Initialize camera and microphone 0.1 seconds after buffer
+        setTimeout(async () => {
+          await initializeDevices();
+        }, 100);
+
         setTimeout(() => {
           setIsAiTyping(false);
           setIsAiSpeaking(true);
@@ -764,7 +771,7 @@ export default function VideoInterview() {
 
       // Set up stop handler
       mediaRecorder.onstop = () => {
-        stopCamera(); // Stop camera when recording stops
+        // Don't stop the camera here, just process the recording
         const videoBlob = new Blob(recordedChunksRef.current, {
           type: "video/webm",
         });
@@ -820,16 +827,16 @@ export default function VideoInterview() {
     // Format the conversation with timestamps
     const formattedConversation = conversation.map((msg) => {
       const timestamp = new Date(msg.timestamp).toLocaleTimeString();
-      return `[${timestamp}] ${msg.sender === "ai" ? "Interviewer" : "You"}: ${msg.message}`;
+      return `[${timestamp}] ${msg.role === "user" ? "You" : "AI Interviewer"}: ${msg.content}`;
     });
 
     // Add feedback section if available
     let transcriptContent = formattedConversation.join("\n\n");
-    if (interviewFeedback) {
+    if (feedback) {
       transcriptContent += "\n\n=== Interview Feedback ===\n\n";
-      transcriptContent += `Overall Score: ${interviewFeedback.score}/10\n\n`;
-      transcriptContent += `Feedback:\n${interviewFeedback.feedback}\n\n`;
-      transcriptContent += `Suggestions for Improvement:\n${interviewFeedback.suggestions.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+      transcriptContent += `Overall Score: ${feedback.score}/10\n\n`;
+      transcriptContent += `Feedback:\n${feedback.feedback}\n\n`;
+      transcriptContent += `Suggestions for Improvement:\n${feedback.suggestions.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
     }
 
     // Create and download the file
@@ -837,11 +844,39 @@ export default function VideoInterview() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${jobData?.title?.replace(/\s+/g, "-").toLowerCase()}-interview-transcript.txt`;
+    a.download = `${jobData?.title?.replace(/\s+/g, "-").toLowerCase() || "interview"}-transcript.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleInterviewComplete = async () => {
+    try {
+      setIsProcessingResponse(true);
+      
+      // Get the interview transcript
+      const transcript = conversation
+        .filter((msg: Message) => msg.role === "user")
+        .map((msg: Message) => msg.content)
+        .join("\n\n");
+
+      // Remove the duplicate call to generate-feedback
+      // The analyzeInterview function will handle this instead
+      
+      // Set the current stage to thank_you
+      setCurrentStage("thank_you");
+    } catch (error) {
+      console.error("Error generating feedback:", error);
+      toast.error("Failed to generate interview feedback. Please try again.");
+    } finally {
+      setIsProcessingResponse(false);
+    }
+  };
+
+  // Update conversation state management
+  const updateConversation = (newMessage: Message) => {
+    setConversation(prev => [...prev, newMessage]);
   };
 
   if (isLoading) {
@@ -861,14 +896,23 @@ export default function VideoInterview() {
   if (showCompletionScreen) {
     return (
       <ThankYouStage
-        companyName={companyData?.name || "the company"}
-        jobTitle={jobData?.title || "the position"}
+        feedback={feedback?.feedback || "No feedback available."}
+        score={feedback?.score || 0}
+        scoreBreakdown={feedback?.scoreBreakdown || {
+          technicalSkills: 0,
+          communication: 0,
+          problemSolving: 0,
+          culturalFit: 0
+        }}
+        suggestions={feedback?.suggestions || ["No suggestions available."]}
+        keywords={feedback?.keywords || [{ term: "No keywords", count: 0, sentiment: "neutral" }]}
         transcript={conversation.map(msg => ({
-          speaker: msg.sender,
-          text: msg.message,
-          timestamp: msg.timestamp
+          speaker: msg.role,
+          text: msg.content,
+          timestamp: msg.timestamp || new Date().toISOString()
         }))}
-        feedback={interviewFeedback}
+        companyName={interviewData.company_name}
+        jobTitle={interviewData.job_title}
       />
     );
   }
@@ -1141,20 +1185,18 @@ export default function VideoInterview() {
                     <div
                       key={index}
                       className={`flex ${
-                        message.sender === "ai"
-                          ? "justify-start"
-                          : "justify-end"
+                        message.role === "user" ? "justify-end" : "justify-start"
                       }`}
                     >
                       <div
                         className={`max-w-[85%] rounded-lg p-3 ${
-                          message.sender === "ai"
-                            ? "bg-muted text-foreground"
-                            : "bg-brand text-brand-foreground"
+                          message.role === "user"
+                            ? "bg-brand text-brand-foreground"
+                            : "bg-muted text-foreground"
                         }`}
                       >
                         <div className="text-xs mb-1">
-                          {message.sender === "ai" ? "AI Interviewer" : "You"}
+                          {message.role === "user" ? "You" : "AI Interviewer"}
                         </div>
                         {message.isTyping ? (
                           <div className="flex items-center gap-1">
@@ -1163,7 +1205,7 @@ export default function VideoInterview() {
                             <div className="w-2 h-2 rounded-full bg-brand animate-bounce" style={{ animationDelay: '300ms' }} />
                           </div>
                         ) : (
-                          <p>{message.message}</p>
+                          <p>{message.content}</p>
                         )}
                       </div>
                     </div>
@@ -1220,6 +1262,33 @@ export default function VideoInterview() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Review Your Response</DialogTitle>
+            <DialogDescription>
+              Please review and edit your response if needed. The AI has transcribed your answer, but you can make corrections if anything was misinterpreted.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              value={editedResponse}
+              onChange={(e) => setEditedResponse(e.target.value)}
+              className="min-h-[200px]"
+              placeholder="Your transcribed response will appear here..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitEditedResponse}>
+              Confirm & Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

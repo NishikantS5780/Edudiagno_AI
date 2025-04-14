@@ -154,6 +154,11 @@ const JobsPage = () => {
 
   const copyInterviewLink = async (jobId: number) => {
     try {
+      if (!jobId || isNaN(jobId)) {
+        toast.error("Invalid job ID");
+        return;
+      }
+      
       const interviewLink = `${window.location.origin}/interview?job_id=${jobId}`;
       await navigator.clipboard.writeText(interviewLink);
       toast.success("Interview link copied to clipboard", {

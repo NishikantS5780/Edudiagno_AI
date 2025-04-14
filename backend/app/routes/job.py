@@ -200,6 +200,7 @@ async def delete_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    stmt = delete(Job).where(id == int(id))
+    stmt = delete(Job).where(Job.id == int(id))
     db.execute(stmt)
+    db.commit()
     return
