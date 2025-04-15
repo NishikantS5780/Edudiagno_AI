@@ -22,6 +22,14 @@ import {
   XCircle,
   Info,
   ArrowRight,
+  Volume2,
+  VolumeX,
+  Wifi,
+  WifiOff,
+  Camera,
+  CameraOff,
+  Settings,
+  RefreshCw,
 } from "lucide-react";
 import ResumeUpload from "@/components/common/ResumeUpload";
 import { toast } from "sonner";
@@ -324,57 +332,69 @@ const CandidatePreCheck = () => {
         </div>
 
         {activeStep === "device" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Test Your Devices</CardTitle>
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xl">Device Check</CardTitle>
               <CardDescription>
-                Make sure your microphone is working properly
+                Let's make sure your devices are working properly for the interview
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6 max-h-[calc(100vh-400px)] overflow-y-auto">
+              <div className="space-y-6">
                 {!isTestingDevices && !isDeviceTestComplete && (
-                  <div className="text-center py-6">
-                    <div className="bg-muted rounded-full p-3 inline-flex mb-3">
-                      <Mic className="h-6 w-6 text-brand" />
+                  <div className="flex flex-col items-center justify-center py-8 px-4">
+                    <div className="bg-brand/10 rounded-full p-4 mb-4">
+                      <Settings className="h-8 w-8 text-brand" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">
+                    <h3 className="text-xl font-semibold mb-2 text-center">
                       Device Check Required
                     </h3>
-                    <p className="mb-4 max-w-md mx-auto text-muted-foreground">
-                      We need to check your microphone to ensure it works properly for the interview
+                    <p className="mb-6 max-w-md text-center text-muted-foreground">
+                      We need to check your microphone and camera to ensure they work properly for the interview
                     </p>
-                    <Button onClick={startDeviceTest}>Start Device Test</Button>
+                    <Button size="lg" onClick={startDeviceTest} className="px-6">
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Start Device Check
+                    </Button>
                   </div>
                 )}
 
                 {isTestingDevices && (
-                  <div className="space-y-4">
-                    <div className="aspect-video bg-muted rounded-lg overflow-hidden relative max-w-2xl mx-auto">
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    <div className="space-y-4 max-w-2xl mx-auto">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div
-                            className={`h-2.5 w-2.5 rounded-full mr-2 ${
-                              cameraAccess === "granted"
-                                ? "bg-success"
-                                : cameraAccess === "denied"
-                                ? "bg-yellow-500"
-                                : "bg-muted"
-                            }`}
-                          />
-                          <span>Camera</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Video Preview */}
+                    <div className="space-y-4">
+                      <div className="aspect-video bg-muted rounded-lg overflow-hidden relative">
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity">
+                          <div className="text-white text-center p-4">
+                            <Camera className="h-8 w-8 mx-auto mb-2" />
+                            <p className="text-sm">Camera Preview</p>
+                          </div>
                         </div>
-                        <span className="text-sm">
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div className="flex items-center">
+                          {cameraAccess === "granted" ? (
+                            <Camera className="h-5 w-5 text-success mr-2" />
+                          ) : cameraAccess === "denied" ? (
+                            <CameraOff className="h-5 w-5 text-yellow-500 mr-2" />
+                          ) : (
+                            <Camera className="h-5 w-5 text-muted-foreground mr-2" />
+                          )}
+                          <span className="font-medium">Camera</span>
+                        </div>
+                        <span className={`text-sm ${
+                          cameraAccess === "granted" ? "text-success" : 
+                          cameraAccess === "denied" ? "text-yellow-500" : 
+                          "text-muted-foreground"
+                        }`}>
                           {cameraAccess === "granted"
                             ? "Working"
                             : cameraAccess === "denied"
@@ -382,115 +402,137 @@ const CandidatePreCheck = () => {
                             : "Checking..."}
                         </span>
                       </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div
-                            className={`h-2.5 w-2.5 rounded-full mr-2 ${
-                              microphoneAccess === "granted"
-                                ? "bg-success"
-                                : microphoneAccess === "denied"
-                                ? "bg-destructive"
-                                : "bg-yellow-500"
-                            }`}
-                          />
-                          <span>Microphone</span>
-                        </div>
-                        <span className="text-sm">
-                          {microphoneAccess === "granted"
-                            ? "Working"
-                            : microphoneAccess === "denied"
-                            ? "Access denied"
-                            : "Checking..."}
-                        </span>
-                      </div>
-
-                      {microphoneAccess === "granted" && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span>Microphone Volume</span>
-                            <span>{Math.round(micVolume)}</span>
-                          </div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-success transition-all"
-                              style={{
-                                width: `${Math.min(micVolume * 2, 100)}%`,
-                              }}
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {micVolume < 10
-                              ? "Speak to test your microphone"
-                              : "Microphone is working well"}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div
-                            className={`h-2.5 w-2.5 rounded-full mr-2 ${
-                              internetConnection === "good"
-                                ? "bg-success"
-                                : internetConnection === "poor"
-                                ? "bg-yellow-500"
-                                : "bg-muted"
-                            }`}
-                          />
-                          <span>Internet Connection</span>
-                        </div>
-                        <span className="text-sm">
-                          {internetConnection === "good"
-                            ? "Good"
-                            : internetConnection === "poor"
-                            ? "Poor"
-                            : "Checking..."}
-                        </span>
-                      </div>
                     </div>
 
-                    <div className="flex justify-end max-w-2xl mx-auto">
-                      <Button onClick={stopDeviceTest}>
-                        Complete Device Test
-                      </Button>
+                    {/* Audio and Connection Status */}
+                    <div className="space-y-4">
+                      <div className="p-4 bg-muted/30 rounded-lg space-y-4">
+                        <h3 className="font-medium flex items-center">
+                          <Mic className="h-5 w-5 mr-2" />
+                          Microphone Status
+                        </h3>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Status</span>
+                          <span className={`text-sm ${
+                            microphoneAccess === "granted" ? "text-success" : 
+                            microphoneAccess === "denied" ? "text-destructive" : 
+                            "text-yellow-500"
+                          }`}>
+                            {microphoneAccess === "granted"
+                              ? "Working"
+                              : microphoneAccess === "denied"
+                              ? "Access denied"
+                              : "Checking..."}
+                          </span>
+                        </div>
+
+                        {microphoneAccess === "granted" && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Volume Level</span>
+                              <span className="text-sm font-medium">{Math.round(micVolume)}</span>
+                            </div>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={`h-full transition-all ${
+                                  micVolume < 10 ? "bg-yellow-500" : "bg-success"
+                                }`}
+                                style={{
+                                  width: `${Math.min(micVolume * 2, 100)}%`,
+                                }}
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground flex items-center">
+                              {micVolume < 10 ? (
+                                <>
+                                  <VolumeX className="h-3 w-3 mr-1 text-yellow-500" />
+                                  Speak to test your microphone
+                                </>
+                              ) : (
+                                <>
+                                  <Volume2 className="h-3 w-3 mr-1 text-success" />
+                                  Microphone is working well
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-4 bg-muted/30 rounded-lg">
+                        <h3 className="font-medium flex items-center mb-2">
+                          <Wifi className="h-5 w-5 mr-2" />
+                          Internet Connection
+                        </h3>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Status</span>
+                          <span className={`text-sm ${
+                            internetConnection === "good" ? "text-success" : 
+                            internetConnection === "poor" ? "text-yellow-500" : 
+                            "text-muted-foreground"
+                          }`}>
+                            {internetConnection === "good"
+                              ? "Good"
+                              : internetConnection === "poor"
+                              ? "Poor"
+                              : "Checking..."}
+                          </span>
+                        </div>
+                        {internetConnection === "poor" && (
+                          <p className="text-xs text-yellow-500 mt-2">
+                            Your connection might be unstable. Consider using a more reliable network.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {isDeviceTestComplete && (
-                  <div className="text-center py-6">
-                    <div className="bg-success/10 rounded-full p-3 inline-flex mb-3">
-                      <CheckCircle className="h-6 w-6 text-success" />
+                  <div className="flex flex-col items-center justify-center py-8 px-4">
+                    <div className="bg-success/10 rounded-full p-4 mb-4">
+                      <CheckCircle className="h-8 w-8 text-success" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Device Test Complete
+                    <h3 className="text-xl font-semibold mb-2 text-center">
+                      Device Check Complete
                     </h3>
-                    <p className="mb-2 max-w-md mx-auto">
+                    <p className="mb-6 max-w-md text-center text-muted-foreground">
                       Your devices are ready for the interview
                     </p>
-                    <ul className="space-y-2 mb-4 max-w-md mx-auto text-sm">
-                      <li className="flex items-center">
-                        <Check className="h-4 w-4 text-success mr-2" />
-                        Microphone is detected and functioning
-                      </li>
-                      <li className="flex items-center">
-                        <Check className="h-4 w-4 text-success mr-2" />
-                        Camera is{" "}
-                        {cameraAccess === "granted"
-                          ? "detected and functioning"
-                          : "optional"}
-                      </li>
-                      <li className="flex items-center">
-                        <Check className="h-4 w-4 text-success mr-2" />
-                        Internet connection is stable
-                      </li>
-                    </ul>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl mb-6">
+                      <div className="flex flex-col items-center p-4 bg-success/5 rounded-lg">
+                        <div className="bg-success/10 rounded-full p-2 mb-2">
+                          <Mic className="h-5 w-5 text-success" />
+                        </div>
+                        <span className="text-sm font-medium">Microphone</span>
+                        <span className="text-xs text-success">Working</span>
+                      </div>
+                      
+                      <div className="flex flex-col items-center p-4 bg-success/5 rounded-lg">
+                        <div className="bg-success/10 rounded-full p-2 mb-2">
+                          <Camera className="h-5 w-5 text-success" />
+                        </div>
+                        <span className="text-sm font-medium">Camera</span>
+                        <span className="text-xs text-success">
+                          {cameraAccess === "granted" ? "Working" : "Optional"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex flex-col items-center p-4 bg-success/5 rounded-lg">
+                        <div className="bg-success/10 rounded-full p-2 mb-2">
+                          <Wifi className="h-5 w-5 text-success" />
+                        </div>
+                        <span className="text-sm font-medium">Internet</span>
+                        <span className="text-xs text-success">Stable</span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
+            <CardFooter className="flex justify-between border-t pt-4">
               <Button variant="outline" onClick={() => setActiveStep("device")}>
                 Back
               </Button>
@@ -499,6 +541,7 @@ const CandidatePreCheck = () => {
                 disabled={
                   !isDeviceTestComplete || microphoneAccess !== "granted"
                 }
+                className="min-w-[120px]"
               >
                 Continue <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

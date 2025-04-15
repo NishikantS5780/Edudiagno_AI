@@ -93,6 +93,7 @@ interface InterviewData {
   title: string;
   description: string;
   company_name: string;
+  job_title: string;
   linkedin_url?: string;
   portfolio_url?: string;
   id?: string;
@@ -109,11 +110,27 @@ interface InterviewData {
 }
 
 interface ThankYouStageProps {
-  feedback: {
-    suggestions: string[];
-    keywords: string[];
+  feedback: string;
+  score: number;
+  scoreBreakdown: {
+    technicalSkills: number;
+    communication: number;
+    problemSolving: number;
+    culturalFit: number;
   };
-  transcript: TranscriptEntry[];
+  suggestions: string[];
+  keywords: Array<{
+    term: string;
+    count: number;
+    sentiment: "positive" | "neutral" | "negative";
+  }>;
+  transcript?: Array<{
+    speaker: string;
+    text: string;
+    timestamp: string;
+  }>;
+  companyName?: string;
+  jobTitle?: string;
 }
 
 export default function VideoInterview() {
@@ -123,6 +140,7 @@ export default function VideoInterview() {
     title: "",
     description: "",
     company_name: "",
+    job_title: "",
   });
   const [companyData, setCompanyData] = useState<RecruiterData>();
   const [jobData, setJobData] = useState<JobData>();
@@ -258,7 +276,8 @@ export default function VideoInterview() {
         questions: data.questions,
         title: data.title || "",
         description: data.description || "",
-        company_name: data.company_name || ""
+        company_name: data.company_name || "",
+        job_title: data.job_title || "",
       } as InterviewData);
       setCompanyData({ name: data.company_name });
       setJobData({ title: data.title });
@@ -879,6 +898,11 @@ export default function VideoInterview() {
     setConversation(prev => [...prev, newMessage]);
   };
 
+  const handleScheduleLater = () => {
+    toast.success("Interview scheduled for later");
+    // You can add additional logic here for scheduling
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-background/80">
@@ -896,7 +920,14 @@ export default function VideoInterview() {
   if (showCompletionScreen) {
     return (
       <ThankYouStage
-        feedback={feedback?.feedback || "No feedback available."}
+        transcript={conversation.map(msg => ({
+          speaker: msg.role === "user" ? "You" : "AI Interviewer",
+          text: msg.content,
+          timestamp: msg.timestamp
+        }))}
+        companyName={interviewData.company_name}
+        jobTitle={interviewData.job_title}
+        feedback={feedback?.feedback || "Thank you for completing the interview."}
         score={feedback?.score || 0}
         scoreBreakdown={feedback?.scoreBreakdown || {
           technicalSkills: 0,
@@ -904,15 +935,8 @@ export default function VideoInterview() {
           problemSolving: 0,
           culturalFit: 0
         }}
-        suggestions={feedback?.suggestions || ["No suggestions available."]}
-        keywords={feedback?.keywords || [{ term: "No keywords", count: 0, sentiment: "neutral" }]}
-        transcript={conversation.map(msg => ({
-          speaker: msg.role,
-          text: msg.content,
-          timestamp: msg.timestamp || new Date().toISOString()
-        }))}
-        companyName={interviewData.company_name}
-        jobTitle={interviewData.job_title}
+        suggestions={feedback?.suggestions || []}
+        keywords={feedback?.keywords || []}
       />
     );
   }
