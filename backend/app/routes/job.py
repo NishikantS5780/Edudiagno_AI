@@ -1,6 +1,7 @@
+from typing import Literal
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import case, delete, select
+from sqlalchemy import asc, case, delete, desc, select
 
 from app import schemas, database
 from app.models import Job, Recruiter
@@ -40,25 +41,52 @@ async def get_job(
 
 @router.get("/all")
 async def get_all_job(
+    start: str = "0",
+    limit: str = "10",
+    sort_field: Literal[
+        "title", "department", "location", "type", "show_salary", "status"
+    ] = None,
+    sort: str = "ascending",
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    stmt = select(
-        Job.id,
-        Job.title,
-        Job.description,
-        Job.department,
-        Job.location,
-        Job.type,
-        Job.min_experience,
-        Job.max_experience,
-        Job.salary_min,
-        Job.salary_max,
-        Job.show_salary,
-        Job.requirements,
-        Job.benefits,
-        Job.status,
-    ).where(Job.company_id == recruiter_id)
+    order_column = Job.id
+
+    if sort_field == "title":
+        order_column = Job.title
+    elif sort_field == "department":
+        order_column = Job.department
+    elif sort_field == "location":
+        order_column = Job.location
+    elif sort_field == "type":
+        order_column = Job.type
+    elif sort_field == "show_salary":
+        order_column = Job.show_salary
+    elif sort_field == "status":
+        order_column = Job.status
+
+    stmt = (
+        select(
+            Job.id,
+            Job.title,
+            Job.description,
+            Job.department,
+            Job.location,
+            Job.type,
+            Job.min_experience,
+            Job.max_experience,
+            Job.salary_min,
+            Job.salary_max,
+            Job.show_salary,
+            Job.requirements,
+            Job.benefits,
+            Job.status,
+        )
+        .where(Job.company_id == recruiter_id)
+        .order_by(desc(order_column) if sort == "descending" else asc(order_column))
+        .limit(int(limit))
+        .offset(int(start))
+    )
     result = db.execute(stmt)
     jobs = result.all()
 
@@ -200,7 +228,6 @@ async def delete_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    stmt = delete(Job).where(Job.id == int(id))
+    stmt = delete(Job).where(id == int(id))
     db.execute(stmt)
-    db.commit()
     return
