@@ -16,9 +16,16 @@ const InterviewPage = () => {
   useEffect(() => {
     const fetchJobDetails = async () => {
       try {
-        const response = await jobAPI.candidateGetJob(
-          urlSearchParams.get("job_id")
-        );
+        const jobId = urlSearchParams.get("job_id");
+        
+        // Check if job_id is missing or invalid
+        if (!jobId) {
+          setError("Missing job ID. Please use a valid interview link.");
+          setLoading(false);
+          return;
+        }
+        
+        const response = await jobAPI.candidateGetJob(jobId);
         const data = response.data;
 
         setJobDetails({

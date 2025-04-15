@@ -75,7 +75,7 @@ const RecordingButton: React.FC<RecordingButtonProps> = ({
           ) : (
             <>
               <Mic className="mr-2 h-4 w-4" />
-              {recordingTime > 0 ? "Re-record Answer" : "Record Answer"}
+              Record Answer
             </>
           )}
         </Button>

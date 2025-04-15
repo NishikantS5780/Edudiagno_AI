@@ -273,13 +273,30 @@ async def generate_feedback(
             Candidate: {question_and_response.answer}
         """
 
-    prompt = f"""Analyze how well the answers are given to the questions and evaluate the candidate based on conversation and answers as per job description and requirements
+    prompt = f"""Analyze the interview responses and provide detailed feedback. Consider the job requirements and evaluate the candidate's performance across multiple dimensions.
 
     Return ONLY a JSON object with these exact fields:
     {{
-        "feedback_for_candidate": "General feedback about interview for candidate",
-        "feedback_for_recruiter": "Detailed feedback about the interview",
-        "score": "number between 0 and 100 based on correctness of answers"
+        "feedback_for_candidate": "Detailed feedback about the interview performance",
+        "feedback_for_recruiter": "Comprehensive analysis for the recruiter",
+        "score": number between 0 and 100,
+        "scoreBreakdown": {{
+            "technicalSkills": number between 0 and 100,
+            "communication": number between 0 and 100,
+            "problemSolving": number between 0 and 100,
+            "culturalFit": number between 0 and 100
+        }},
+        "suggestions": [
+            "List of specific suggestions for improvement",
+            "Each suggestion should be actionable and specific"
+        ],
+        "keywords": [
+            {{
+                "term": "string",
+                "count": number,
+                "sentiment": "positive" | "neutral" | "negative"
+            }}
+        ]
     }}
 
     Conversation:
@@ -294,9 +311,9 @@ async def generate_feedback(
     Important:
     - Return ONLY the JSON object, no other text
     - All fields must be present
-    - match_score must be a number between 0 and 100
-    - Arrays should not be empty (use empty string if no data)
-    - All other values must be strings
+    - All scores must be numbers between 0 and 100
+    - Keywords should be relevant to the job and interview
+    - Suggestions should be specific and actionable
     """
 
     response = await openai.client.chat.completions.create(
@@ -304,7 +321,7 @@ async def generate_feedback(
         messages=[
             {
                 "role": "system",
-                "content": "You are a helpful assistant that interviews candidates for job posting. You must return a valid JSON object.",
+                "content": "You are an expert interviewer and evaluator. Provide detailed, constructive feedback.",
             },
             {"role": "user", "content": prompt},
         ],
@@ -326,4 +343,10 @@ async def generate_feedback(
 
     db.execute(stmt).scalars().all()[0]
 
-    return {"feedback": interview_data["feedback_for_candidate"]}
+    return {
+        "feedback": interview_data["feedback_for_candidate"],
+        "score": interview_data["score"],
+        "scoreBreakdown": interview_data["scoreBreakdown"],
+        "suggestions": interview_data["suggestions"],
+        "keywords": interview_data["keywords"]
+    }

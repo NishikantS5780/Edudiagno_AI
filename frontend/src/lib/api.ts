@@ -120,6 +120,12 @@ export const interviewAPI = {
     );
     return res;
   },
+  generateFeedback: async () => {
+    const res = await api.put("/interview/generate-feedback", undefined, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+    });
+    return res.data;
+  },
 };
 
 export const jobAPI = {
