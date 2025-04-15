@@ -74,13 +74,14 @@ const JobsPage = () => {
       const data = response.data;
       setJobs(
         data.map((jobData) => {
+          const date = jobData.created_at ? new Date(jobData.created_at.replace('Z', '')) : new Date();
           return {
             id: jobData.id,
             title: jobData.title,
             department: jobData.department,
             location: jobData.location,
             status: jobData.status,
-            createdAt: new Date(jobData.created_at),
+            createdAt: date,
           };
         })
       );
@@ -141,15 +142,11 @@ const JobsPage = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    return date.toLocaleDateString();
+    // Format the date as MM/DD/YYYY
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   const copyInterviewLink = async (jobId: number) => {

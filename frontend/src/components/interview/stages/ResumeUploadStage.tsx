@@ -8,6 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { interviewAPI, resumeAPI } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { InterviewData } from "@/types/interview";
+import { MatchResultsStage } from "./MatchResultsStage";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -125,76 +126,26 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
     navigate(`/interview/setup?i_id=${candidateData.id}`);
   };
 
+  const handleMatchAnalysis = async (analysis: MatchAnalysis) => {
+    setMatchAnalysis(analysis);
+    setMatchScore(Number(analysis.matchScore));
+    setMatchFeedback(analysis.matchFeedback);
+    setShowMatchResults(true);
+  };
+
   if (isCompleted && matchAnalysis) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="space-y-6">
-          <div className="text-center space-y-4">
-            <div className="text-4xl">✅</div>
-            <h2 className="text-xl font-semibold">
-              Resume Successfully Processed!
-            </h2>
-            <p className="text-muted-foreground">
-              Your resume has been analyzed and we've determined your
-              compatibility with the position.
-            </p>
-          </div>
-
-          <div className="bg-muted/50 rounded-xl p-6 space-y-4">
-            <div className="flex justify-center mb-4">
-              <div className="bg-background rounded-full h-6 w-64 overflow-hidden">
-                <div
-                  className={`h-full ${
-                    matchAnalysis.matchScore >= 60
-                      ? "bg-green-500"
-                      : "bg-orange-500"
-                  }`}
-                  style={{ width: `${matchAnalysis.matchScore}%` }}
-                />
-              </div>
-              <span className="ml-2 font-semibold">
-                {matchAnalysis.matchScore}%
-              </span>
-            </div>
-
-            <div className="text-center">
-              <h3 className="text-lg font-semibold mb-2">
-                {matchAnalysis.matchScore >= 60
-                  ? "Great Match!"
-                  : "Not Quite a Match"}
-              </h3>
-              <p className="text-muted-foreground">
-                {matchAnalysis.matchScore >= 60
-                  ? "Your profile matches well with the job requirements!"
-                  : "Your profile doesn't seem to be a strong match for this position."}
-              </p>
-            </div>
-
-            {matchAnalysis.matchFeedback && (
-              <div className="bg-background p-4 rounded-md">
-                <h4 className="font-medium mb-2">Feedback:</h4>
-                <p className="text-sm">{matchAnalysis.matchFeedback}</p>
-              </div>
-            )}
-
-            <div className="pt-4 text-center">
-              {/* {matchAnalysis.matchScore >= 60 ? ( */}
-              <Button onClick={() => handleStartInterview()} className="w-full">
-                Continue to Interview
-              </Button>
-              {/* ) : (
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/")}
-                  className="w-full"
-                >
-                  View Other Opportunities
-                </Button>
-              )} */}
-            </div>
-          </div>
-        </div>
-      </div>
+      <MatchResultsStage
+        matchScore={matchAnalysis.matchScore.toString()}
+        matchFeedback={matchAnalysis.matchFeedback}
+        jobTitle={jobTitle}
+        companyName={companyName}
+        interviewId={candidateData.id}
+        onScheduleLater={() => {
+          // Here you would typically make an API call to schedule the interview for later
+          toast.success("Interview scheduled for later. Check your email for details.");
+        }}
+      />
     );
   }
 
