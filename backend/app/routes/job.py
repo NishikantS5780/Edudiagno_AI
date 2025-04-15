@@ -33,7 +33,7 @@ async def get_job(
         Job.status,
     ).where(Job.id == int(id))
     result = db.execute(stmt)
-    job = result.scalars().all()[0]
+    job = result.all()[0]._mapping
 
     return job
 
