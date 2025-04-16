@@ -228,10 +228,8 @@ const CandidatePreCheck = () => {
       animationFrame.current = null;
     }
 
-    // Only set device test complete if we have microphone access
-    if (microphoneAccess === "granted") {
-      setIsDeviceTestComplete(true);
-    }
+    // Set device test complete regardless of microphone access
+    setIsDeviceTestComplete(true);
     setIsTestingDevices(false);
   };
 
@@ -489,6 +487,21 @@ const CandidatePreCheck = () => {
                   </div>
                 )}
 
+                {isTestingDevices && (
+                  <div className="flex justify-center mt-6">
+                    <Button 
+                      onClick={() => {
+                        stopDeviceTest();
+                        setIsDeviceTestComplete(true);
+                      }}
+                      className="px-6"
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Complete Device Test
+                    </Button>
+                  </div>
+                )}
+
                 {isDeviceTestComplete && (
                   <div className="flex flex-col items-center justify-center py-8 px-4">
                     <div className="bg-success/10 rounded-full p-4 mb-4">
@@ -538,9 +551,7 @@ const CandidatePreCheck = () => {
               </Button>
               <Button
                 onClick={proceedToNextStep}
-                disabled={
-                  !isDeviceTestComplete || microphoneAccess !== "granted"
-                }
+                disabled={!isDeviceTestComplete}
                 className="min-w-[120px]"
               >
                 Continue <ArrowRight className="ml-2 h-4 w-4" />
