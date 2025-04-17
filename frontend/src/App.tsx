@@ -57,6 +57,7 @@ import { UserContext, UserProvider } from "./context/UserContext";
 import LoadingSpinner from "./components/common/LoadingSpinner";
 import RequireProfileVerified from "@/components/common/RequireProfileVerified";
 import InterviewPage from "@/pages/Interview/InterviewPage";
+import DsaExecution from "./pages/DsaLab/DsaExecution";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,6 +98,8 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+
+            <Route path="/dsa" element={<DsaExecution />} />
 
             <Route path="/interview" element={<InterviewPage />} />
             <Route
