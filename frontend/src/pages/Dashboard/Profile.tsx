@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Pencil, Shield, UserCircle, AlertCircle } from "lucide-react";
 import ProfileCompletion from "@/components/profile/ProfileCompletion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { recruiterAPI } from "@/lib/api";
 
 const Profile = () => {
   const { toast } = useToast();
@@ -65,6 +66,54 @@ const Profile = () => {
   // Add this near the top of the component with other state declarations
   const [hasCompletedProfile, setHasCompletedProfile] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+
+  // Fetch user details when component mounts
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      try {
+        const recruiterData = await recruiterAPI.verifyLogin();
+        const userData = recruiterData.data;
+        
+        // Log the data to verify structure
+        console.log('Recruiter Data:', userData);
+
+        setProfileData({
+          name: userData.name || '',
+          email: userData.email || '',
+          company: userData.company_name || '',
+          title: userData.designation || '',
+          phone: userData.phone || '',
+          timezone: "America/New_York", // Default value since not in API
+          language: "English", // Default value since not in API
+        });
+        setCompanySettings({
+          companyName: userData.company_name || '',
+          website: userData.website || '',
+          industry: userData.industry || "Technology",
+          size: userData.min_company_size && userData.max_company_size 
+            ? `${userData.min_company_size}-${userData.max_company_size} employees`
+            : "51-200 employees",
+          logo: userData.company_logo || null,
+          address: userData.address || '',
+          city: userData.city || '',
+          state: userData.state || '',
+          zip: userData.zip || '',
+          country: userData.country || "United States",
+        });
+        setProfileImage(userData.company_logo || null);
+        setHasCompletedProfile(true); // Assuming profile is complete if we have data
+      } catch (error) {
+        console.error("Failed to fetch recruiter details:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchUserDetails();
+  }, []);
 
   // Separate useEffect for checking profile completion status
   useEffect(() => {

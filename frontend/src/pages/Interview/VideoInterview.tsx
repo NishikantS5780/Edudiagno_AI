@@ -1093,7 +1093,7 @@ export default function VideoInterview() {
                             disabled={isRecording || isProcessingResponse}
                             className=""
                           >
-                            Next Question
+                            {currentQuestionIndex === interviewFlow.length - 1 ? "End Interview" : "Next Question"}
                           </Button>
                         )}
                     </div>

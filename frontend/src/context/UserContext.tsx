@@ -27,13 +27,22 @@ export const UserProvider = ({ children }) => {
   useEffect(() => {
     const verifyLogin = async () => {
       if (localStorage.getItem("token")) {
-        const res = await recruiterAPI.verifyLogin();
-        setRecruiter({ name: res.data.name, verified: res.data.verified });
-        navigate("dashboard", { replace: true });
+        try {
+          const res = await recruiterAPI.verifyLogin();
+          setRecruiter({ name: res.data.name, verified: res.data.verified });
+          // Only navigate to dashboard if we're on the login or landing page
+          const currentPath = window.location.pathname;
+          if (currentPath === "/" || currentPath === "/login") {
+            navigate("dashboard", { replace: true });
+          }
+        } catch (error) {
+          console.error("Token verification failed:", error);
+          localStorage.removeItem("token");
+        }
       }
+      setIsLoading(false);
     };
     verifyLogin();
-    setIsLoading(false);
   }, []);
 
   return (

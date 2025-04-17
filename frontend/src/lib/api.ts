@@ -135,8 +135,19 @@ export const interviewAPI = {
 };
 
 export const jobAPI = {
-  recruiterGetAllJobs: async () => {
-    const res = await api.get("/job/all", {
+  recruiterGetAllJobs: async (params?: {
+    limit?: number;
+    start?: number;
+    sort?: 'ascending' | 'descending';
+    sort_field?: 'title' | 'department' | 'location' | 'type' | 'show_salary' | 'status';
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.start) queryParams.append('start', params.start.toString());
+    if (params?.sort) queryParams.append('sort', params.sort);
+    if (params?.sort_field) queryParams.append('sort_field', params.sort_field);
+
+    const res = await api.get(`/job/all?${queryParams.toString()}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     return res;
@@ -222,6 +233,21 @@ export const resumeAPI = {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return res;
+  },
+};
+
+export const userAPI = {
+  getCurrentUser: async () => {
+    const res = await api.get("/user/me", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    return res.data;
+  },
+  updateProfile: async (data: any) => {
+    const res = await api.put("/user/profile", data, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    return res.data;
   },
 };
 

@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import AIGeneratePopup from "@/components/jobs/AIGeneratePopup";
+import { useNotifications } from "@/context/NotificationContext";
 
 const jobFormSchema = z.object({
   title: z
@@ -56,25 +57,25 @@ const NewJob = () => {
     title: "",
     status: "active",
   });
+  const { addNotification } = useNotifications();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const createJob = async () => {
-      try {
-        setIsSubmitting(true);
-
-        await jobAPI.createJob(jobData);
+    try {
+      const response = await jobAPI.createJob(jobData);
+      if (response.status === 201) {
+        addNotification({
+          type: 'job',
+          title: 'New Job Created',
+          message: `Your job posting "${jobData.title}" is now live.`
+        });
         toast.success("Job created successfully");
         navigate("/dashboard/jobs");
-      } catch (error) {
-        console.error("Error creating job:", error);
-        toast.error("Failed to create job. Please try again.");
-      } finally {
-        setIsSubmitting(false);
       }
-    };
-
-    createJob();
+    } catch (error) {
+      console.error("Error creating job:", error);
+      toast.error("Failed to create job");
+    }
   };
 
   const handleGeneratedContent = (
