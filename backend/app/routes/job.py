@@ -32,6 +32,7 @@ async def get_job(
         Job.requirements,
         Job.benefits,
         Job.status,
+        Job.created_at,
     ).where(Job.id == int(id))
     result = db.execute(stmt)
     job = result.all()[0]._mapping
@@ -81,6 +82,7 @@ async def get_all_job(
             Job.requirements,
             Job.benefits,
             Job.status,
+            Job.created_at,
         )
         .where(Job.company_id == recruiter_id)
         .order_by(desc(order_column) if sort == "descending" else asc(order_column))

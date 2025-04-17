@@ -13,7 +13,7 @@ from fastapi import (
     status,
 )
 from sqlalchemy.orm import Session
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 
 from app import database, schemas
 from app.configs import openai
@@ -171,6 +171,24 @@ async def update_interview(
     db.commit()
     interview = result.scalars().all()[0]
     return interview
+
+
+@router.delete("", status_code=204)
+async def update_interview(
+    id: str,
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
+):
+    job_subq = select(Job.id).where(Job.company_id == recruiter_id).subquery()
+    stmt = (
+        delete(Interview)
+        .where(Interview.job_id.in_(select(job_subq)))
+        .where(Interview.id == int(id))
+    )
+    print(stmt)
+    db.execute(stmt)
+    db.commit()
+    return
 
 
 @router.post("/analyze-resume")
@@ -348,5 +366,5 @@ async def generate_feedback(
         "score": interview_data["score"],
         "scoreBreakdown": interview_data["scoreBreakdown"],
         "suggestions": interview_data["suggestions"],
-        "keywords": interview_data["keywords"]
+        "keywords": interview_data["keywords"],
     }
