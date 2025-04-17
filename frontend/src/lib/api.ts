@@ -67,6 +67,12 @@ export const interviewAPI = {
     });
     return res;
   },
+  deleteInterview: async (id: number) => {
+    const res = await api.delete(`/interview?id=${id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    return res;
+  },
   analyzeCandidate: async () => {
     const res = await api.post("/interview/analyze-resume", undefined, {
       headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },

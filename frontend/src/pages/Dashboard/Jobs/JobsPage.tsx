@@ -56,6 +56,16 @@ import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { jobAPI } from "@/lib/api";
 import { JobData } from "@/types/job";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const JobsPage = () => {
   const [jobs, setJobs] = useState<JobData[]>([]);
@@ -64,6 +74,7 @@ const JobsPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
+  const [jobToDelete, setJobToDelete] = useState<number | null>(null);
 
   const departments = ["IT", "Healthcare"];
   const locations = ["Mumbai", "Delhi"];
@@ -71,6 +82,7 @@ const JobsPage = () => {
   const fetchJobs = async () => {
     try {
       const response = await jobAPI.recruiterGetAllJobs();
+      console.log('Jobs API Response:', response.data);
       const data = response.data;
       setJobs(
         data.map((jobData) => {
@@ -130,13 +142,15 @@ const JobsPage = () => {
       const response = await jobAPI.deleteJob(jobId.toString());
       if (response.status === 204) {
         toast.success("Job deleted successfully");
-        fetchJobs();
+        await fetchJobs();
       } else {
         throw new Error("Failed to delete job");
       }
     } catch (error) {
       console.error("Error deleting job:", error);
       toast.error("Failed to delete job");
+    } finally {
+      setJobToDelete(null);
     }
   };
 
@@ -311,7 +325,7 @@ const JobsPage = () => {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => handleDeleteJob(job.id)}
+                          onClick={() => setJobToDelete(job.id)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
@@ -334,6 +348,27 @@ const JobsPage = () => {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={jobToDelete !== null} onOpenChange={() => setJobToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the job posting
+              and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => jobToDelete && handleDeleteJob(jobToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };

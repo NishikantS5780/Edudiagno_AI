@@ -53,6 +53,17 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { interviewAPI } from "@/lib/api";
 import { InterviewData } from "@/types/interview";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const InterviewsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,8 +71,8 @@ const InterviewsPage = () => {
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
   const [interviewsData, setInterviewsData] = useState<InterviewData[]>();
+  const [interviewToDelete, setInterviewToDelete] = useState<number | null>(null);
 
-  useEffect(() => {
     const getInterviewData = async () => {
       const res = await interviewAPI.getInterviews();
       setInterviewsData(() =>
@@ -90,8 +101,23 @@ const InterviewsPage = () => {
         })
       );
     };
+
+  useEffect(() => {
     getInterviewData();
   }, []);
+
+  const handleDeleteInterview = async (id: number) => {
+    try {
+      await interviewAPI.deleteInterview(id);
+      toast.success("Interview deleted successfully");
+      getInterviewData(); // Refresh the list
+    } catch (error) {
+      console.error("Error deleting interview:", error);
+      toast.error("Failed to delete interview");
+    } finally {
+      setInterviewToDelete(null);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -136,9 +162,10 @@ const InterviewsPage = () => {
 
   return (
     <DashboardLayout>
+      <div className="container mx-auto py-6">
       <PageHeader
-        title="AI Interviews"
-        description="Manage and review AI-conducted candidate interviews"
+          title="Interviews"
+          description="Manage and track all your interviews"
       />
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
@@ -258,41 +285,31 @@ const InterviewsPage = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Link to={`/dashboard/interviews/${interview.id}`}>
-                            <Eye className="h-4 w-4 mr-2" />
+                          <DropdownMenuItem>
+                            <Link
+                              to={`/dashboard/interviews/${interview.id}`}
+                              className="flex items-center"
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </Link>
                         </DropdownMenuItem>
-                        {interview.status === "completed" && (
-                          <>
-                            <DropdownMenuItem asChild>
+                          <DropdownMenuItem>
                               <Link
                                 to={`/dashboard/interviews/${interview.id}/report`}
+                              className="flex items-center"
                               >
-                                <BarChart3 className="h-4 w-4 mr-2" />
+                              <FileText className="mr-2 h-4 w-4" />
                                 View Report
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link
-                                to={`/dashboard/interviews/${interview.id}/transcript`}
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                View Transcript
-                              </Link>
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                        <DropdownMenuItem>
-                          <Share className="h-4 w-4 mr-2" />
-                          Share Interview
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => setInterviewToDelete(interview.id!)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Interview
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -335,6 +352,28 @@ const InterviewsPage = () => {
           </PaginationItem>
         </PaginationContent>
       </Pagination>
+      </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={interviewToDelete !== null} onOpenChange={() => setInterviewToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the interview and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => interviewToDelete && handleDeleteInterview(interviewToDelete)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };

@@ -205,9 +205,13 @@ export default function VideoInterview() {
   const microphone = useRef<MediaStreamAudioSourceNode | null>(null);
   const dataArray = useRef<Uint8Array | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+  const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const recordingStartTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (speech) {
@@ -368,16 +372,21 @@ export default function VideoInterview() {
   const handleStartRecording = () => {
     if (
       !mediaRecorderRef.current ||
-      mediaRecorderRef.current.state === "recording"
+      mediaRecorderRef.current.state === "recording" ||
+      !audioRecorderRef.current ||
+      audioRecorderRef.current.state === "recording"
     ) {
       return;
     }
 
     // Clear previous chunks
     recordedChunksRef.current = [];
+    audioChunksRef.current = [];
+    recordingStartTimeRef.current = performance.now();
 
     // Start recording with 1-second chunks
     mediaRecorderRef.current.start(1000);
+    audioRecorderRef.current.start(1000);
     setIsRecording(true);
     setRecordingTime(0);
 
@@ -390,13 +399,16 @@ export default function VideoInterview() {
   const handleStopRecording = () => {
     if (
       !mediaRecorderRef.current ||
-      mediaRecorderRef.current.state !== "recording"
+      mediaRecorderRef.current.state !== "recording" ||
+      !audioRecorderRef.current ||
+      audioRecorderRef.current.state !== "recording"
     ) {
       return;
     }
 
     // Stop recording
     mediaRecorderRef.current.stop();
+    audioRecorderRef.current.stop();
     setIsRecording(false);
 
     // Clear timer
@@ -406,124 +418,44 @@ export default function VideoInterview() {
     }
   };
 
-  const transcribeVideo = async (videoBlob: Blob): Promise<string | null> => {
+  const transcribeAudio = async (audioBlob: Blob): Promise<string | null> => {
     try {
       setIsProcessingResponse(true);
+      const startTime = performance.now();
 
-      console.log("Starting video transcription process...");
-      console.log("Video blob details:", {
-        size: videoBlob.size,
-        type: videoBlob.type,
-      });
+      if (audioBlob.size < 1000) {
+        return null;
+      }
 
-      // Convert video blob to audio blob
-      const audioContext = new AudioContext();
-      const videoElement = document.createElement("video");
-      videoElement.src = URL.createObjectURL(videoBlob);
+      try {
+        // Create a File object from the audio blob
+        const audioFile = new File([audioBlob], "audio.webm", {
+          type: "audio/webm;codecs=opus",
+        });
 
-      await new Promise((resolve) => {
-        videoElement.onloadedmetadata = () => {
-          resolve(null);
-        };
-      });
+        // Create a new FormData instance
+        const formData = new FormData();
+        formData.append("audio_file", audioFile);
 
-      const mediaStreamSource =
-        audioContext.createMediaElementSource(videoElement);
-      const mediaStreamDestination =
-        audioContext.createMediaStreamDestination();
-      mediaStreamSource.connect(mediaStreamDestination);
+        // Use the /audio/to-text endpoint
+        const response = await api.post("/audio/to-text", formData, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        });
 
-      const mediaRecorder = new MediaRecorder(mediaStreamDestination.stream);
-      const audioChunks: BlobPart[] = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunks.push(event.data);
-      };
-
-      const transcriptionPromise = new Promise<string>((resolve, reject) => {
-        mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-          console.log("Audio blob details:", {
-            size: audioBlob.size,
-            type: audioBlob.type,
-          });
-
-          if (audioBlob.size < 1000) {
-            console.warn("Audio blob is too small:", audioBlob.size);
-            resolve(null);
-            return;
-          }
-
-          try {
-            // Create a File object from the audio blob
-            const audioFile = new File([audioBlob], "audio.webm", {
-              type: "audio/webm;codecs=opus",
-            });
-
-            // Create a new FormData instance
-            const formData = new FormData();
-            formData.append("audio_file", audioFile);
-
-            console.log("Sending request to /audio/to-text with:", {
-              fileSize: audioFile.size,
-              fileType: audioFile.type,
-              formDataKeys: Array.from(formData.keys()),
-            });
-
-            // Use the new /audio/to-text endpoint
-            const response = await api.post("/audio/to-text", formData, {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("i_token")}`,
-                "Content-Type": "multipart/form-data",
-              },
-            });
-
-            console.log("Transcription response:", {
-              status: response.status,
-              hasData: !!response.data,
-              hasTranscript: !!response.data?.transcript,
-              responseData: response.data,
-            });
-
-            if (response.data && response.data.transcript) {
-              console.log("Successfully received transcript");
-              resolve(response.data.transcript);
-            } else {
-              console.log("No transcript received in response");
-              resolve(null);
-            }
-          } catch (error) {
-            console.error("Error transcribing audio:", {
-              error,
-              message: error.message,
-              response: error.response?.data,
-              status: error.response?.status,
-              headers: error.response?.headers,
-            });
-            toast.error("Failed to transcribe audio");
-            reject(error);
-          }
-        };
-      });
-
-      // Start recording and playing
-      mediaRecorder.start();
-      await videoElement.play();
-
-      // Record until video ends
-      videoElement.onended = () => {
-        mediaRecorder.stop();
-      };
-
-      // Wait for the transcription to complete
-      const transcript = await transcriptionPromise;
-      return transcript;
+        if (response.data && response.data.transcript) {
+          return response.data.transcript;
+        } else {
+          return null;
+        }
+      } catch (error) {
+        toast.error("Failed to transcribe audio");
+        return null;
+      }
     } catch (error) {
-      console.error("Error processing video:", {
-        error,
-        message: error.message,
-      });
-      toast.error("Failed to process video");
+      toast.error("Failed to process audio");
       return null;
     } finally {
       setIsProcessingResponse(false);
@@ -531,7 +463,6 @@ export default function VideoInterview() {
   };
 
   const handleResponseRecorded = async (transcript: string) => {
-    console.log("handleResponseRecorded called with transcript:", transcript);
     setCurrentResponse(transcript);
     setEditedResponse(transcript);
     setShowEditDialog(true);
@@ -542,7 +473,6 @@ export default function VideoInterview() {
     addUserMessage(editedResponse);
     setConversationHistory((prev) => {
       const newHistory = [...prev, { role: "user", content: editedResponse }];
-      console.log("Updated conversation history:", newHistory);
       return newHistory;
     });
     setShowEditDialog(false);
@@ -555,6 +485,14 @@ export default function VideoInterview() {
       });
       streamRef.current = null;
     }
+    
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => {
+        track.stop();
+      });
+      audioStreamRef.current = null;
+    }
+    
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
@@ -613,20 +551,14 @@ export default function VideoInterview() {
   };
 
   const handleNextQuestion = () => {
-    console.warn("Current question index:", currentQuestionIndex);
-    console.warn("Interview flow length:", interviewFlow.length);
-
     if (currentQuestionIndex < interviewFlow.length - 1) {
       const nextIndex = currentQuestionIndex + 1;
-      console.log("Moving to next question index:", nextIndex);
 
       // Update the current question index
       setCurrentQuestionIndex(nextIndex);
 
       // Get the next question
-      console.log(interviewFlow);
       const nextQuestion = interviewFlow[nextIndex].question;
-      console.log("Next question:", nextQuestion);
 
       // Update the current question
       setCurrentQuestion(nextQuestion);
@@ -646,6 +578,7 @@ export default function VideoInterview() {
 
       // Clear recorded chunks for the next recording
       recordedChunksRef.current = [];
+      audioChunksRef.current = [];
 
       // Show typing animation first
       setIsAiTyping(true);
@@ -655,8 +588,8 @@ export default function VideoInterview() {
         setTimeout(() => setIsAiSpeaking(false), 3000);
       }, 2000);
     } else {
-      console.log("Interview completed");
       mediaRecorderRef.current.stop();
+      audioRecorderRef.current.stop();
       stopCamera();
       analyzeInterview();
       setShowCompletionScreen(true);
@@ -759,38 +692,57 @@ export default function VideoInterview() {
       // Stop any existing stream first
       stopCamera();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // Get video stream
+      const videoStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: true,
       });
 
-      streamRef.current = stream;
+      // Get audio-only stream
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
+
+      streamRef.current = videoStream;
+      audioStreamRef.current = audioStream;
 
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        videoRef.current.srcObject = videoStream;
         videoRef.current.play().catch((error) => {
-          console.error("Error playing video:", error);
           toast.error("Failed to start video feed");
         });
       }
 
-      // Set up media recorder
-      const mediaRecorder = new MediaRecorder(stream, {
+      // Set up video media recorder
+      const videoRecorder = new MediaRecorder(videoStream, {
         mimeType: "video/webm;codecs=vp9,opus",
       });
 
-      mediaRecorderRef.current = mediaRecorder;
+      // Set up audio-only media recorder
+      const audioRecorder = new MediaRecorder(audioStream, {
+        mimeType: "audio/webm;codecs=opus",
+      });
 
-      // Set up data handler
-      mediaRecorder.ondataavailable = (e) => {
+      mediaRecorderRef.current = videoRecorder;
+      audioRecorderRef.current = audioRecorder;
+
+      // Set up video data handler
+      videoRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           recordedChunksRef.current.push(e.data);
         }
       };
 
-      // Set up stop handler
-      mediaRecorder.onstop = () => {
-        // Don't stop the camera here, just process the recording
+      // Set up audio data handler
+      audioRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      // Set up stop handler for video recorder
+      videoRecorder.onstop = () => {
         const videoBlob = new Blob(recordedChunksRef.current, {
           type: "video/webm",
         });
@@ -802,23 +754,30 @@ export default function VideoInterview() {
               blob: videoBlob,
             },
           ]);
+        }
+      };
 
-          transcribeVideo(videoBlob)
-            .then((transcript) => {
-              if (transcript) {
-                handleResponseRecorded(transcript);
-              }
-            })
-            .catch((error) => {
-              console.error("Error transcribing video:", error);
-              toast.error("Failed to transcribe video");
-            });
+      // Set up stop handler for audio recorder
+      audioRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
+        
+        if (audioBlob.size > 0) {
+          const transcript = await transcribeAudio(audioBlob);
+          if (transcript) {
+            handleResponseRecorded(transcript);
+          }
         }
       };
 
       // Set up error handler
-      mediaRecorder.onerror = (error) => {
-        console.error("MediaRecorder error:", error);
+      videoRecorder.onerror = (error) => {
+        toast.error("Recording error occurred");
+        setIsRecording(false);
+      };
+
+      audioRecorder.onerror = (error) => {
         toast.error("Recording error occurred");
         setIsRecording(false);
       };
@@ -826,7 +785,6 @@ export default function VideoInterview() {
       setIsDevicesInitialized(true);
       toast.success("Camera and microphone initialized successfully");
     } catch (error) {
-      console.error("Error initializing devices:", error);
       toast.error(
         "Failed to initialize camera and microphone. Please check your permissions."
       );

@@ -185,7 +185,6 @@ async def update_interview(
         .where(Interview.job_id.in_(select(job_subq)))
         .where(Interview.id == int(id))
     )
-    print(stmt)
     db.execute(stmt)
     db.commit()
     return
