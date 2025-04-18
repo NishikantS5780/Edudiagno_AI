@@ -64,6 +64,57 @@ class Job(Base):
     # Relationships
     company = relationship("Recruiter", back_populates="jobs")
     interviews = relationship("Interview", back_populates="job")
+    quiz_questions = relationship("QuizQuestions", back_populates="job")
+    dsa_quesitons = relationship("DSAQuestion", back_populates="job")
+
+
+class QuizQuestion(Base):
+    __tablename__ = "quiz_questions"
+
+    id = Column(Integer, primary_key=True)
+    description = Column(String)
+    created_at = Column(DateTime, default=func.now())
+    job_id = Column(Integer, ForeignKey("jobs.id"))
+
+    job = relationship("Job", back_populates="quiz_questions")
+    options = relationship("QuizOption", back_populates="question")
+    responses = relationship("QuizResponse", back_populates="question")
+
+
+class QuizOption(Base):
+    __tablename__ = "quiz_options"
+
+    id = Column(Integer, primary_key=True)
+    label = Column(String)
+    question_id = Column(Integer, ForeignKey("quiz_questions.id"))
+
+    question = relationship("QuizQuestion", back_populates="options")
+    responses = relationship("QuizResponse", back_populates="option")
+
+
+class DSAQuestion(Base):
+    __tablename__ = "dsa_questions"
+
+    id = Column(Integer, primary_key=True)
+    description = Column(String)
+    created_at = Column(DateTime, default=func.now())
+    job_id = Column(Integer, ForeignKey("jobs.id"))
+
+    job = relationship("Job", back_populates="dsa_questions")
+    test_cases = relationship("DSATestCase", back_populates="question")
+    responses = relationship("DSAResponse", back_populates="question")
+
+
+class DSATestCase(Base):
+    __tablename__ = "dsa_test_cases"
+
+    id = Column(Integer, primary_key=True)
+    input = Column(String)
+    expected_output = Column(String)
+    dsa_question_id = Column(Integer, ForeignKey("dsa_questions.id"))
+
+    question = relationship("DSAQuestion", back_populates="test_cases")
+    responses = relationship("DSATestCaseResponse", back_populates="test_case")
 
 
 class Interview(Base):
@@ -98,6 +149,8 @@ class Interview(Base):
         back_populates="interview",
         cascade="all, delete-orphan",
     )
+    quiz_responses = relationship("QuizResponse", back_populates="interview")
+    dsa_responses = relationship("DSAResponse", back_populates="interview")
 
 
 class InterviewQuestionAndResponse(Base):
@@ -116,3 +169,49 @@ class InterviewQuestionAndResponse(Base):
 
     # Relationships
     interview = relationship("Interview", back_populates="question_and_responses")
+
+
+class DSAResponse(Base):
+    __tablename__ = "dsa_responses"
+
+    id = Column(Integer, primary_key=True)
+    code = Column(String)
+    interview_id = Column(Integer, ForeignKey("interviews.id"))
+    question_id = Column(Integer, ForeignKey("dsa_questions.id"))
+
+    interview = relationship("Interview", back_populates="dsa_responses")
+    question = relationship("DSAQuestion", back_populates="responses")
+    test_case_responses = relationship(
+        "TestCaseResponse", back_populates="dsa_response"
+    )
+
+    _table_args__ = UniqueConstraint(
+        "interview_id", "question_id", name="uq_interview_and_question"
+    )
+
+
+class DSATestCaseResponse(Base):
+    __tablename__ = "dsa_test_case_responses"
+
+    status = Column(String)
+    dsa_response_id = Column(Integer, ForeignKey("dsa_responses.id"), primary_key=True)
+    dsa_test_case_id = Column(
+        Integer, ForeignKey("dsa_test_cases.id"), primary_key=True
+    )
+
+    interview_dsa_response = relationship(
+        "DSAResponse", back_populates="test_case_responses"
+    )
+    dsa_test_case = relationship("DSATestCase", back_populates="responses")
+
+
+class QuizResponse(Base):
+    __tablename__ = "quiz_responses"
+
+    interview_id = Column(Integer, ForeignKey("interviews.id"), primary_key=True)
+    question_id = Column(Integer, ForeignKey("quiz_questions.id"), primary_key=True)
+    option_id = Column(Integer, ForeignKey("quiz_questions.id"))
+
+    interview = relationship("Interview", back_populates="quiz_responses")
+    question = relationship("QuizQuestion", back_populates="responses")
+    option = relationship("QuizOption", back_populates="responses")

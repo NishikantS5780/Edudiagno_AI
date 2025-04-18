@@ -1,33 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Play,
-  Pause,
   Mic,
   MicOff,
   Video as VideoIcon,
   VideoOff,
   MessageSquare,
   Info,
-  Download,
-  CheckCircle,
-  ChevronRight,
   Loader2,
   Clock,
-  Check,
-  AlertTriangle,
   Brain,
   Sparkles,
   BookOpen,
@@ -38,11 +24,8 @@ import AIAvatar from "../../components/interview/AIAvatar";
 import RecordingButton from "../../components/interview/RecordingButton";
 import { useInterviewResponseProcessor } from "../../components/interview/InterviewResponseProcessor";
 import api, { interviewAPI, textAPI } from "@/lib/api";
-import axios from "axios";
-import { InterviewData as ImportedInterviewData } from "@/types/interview";
 import { RecruiterData } from "@/types/recruiter";
 import { JobData } from "@/types/job";
-import { flushSync } from "react-dom";
 import { ThankYouStage } from "./ThankYouStage";
 import VoiceAnimation from "@/components/interview/VoiceAnimation";
 import {
@@ -77,8 +60,8 @@ interface Message {
   content: string;
   timestamp: string;
   isTyping?: boolean;
-  sender?: "user" | "ai";  // For backward compatibility
-  message?: string;        // For backward compatibility
+  sender?: "user" | "ai"; // For backward compatibility
+  message?: string; // For backward compatibility
 }
 
 interface TranscriptEntry {
@@ -216,16 +199,16 @@ export default function VideoInterview() {
         currentAudioRef.current.currentTime = 0;
       }
       const newAudio = new Audio("data:audio/mpeg;base64," + speech);
-      
+
       // Add event listeners for audio playback
       newAudio.onplay = () => {
         setIsAiSpeaking(true);
       };
-      
+
       newAudio.onended = () => {
         setIsAiSpeaking(false);
       };
-      
+
       newAudio.play();
       currentAudioRef.current = newAudio;
     }
@@ -550,7 +533,7 @@ export default function VideoInterview() {
 
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
+      streamRef.current.getTracks().forEach((track) => {
         track.stop();
       });
       streamRef.current = null;
@@ -577,22 +560,28 @@ export default function VideoInterview() {
 
       // Call the API to analyze the transcript
       // Use PUT instead of POST for the generate-feedback endpoint
-      const response = await api.put("/interview/generate-feedback", {
-        transcript: userTranscript,
-        job_requirements: jobData?.requirements || ""
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` }
-      });
-      
+      const response = await api.put(
+        "/interview/generate-feedback",
+        {
+          transcript: userTranscript,
+          job_requirements: jobData?.requirements || "",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+          },
+        }
+      );
+
       // Set the feedback state with the response data
       setFeedback(response.data);
-      
+
       // Make sure to set showCompletionScreen to true
       setShowCompletionScreen(true);
     } catch (error) {
       console.error("Error analyzing transcript:", error);
       toast.error("Failed to analyze interview performance");
-      
+
       // Create a default feedback object to prevent null reference errors
       setFeedback({
         suggestions: ["Unable to generate feedback due to an error."],
@@ -602,11 +591,11 @@ export default function VideoInterview() {
           technicalSkills: 0,
           communication: 0,
           problemSolving: 0,
-          culturalFit: 0
+          culturalFit: 0,
         },
-        feedback: "There was an error analyzing your interview responses."
+        feedback: "There was an error analyzing your interview responses.",
       });
-      
+
       // Even if analysis fails, still show the completion screen
       setShowCompletionScreen(true);
     }
@@ -664,20 +653,26 @@ export default function VideoInterview() {
   };
 
   const addAssistantMessage = (content: string) => {
-    setConversation(prev => [...prev, {
-      role: "assistant",
-      content,
-      timestamp: new Date().toISOString(),
-      isTyping: false
-    }]);
+    setConversation((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content,
+        timestamp: new Date().toISOString(),
+        isTyping: false,
+      },
+    ]);
   };
 
   const addUserMessage = (content: string) => {
-    setConversation(prev => [...prev, {
-      role: "user",
-      content,
-      timestamp: new Date().toISOString()
-    }]);
+    setConversation((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
   };
 
   const startInterview = async () => {
@@ -711,7 +706,7 @@ export default function VideoInterview() {
         setIsPreparing(false);
         setIsAiTyping(true);
         addAssistantMessage(interviewFlow[0].question);
-        
+
         // Initialize camera and microphone 0.1 seconds after buffer
         setTimeout(async () => {
           await initializeDevices();
@@ -846,7 +841,9 @@ export default function VideoInterview() {
     // Format the conversation with timestamps
     const formattedConversation = conversation.map((msg) => {
       const timestamp = new Date(msg.timestamp).toLocaleTimeString();
-      return `[${timestamp}] ${msg.role === "user" ? "You" : "AI Interviewer"}: ${msg.content}`;
+      return `[${timestamp}] ${
+        msg.role === "user" ? "You" : "AI Interviewer"
+      }: ${msg.content}`;
     });
 
     // Add feedback section if available
@@ -855,7 +852,9 @@ export default function VideoInterview() {
       transcriptContent += "\n\n=== Interview Feedback ===\n\n";
       transcriptContent += `Overall Score: ${feedback.score}/10\n\n`;
       transcriptContent += `Feedback:\n${feedback.feedback}\n\n`;
-      transcriptContent += `Suggestions for Improvement:\n${feedback.suggestions.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+      transcriptContent += `Suggestions for Improvement:\n${feedback.suggestions
+        .map((s, i) => `${i + 1}. ${s}`)
+        .join("\n")}`;
     }
 
     // Create and download the file
@@ -863,7 +862,9 @@ export default function VideoInterview() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${jobData?.title?.replace(/\s+/g, "-").toLowerCase() || "interview"}-transcript.txt`;
+    a.download = `${
+      jobData?.title?.replace(/\s+/g, "-").toLowerCase() || "interview"
+    }-transcript.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -873,7 +874,7 @@ export default function VideoInterview() {
   const handleInterviewComplete = async () => {
     try {
       setIsProcessingResponse(true);
-      
+
       // Get the interview transcript
       const transcript = conversation
         .filter((msg: Message) => msg.role === "user")
@@ -882,7 +883,7 @@ export default function VideoInterview() {
 
       // Remove the duplicate call to generate-feedback
       // The analyzeInterview function will handle this instead
-      
+
       // Set the current stage to thank_you
       setCurrentStage("thank_you");
     } catch (error) {
@@ -895,7 +896,7 @@ export default function VideoInterview() {
 
   // Update conversation state management
   const updateConversation = (newMessage: Message) => {
-    setConversation(prev => [...prev, newMessage]);
+    setConversation((prev) => [...prev, newMessage]);
   };
 
   const handleScheduleLater = () => {
@@ -920,21 +921,25 @@ export default function VideoInterview() {
   if (showCompletionScreen) {
     return (
       <ThankYouStage
-        transcript={conversation.map(msg => ({
+        transcript={conversation.map((msg) => ({
           speaker: msg.role === "user" ? "You" : "AI Interviewer",
           text: msg.content,
-          timestamp: msg.timestamp
+          timestamp: msg.timestamp,
         }))}
         companyName={interviewData.company_name}
         jobTitle={interviewData.job_title}
-        feedback={feedback?.feedback || "Thank you for completing the interview."}
+        feedback={
+          feedback?.feedback || "Thank you for completing the interview."
+        }
         score={feedback?.score || 0}
-        scoreBreakdown={feedback?.scoreBreakdown || {
-          technicalSkills: 0,
-          communication: 0,
-          problemSolving: 0,
-          culturalFit: 0
-        }}
+        scoreBreakdown={
+          feedback?.scoreBreakdown || {
+            technicalSkills: 0,
+            communication: 0,
+            problemSolving: 0,
+            culturalFit: 0,
+          }
+        }
         suggestions={feedback?.suggestions || []}
         keywords={feedback?.keywords || []}
       />
@@ -955,9 +960,11 @@ export default function VideoInterview() {
               </div>
             </div>
           </div>
-          
-          <h2 className="text-2xl font-semibold mb-4">Preparing Your Interview</h2>
-          
+
+          <h2 className="text-2xl font-semibold mb-4">
+            Preparing Your Interview
+          </h2>
+
           <div className="grid grid-cols-2 gap-4 mb-8">
             <div className="bg-muted/50 p-4 rounded-lg">
               <BookOpen className="h-6 w-6 text-brand mb-2 mx-auto" />
@@ -978,7 +985,8 @@ export default function VideoInterview() {
           </div>
 
           <p className="text-muted-foreground">
-            Our AI is preparing a tailored interview experience based on your background and the position requirements.
+            Our AI is preparing a tailored interview experience based on your
+            background and the position requirements.
           </p>
         </div>
       </div>
@@ -1074,7 +1082,9 @@ export default function VideoInterview() {
                     </div>
                     <div className="flex items-center gap-2 mt-2 bg-background/80 backdrop-blur-sm px-3 py-1 rounded-full">
                       <span className="text-sm text-white">AI Interviewer</span>
-                      {isAiSpeaking && <VoiceAnimation isSpeaking={isAiSpeaking} />}
+                      {isAiSpeaking && (
+                        <VoiceAnimation isSpeaking={isAiSpeaking} />
+                      )}
                     </div>
                   </div>
 
@@ -1166,9 +1176,15 @@ export default function VideoInterview() {
                       <AIAvatar isSpeaking={isAiSpeaking} size="lg" />
                     </div>
                     <div className="text-left max-w-md">
-                      <h3 className="text-xl font-semibold mb-2">Hi, I'm Arya!</h3>
+                      <h3 className="text-xl font-semibold mb-2">
+                        Hi, I'm Arya!
+                      </h3>
                       <p className="text-muted-foreground">
-                        I'll be your interviewer for the {jobData?.title} position at {companyData?.name}. Take a deep breath and relax - I'll help you showcase your skills and experience. When you're ready, click the button below to begin.
+                        I'll be your interviewer for the {jobData?.title}{" "}
+                        position at {companyData?.name}. Take a deep breath and
+                        relax - I'll help you showcase your skills and
+                        experience. When you're ready, click the button below to
+                        begin.
                       </p>
                     </div>
                   </div>
@@ -1209,7 +1225,9 @@ export default function VideoInterview() {
                     <div
                       key={index}
                       className={`flex ${
-                        message.role === "user" ? "justify-end" : "justify-start"
+                        message.role === "user"
+                          ? "justify-end"
+                          : "justify-start"
                       }`}
                     >
                       <div
@@ -1224,9 +1242,18 @@ export default function VideoInterview() {
                         </div>
                         {message.isTyping ? (
                           <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 rounded-full bg-brand animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <div className="w-2 h-2 rounded-full bg-brand animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <div className="w-2 h-2 rounded-full bg-brand animate-bounce" style={{ animationDelay: '300ms' }} />
+                            <div
+                              className="w-2 h-2 rounded-full bg-brand animate-bounce"
+                              style={{ animationDelay: "0ms" }}
+                            />
+                            <div
+                              className="w-2 h-2 rounded-full bg-brand animate-bounce"
+                              style={{ animationDelay: "150ms" }}
+                            />
+                            <div
+                              className="w-2 h-2 rounded-full bg-brand animate-bounce"
+                              style={{ animationDelay: "300ms" }}
+                            />
                           </div>
                         ) : (
                           <p>{message.content}</p>
@@ -1292,7 +1319,9 @@ export default function VideoInterview() {
           <DialogHeader>
             <DialogTitle>Review Your Response</DialogTitle>
             <DialogDescription>
-              Please review and edit your response if needed. The AI has transcribed your answer, but you can make corrections if anything was misinterpreted.
+              Please review and edit your response if needed. The AI has
+              transcribed your answer, but you can make corrections if anything
+              was misinterpreted.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
