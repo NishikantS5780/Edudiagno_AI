@@ -64,8 +64,8 @@ class Job(Base):
     # Relationships
     company = relationship("Recruiter", back_populates="jobs")
     interviews = relationship("Interview", back_populates="job")
-    quiz_questions = relationship("QuizQuestions", back_populates="job")
-    dsa_quesitons = relationship("DSAQuestion", back_populates="job")
+    quiz_questions = relationship("QuizQuestion", back_populates="job")
+    dsa_questions = relationship("DSAQuestion", back_populates="job")
 
 
 class QuizQuestion(Base):
@@ -182,7 +182,7 @@ class DSAResponse(Base):
     interview = relationship("Interview", back_populates="dsa_responses")
     question = relationship("DSAQuestion", back_populates="responses")
     test_case_responses = relationship(
-        "TestCaseResponse", back_populates="dsa_response"
+        "DSATestCaseResponse", back_populates="interview_dsa_response"
     )
 
     _table_args__ = UniqueConstraint(
@@ -202,7 +202,7 @@ class DSATestCaseResponse(Base):
     interview_dsa_response = relationship(
         "DSAResponse", back_populates="test_case_responses"
     )
-    dsa_test_case = relationship("DSATestCase", back_populates="responses")
+    test_case = relationship("DSATestCase", back_populates="responses")
 
 
 class QuizResponse(Base):
@@ -210,7 +210,7 @@ class QuizResponse(Base):
 
     interview_id = Column(Integer, ForeignKey("interviews.id"), primary_key=True)
     question_id = Column(Integer, ForeignKey("quiz_questions.id"), primary_key=True)
-    option_id = Column(Integer, ForeignKey("quiz_questions.id"))
+    option_id = Column(Integer, ForeignKey("quiz_options.id"))
 
     interview = relationship("Interview", back_populates="quiz_responses")
     question = relationship("QuizQuestion", back_populates="responses")
