@@ -50,12 +50,23 @@ import {
   CheckCircle,
   XCircle,
   Users,
+  ChevronDown,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { jobAPI } from "@/lib/api";
 import { JobData } from "@/types/job";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const JobsPage = () => {
   const [jobs, setJobs] = useState<JobData[]>([]);
@@ -64,13 +75,37 @@ const JobsPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
+  const [jobToDelete, setJobToDelete] = useState<number | null>(null);
+  const [sortField, setSortField] = useState<'title' | 'department' | 'location' | 'type' | 'show_salary' | 'status'>('title');
+  const [sortOrder, setSortOrder] = useState<'ascending' | 'descending'>('ascending');
 
-  const departments = ["IT", "Healthcare"];
-  const locations = ["Mumbai", "Delhi"];
+  // Function to capitalize first letter of each word
+  const capitalizeWords = (str: string) => {
+    return str
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Get unique departments and locations from jobs data
+  const departments = React.useMemo(() => {
+    const uniqueDepts = new Set(jobs.map(job => job.department).filter(Boolean));
+    return Array.from(uniqueDepts).sort();
+  }, [jobs]);
+
+  const locations = React.useMemo(() => {
+    const uniqueLocs = new Set(jobs.map(job => job.location).filter(Boolean));
+    return Array.from(uniqueLocs).sort();
+  }, [jobs]);
 
   const fetchJobs = async () => {
     try {
-      const response = await jobAPI.recruiterGetAllJobs();
+      setLoading(true);
+      const response = await jobAPI.recruiterGetAllJobs({
+        sort: sortOrder,
+        sort_field: sortField
+      });
+      console.log('Jobs API Response:', response.data);
       const data = response.data;
       setJobs(
         data.map((jobData) => {
@@ -80,6 +115,7 @@ const JobsPage = () => {
             title: jobData.title,
             department: jobData.department,
             location: jobData.location,
+            type: jobData.type,
             status: jobData.status,
             createdAt: date,
           };
@@ -95,7 +131,7 @@ const JobsPage = () => {
 
   useEffect(() => {
     fetchJobs();
-  }, []);
+  }, [sortField, sortOrder]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -130,13 +166,15 @@ const JobsPage = () => {
       const response = await jobAPI.deleteJob(jobId.toString());
       if (response.status === 204) {
         toast.success("Job deleted successfully");
-        fetchJobs();
+        await fetchJobs();
       } else {
         throw new Error("Failed to delete job");
       }
     } catch (error) {
       console.error("Error deleting job:", error);
       toast.error("Failed to delete job");
+    } finally {
+      setJobToDelete(null);
     }
   };
 
@@ -164,6 +202,15 @@ const JobsPage = () => {
     } catch (error) {
       console.error("Error creating interview link:", error);
       toast.error("Failed to create interview link");
+    }
+  };
+
+  const handleSort = (field: typeof sortField) => {
+    if (field === sortField) {
+      setSortOrder(sortOrder === 'ascending' ? 'descending' : 'ascending');
+    } else {
+      setSortField(field);
+      setSortOrder('ascending');
     }
   };
 
@@ -201,9 +248,14 @@ const JobsPage = () => {
         </div>
         <div className="flex flex-wrap gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[180px]">
               <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Status" />
+              <SelectValue>
+                {statusFilter === 'all' ? 'All Statuses' : 
+                 statusFilter === 'active' ? 'Active' :
+                 statusFilter === 'draft' ? 'Draft' :
+                 statusFilter === 'closed' ? 'Closed' : 'Status'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
@@ -214,30 +266,34 @@ const JobsPage = () => {
           </Select>
 
           <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Department" />
+              <SelectValue>
+                {departmentFilter === 'all' ? 'All Departments' : capitalizeWords(departmentFilter)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
               {departments.map((dept) => (
                 <SelectItem key={dept} value={dept}>
-                  {dept}
+                  {capitalizeWords(dept)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           <Select value={locationFilter} onValueChange={setLocationFilter}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[180px]">
               <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Location" />
+              <SelectValue>
+                {locationFilter === 'all' ? 'All Locations' : capitalizeWords(locationFilter)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Locations</SelectItem>
               {locations.map((loc) => (
                 <SelectItem key={loc} value={loc}>
-                  {loc}
+                  {capitalizeWords(loc)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -311,7 +367,7 @@ const JobsPage = () => {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => handleDeleteJob(job.id)}
+                          onClick={() => setJobToDelete(job.id)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
@@ -334,6 +390,27 @@ const JobsPage = () => {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={jobToDelete !== null} onOpenChange={() => setJobToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the job posting
+              and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => jobToDelete && handleDeleteJob(jobToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };

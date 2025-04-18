@@ -151,16 +151,14 @@ export function ThankYouStage({
         </p>
       </motion.div>
       
-      <div className="w-full max-w-6xl">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto">
-            <TabsTrigger value="feedback">Feedback</TabsTrigger>
-            <TabsTrigger value="next-steps">Next Steps</TabsTrigger>
-            <TabsTrigger value="actions">Actions</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
-        <TabsContent value="feedback" className="mt-0">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6 w-full max-w-4xl">
+        <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto">
+          <TabsTrigger value="feedback">Feedback</TabsTrigger>
+          <TabsTrigger value="next-steps">Next Steps</TabsTrigger>
+          <TabsTrigger value="actions">Actions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="feedback" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Left Column - Feedback */}
             <motion.div 
@@ -317,7 +315,7 @@ export function ThankYouStage({
           </div>
         </TabsContent>
         
-        <TabsContent value="next-steps" className="mt-0">
+        <TabsContent value="next-steps" className="mt-6">
           <motion.div 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -369,7 +367,7 @@ export function ThankYouStage({
           </motion.div>
         </TabsContent>
         
-        <TabsContent value="actions" className="mt-0">
+        <TabsContent value="actions" className="mt-6">
           <motion.div 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -379,8 +377,7 @@ export function ThankYouStage({
             <Card className="shadow-sm">
               <CardContent className="pt-6">
                 <h3 className="text-xl font-semibold mb-4">Actions</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Button onClick={() => setShowRatingModal(true)} className="w-full h-auto py-4">
                     <Star className="mr-2 h-5 w-5" />
                     <div className="flex flex-col items-start">
@@ -404,20 +401,12 @@ export function ThankYouStage({
                       <span className="text-xs text-muted-foreground">Get help with your interview</span>
                     </div>
                   </Button>
-                  
-                  <Button variant="outline" className="w-full h-auto py-4">
-                    <ArrowRight className="mr-2 h-5 w-5" />
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">View Other Jobs</span>
-                      <span className="text-xs text-muted-foreground">Explore more opportunities</span>
-                    </div>
-                  </Button>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
         </TabsContent>
-      </div>
+      </Tabs>
 
       <Dialog open={showRatingModal} onOpenChange={setShowRatingModal}>
         <DialogContent className="sm:max-w-md">

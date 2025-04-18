@@ -162,10 +162,6 @@ const JobDetail = () => {
               <Copy className="h-4 w-4 mr-2" />
               Copy Shareable Link
             </Button>
-            <Button variant="outline" onClick={() => {}}>
-              <Share2 className="h-4 w-4 mr-2" />
-              Share
-            </Button>
 
             <Button
               variant="outline"

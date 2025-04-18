@@ -1,7 +1,8 @@
 from typing import Literal
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import asc, case, delete, desc, select
+from sqlalchemy import asc, case, delete, desc, select, and_
+from fastapi import HTTPException, status
 
 from app import schemas, database
 from app.models import Job, Recruiter
@@ -230,6 +231,28 @@ async def delete_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    stmt = delete(Job).where(id == int(id))
+    stmt = select(Job).where(
+        and_(
+            Job.id == int(id),
+            Job.company_id == recruiter_id
+        )
+    )
+    result = db.execute(stmt)
+    job = result.scalar_one_or_none()
+    
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found or you don't have permission to delete it"
+        )
+    
+    # Delete the job
+    stmt = delete(Job).where(
+        and_(
+            Job.id == int(id),
+            Job.company_id == recruiter_id
+        )
+    )
     db.execute(stmt)
+    db.commit()
     return
