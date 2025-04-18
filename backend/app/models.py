@@ -47,6 +47,7 @@ class Job(Base):
     title = Column(String, nullable=False)
     description = Column(String)
     department = Column(String)
+    city = Column(String)
     location = Column(String)
     type = Column(String)  # full-time, part-time, contract, etc.
     min_experience = Column(Integer)
@@ -77,8 +78,12 @@ class QuizQuestion(Base):
     job_id = Column(Integer, ForeignKey("jobs.id"))
 
     job = relationship("Job", back_populates="quiz_questions")
-    options = relationship("QuizOption", back_populates="question")
-    responses = relationship("QuizResponse", back_populates="question")
+    options = relationship(
+        "QuizOption", back_populates="question", cascade="all, delete"
+    )
+    responses = relationship(
+        "QuizResponse", back_populates="question", cascade="all, delete"
+    )
 
 
 class QuizOption(Base):
@@ -89,7 +94,9 @@ class QuizOption(Base):
     question_id = Column(Integer, ForeignKey("quiz_questions.id"))
 
     question = relationship("QuizQuestion", back_populates="options")
-    responses = relationship("QuizResponse", back_populates="option")
+    responses = relationship(
+        "QuizResponse", back_populates="option", cascade="all, delete"
+    )
 
 
 class DSAQuestion(Base):
@@ -101,8 +108,12 @@ class DSAQuestion(Base):
     job_id = Column(Integer, ForeignKey("jobs.id"))
 
     job = relationship("Job", back_populates="dsa_questions")
-    test_cases = relationship("DSATestCase", back_populates="question")
-    responses = relationship("DSAResponse", back_populates="question")
+    test_cases = relationship(
+        "DSATestCase", back_populates="question", cascade="all, delete"
+    )
+    responses = relationship(
+        "DSAResponse", back_populates="question", cascade="all, delete"
+    )
 
 
 class DSATestCase(Base):
@@ -114,7 +125,9 @@ class DSATestCase(Base):
     dsa_question_id = Column(Integer, ForeignKey("dsa_questions.id"))
 
     question = relationship("DSAQuestion", back_populates="test_cases")
-    responses = relationship("DSATestCaseResponse", back_populates="test_case")
+    responses = relationship(
+        "DSATestCaseResponse", back_populates="test_case", cascade="all, delete"
+    )
 
 
 class Interview(Base):
@@ -147,10 +160,14 @@ class Interview(Base):
     question_and_responses = relationship(
         "InterviewQuestionAndResponse",
         back_populates="interview",
-        cascade="all, delete-orphan",
+        cascade="all, delete",
     )
-    quiz_responses = relationship("QuizResponse", back_populates="interview")
-    dsa_responses = relationship("DSAResponse", back_populates="interview")
+    quiz_responses = relationship(
+        "QuizResponse", back_populates="interview", cascade="all, delete"
+    )
+    dsa_responses = relationship(
+        "DSAResponse", back_populates="interview", cascade="all, delete"
+    )
 
 
 class InterviewQuestionAndResponse(Base):
@@ -200,7 +217,7 @@ class DSATestCaseResponse(Base):
     )
 
     interview_dsa_response = relationship(
-        "DSAResponse", back_populates="test_case_responses"
+        "DSAResponse", back_populates="test_case_responses", cascade="all, delete"
     )
     test_case = relationship("DSATestCase", back_populates="responses")
 

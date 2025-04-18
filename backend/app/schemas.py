@@ -48,13 +48,14 @@ class CreateJob(BaseModel):
     title: str
     description: str
     department: str
+    city: str
     location: str
     type: str
     min_experience: int
     max_experience: int
     salary_min: int
     salary_max: int
-    show_salary: bool
+    show_salary: Optional[bool] = True
     requirements: str
     benefits: str
     status: str
