@@ -55,7 +55,7 @@ class CreateJob(BaseModel):
     max_experience: int
     salary_min: int
     salary_max: int
-    show_salary: bool
+    show_salary: Optional[bool] = True
     requirements: str
     benefits: str
     status: str
