@@ -23,6 +23,7 @@ async def get_job(
         Job.title,
         Job.description,
         Job.department,
+        Job.city,
         Job.location,
         Job.type,
         Job.min_experience,
@@ -73,6 +74,7 @@ async def get_all_job(
             Job.title,
             Job.description,
             Job.department,
+            Job.city,
             Job.location,
             Job.type,
             Job.min_experience,
@@ -106,6 +108,7 @@ async def get_job_candidate_view(
             Job.title,
             Job.description,
             Job.department,
+            Job.city,
             Job.location,
             Job.type,
             Job.min_experience,
@@ -141,6 +144,7 @@ async def create_job(
         title=job_data.title,
         description=job_data.description,
         department=job_data.department,
+        city=job_data.city,
         location=job_data.location,
         type=job_data.type,
         min_experience=job_data.min_experience,
@@ -231,28 +235,18 @@ async def delete_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    stmt = select(Job).where(
-        and_(
-            Job.id == int(id),
-            Job.company_id == recruiter_id
-        )
-    )
+    stmt = select(Job).where(and_(Job.id == int(id), Job.company_id == recruiter_id))
     result = db.execute(stmt)
     job = result.scalar_one_or_none()
-    
+
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found or you don't have permission to delete it"
+            detail="Job not found or you don't have permission to delete it",
         )
-    
+
     # Delete the job
-    stmt = delete(Job).where(
-        and_(
-            Job.id == int(id),
-            Job.company_id == recruiter_id
-        )
-    )
+    stmt = delete(Job).where(and_(Job.id == int(id), Job.company_id == recruiter_id))
     db.execute(stmt)
     db.commit()
     return

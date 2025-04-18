@@ -48,6 +48,7 @@ class CreateJob(BaseModel):
     title: str
     description: str
     department: str
+    city: str
     location: str
     type: str
     min_experience: int
