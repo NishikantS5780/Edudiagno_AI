@@ -2,13 +2,22 @@ import React from 'react'
 import { Editor } from "@monaco-editor/react";
 import { Play, Terminal } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-function CodeExecutionPanel({expectedOutput}: {expectedOutput: string}) {
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useNavigate, useSearchParams } from "react-router-dom";
+function CodeExecutionPanel({ expectedOutput }: { expectedOutput: string }) {
   const [taskId, setTaskId] = React.useState("");
   const [output, setOutput] = React.useState("");
   const [codeError, setCodeError] = React.useState("");
   const [syntaxError, setSyntaxError] = React.useState("");
   const [runStatus, setRunStatus] = React.useState("");
   const apiKey = import.meta.env.VITE_FERMION_API_KEY;
+
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const handleFinish = () => {
+    navigate(`/interview/precheck?i_id=${searchParams.get('i_id')}`);
+  };
 
   React.useEffect(() => console.log(taskId), [taskId]);
 
@@ -149,7 +158,32 @@ function CodeExecutionPanel({expectedOutput}: {expectedOutput: string}) {
             ))}
           </select>
         </div>
+        <Button
+          onClick={handleFinish}
+          size="sm"
+          className={cn(
+            "h-8 min-w-[140px] bg-[#27272A] hover:bg-[#3F3F46] text-sm",
+            runStatus === 'successful' && "bg-[#22C55E] hover:bg-[#16A34A] text-white",
+            runStatus != 'successful' && "hidden"
+          )}
+          disabled={runStatus != 'successful'}
+        >
+          {runStatus === 'successful' ? "Continue" : "Next"}
+        </Button>
+        <Button
+         onClick={handleFinish}
+          size="sm"
+          className={cn(
+            "h-8 min-w-[140px] bg-[#27272A] hover:bg-[#3F3F46] text-sm",
+             runStatus != 'successful' && "bg-red-500 hover:bg-red-700",
+             runStatus === 'successful' && "hidden"
+          )}
+          disabled={runStatus === 'successful'}
+        >
+          Skip & Next
+        </Button>
       </div>
+
       <div className=" h-[86vh] bg-[#27272a] rounded-xl">
 
         <Editor
