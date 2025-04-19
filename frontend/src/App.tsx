@@ -51,6 +51,7 @@ import Help from "@/pages/Dashboard/Help";
 import PublicInterview from "@/pages/Interview/InterviewPage";
 import InterviewFlow from "@/pages/Interview/InterviewFlow";
 import CandidatePreCheck from "@/components/interview/CandidatePreCheck";
+import DSAPlayground from "@/pages/Interview/DSAPlayground";
 
 import NotFound from "@/pages/NotFound";
 import { UserContext, UserProvider } from "./context/UserContext";
@@ -226,10 +227,12 @@ const App = () => {
                     }
                   />
 
-                  <Route
-                    path="/dashboard/*"
-                    element={<Navigate to="/dashboard" replace />}
-                  />
+                  <Route path="/interview" element={<PublicInterview />} />
+                  <Route path="/interview/flow" element={<InterviewFlow />} />
+                  <Route path="/interview/precheck" element={<CandidatePreCheck />} />
+                  <Route path="/interview/dsa-playground" element={<DSAPlayground />} />
+                  <Route path="/interview/video" element={<VideoInterview />} />
+                  <Route path="/dsa-lab" element={<DsaExecution />} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

@@ -35,7 +35,7 @@ export function MatchResultsStage({
   const navigate = useNavigate();
 
   const handleStartInterview = () => {
-    navigate(`/interview/setup?i_id=${interviewId}`);
+    navigate(`/interview/dsa-playground?i_id=${interviewId}`);
   };
 
   const handleScheduleLater = () => {
