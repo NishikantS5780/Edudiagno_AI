@@ -38,8 +38,15 @@ export const recruiterAPI = {
 };
 
 export const interviewAPI = {
-  getInterviews: async () => {
-    const res = await api.get("/interview/recruiter-view/all", {
+  getInterviews: async (params?: {
+    limit?: number;
+    start?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.start) queryParams.append('start', params.start.toString());
+
+    const res = await api.get(`/interview/recruiter-view/all?${queryParams.toString()}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     return res;
@@ -159,23 +166,27 @@ export const jobAPI = {
     return res;
   },
   createJob: async (data: JobData) => {
+    const transformedData = {
+      title: data.title,
+      description: data.description,
+      department: data.department,
+      city: data.city,
+      location: data.location,
+      type: data.type,
+      min_experience: data.min_experience,
+      max_experience: data.max_experience,
+      salary_min: data.salary_min,
+      salary_max: data.salary_max,
+      currency: data.currency,
+      show_salary: data.show_salary,
+      requirements: data.requirements,
+      benefits: data.benefits,
+      status: data.status || 'active'
+    };
+
     const res = await api.post(
       "/job",
-      {
-        title: data.title,
-        description: data.description,
-        department: data.department,
-        location: data.location,
-        type: data.type,
-        min_experience: data.minExperience,
-        max_experience: data.maxExperience,
-        salary_min: data.minSalary,
-        salary_max: data.maxSalary,
-        show_salary: data.showSalary,
-        requirements: data.requirements,
-        benefits: data.benefits,
-        status: data.status,
-      },
+      transformedData,
       { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
     );
     return res;

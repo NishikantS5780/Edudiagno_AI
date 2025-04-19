@@ -265,15 +265,36 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
                     <Lightbulb className="h-4 w-4 text-amber-500" />
                     Generated {fieldLabel}
                   </h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={copyToClipboard}
-                    className="hover:bg-slate-100 border-slate-300"
-                  >
-                    <Copy className="mr-1.5 h-3.5 w-3.5" />
-                    Copy
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyToClipboard}
+                      className="hover:bg-slate-100 border-slate-300"
+                    >
+                      <Copy className="mr-1.5 h-3.5 w-3.5" />
+                      Copy
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerate}
+                      disabled={isGenerating}
+                      className="hover:bg-slate-100 border-slate-300"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <LoadingSpinner size="sm" className="mr-1.5" />
+                          Regenerating...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+                          Regenerate
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div className="border rounded-md p-4 min-h-[200px] max-h-[300px] overflow-y-auto bg-white/50 backdrop-blur-sm shadow-inner">
                   <pre className="whitespace-pre-wrap font-sans text-sm">

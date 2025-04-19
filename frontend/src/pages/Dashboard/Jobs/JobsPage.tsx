@@ -70,6 +70,7 @@ import {
 
 const JobsPage = () => {
   const [jobs, setJobs] = useState<JobData[]>([]);
+  const [filteredJobs, setFilteredJobs] = useState<JobData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -78,6 +79,9 @@ const JobsPage = () => {
   const [jobToDelete, setJobToDelete] = useState<number | null>(null);
   const [sortField, setSortField] = useState<'title' | 'department' | 'location' | 'type' | 'show_salary' | 'status'>('title');
   const [sortOrder, setSortOrder] = useState<'ascending' | 'descending'>('ascending');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10;
 
   // Function to capitalize first letter of each word
   const capitalizeWords = (str: string) => {
@@ -103,24 +107,28 @@ const JobsPage = () => {
       setLoading(true);
       const response = await jobAPI.recruiterGetAllJobs({
         sort: sortOrder,
-        sort_field: sortField
+        sort_field: sortField,
+        start: (currentPage - 1) * itemsPerPage,
+        limit: itemsPerPage
       });
       console.log('Jobs API Response:', response.data);
       const data = response.data;
-      setJobs(
-        data.map((jobData) => {
-          const date = jobData.created_at ? new Date(jobData.created_at.replace('Z', '')) : new Date();
-          return {
-            id: jobData.id,
-            title: jobData.title,
-            department: jobData.department,
-            location: jobData.location,
-            type: jobData.type,
-            status: jobData.status,
-            createdAt: date,
-          };
-        })
-      );
+      const jobsData = data.map((jobData) => {
+        const date = jobData.created_at ? new Date(jobData.created_at.replace('Z', '')) : new Date();
+        return {
+          id: jobData.id,
+          title: jobData.title,
+          department: jobData.department,
+          location: jobData.location,
+          type: jobData.type,
+          status: jobData.status,
+          createdAt: date,
+        };
+      });
+      setJobs(jobsData);
+      // Calculate total pages based on total count from API
+      const totalCount = response.headers['x-total-count'] || data.length;
+      setTotalPages(Math.ceil(totalCount / itemsPerPage));
     } catch (error) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to fetch jobs");
@@ -129,9 +137,41 @@ const JobsPage = () => {
     }
   };
 
+  // Apply filters whenever jobs, searchQuery, or filters change
+  useEffect(() => {
+    let filtered = [...jobs];
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(job => 
+        job.title.toLowerCase().includes(query) ||
+        job.department.toLowerCase().includes(query) ||
+        job.location.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply department filter
+    if (departmentFilter !== 'all') {
+      filtered = filtered.filter(job => job.department === departmentFilter);
+    }
+
+    // Apply location filter
+    if (locationFilter !== 'all') {
+      filtered = filtered.filter(job => job.location === locationFilter);
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(job => job.status === statusFilter);
+    }
+
+    setFilteredJobs(filtered);
+  }, [jobs, searchQuery, departmentFilter, locationFilter, statusFilter]);
+
   useEffect(() => {
     fetchJobs();
-  }, [sortField, sortOrder]);
+  }, [sortField, sortOrder, currentPage]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -316,8 +356,8 @@ const JobsPage = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {jobs.length > 0 ? (
-              jobs.map((job) => (
+            {filteredJobs.length > 0 ? (
+              filteredJobs.map((job) => (
                 <TableRow key={job.id}>
                   <TableCell className="font-medium">
                     <Link
@@ -390,6 +430,48 @@ const JobsPage = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination className="mt-6">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) setCurrentPage(currentPage - 1);
+                }}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <PaginationItem key={page}>
+                <PaginationLink 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage(page);
+                  }}
+                  isActive={currentPage === page}
+                >
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                }}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
 
       <AlertDialog open={jobToDelete !== null} onOpenChange={() => setJobToDelete(null)}>
         <AlertDialogContent>

@@ -72,9 +72,16 @@ const InterviewsPage = () => {
   const [jobFilter, setJobFilter] = useState("all");
   const [interviewsData, setInterviewsData] = useState<InterviewData[]>();
   const [interviewToDelete, setInterviewToDelete] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10;
 
-    const getInterviewData = async () => {
-      const res = await interviewAPI.getInterviews();
+  const getInterviewData = async () => {
+    try {
+      const res = await interviewAPI.getInterviews({
+        start: (currentPage - 1) * itemsPerPage,
+        limit: itemsPerPage
+      });
       setInterviewsData(() =>
         res.data.map((interview) => {
           return {
@@ -100,11 +107,18 @@ const InterviewsPage = () => {
           };
         })
       );
-    };
+      // Calculate total pages based on total count from API
+      const totalCount = res.headers['x-total-count'] || res.data.length;
+      setTotalPages(Math.ceil(totalCount / itemsPerPage));
+    } catch (error) {
+      console.error("Error fetching interviews:", error);
+      toast.error("Failed to fetch interviews");
+    }
+  };
 
   useEffect(() => {
     getInterviewData();
-  }, []);
+  }, [currentPage]);
 
   const handleDeleteInterview = async (id: number) => {
     try {
@@ -331,27 +345,46 @@ const InterviewsPage = () => {
       </div>
 
       {/* Pagination */}
-      <Pagination className="mt-6">
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious href="#" />
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationLink href="#" isActive>
-              1
-            </PaginationLink>
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationLink href="#">2</PaginationLink>
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationLink href="#">3</PaginationLink>
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationNext href="#" />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      {totalPages > 1 && (
+        <Pagination className="mt-6">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) setCurrentPage(currentPage - 1);
+                }}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <PaginationItem key={page}>
+                <PaginationLink 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage(page);
+                  }}
+                  isActive={currentPage === page}
+                >
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                }}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
       </div>
 
       {/* Confirmation Dialog */}

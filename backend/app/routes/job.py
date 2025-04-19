@@ -166,29 +166,28 @@ async def create_job(
 @router.post("/generate-description")
 async def generate_description(generate_jd_data: schemas.GenerateJobDescription):
     prompt = f"""
-    Create a comprehensive job description for a {generate_jd_data.title} position in the {generate_jd_data.department} department.
+    Create a detailed job description for a {generate_jd_data.title} position in the {generate_jd_data.department} department.
     The position is {generate_jd_data.location}-based.
     
-    Include the following sections:
-    1. Overview of the role and responsibilities
-    2. Requirements and qualifications
-    3. Benefits and perks
+    Focus ONLY on describing the role, responsibilities, and day-to-day activities.
+    Do NOT include requirements, qualifications, or benefits.
     
-    Format the content with markdown, using ## for section headers.
+    Return the content in plain text format only. Do not use any markdown, headers, or special formatting.
+    Use simple paragraphs and bullet points with dashes (-) if needed.
     """
 
-    print(f"Making OpenAI API call with model: gpt-4")
+    print(f"Making OpenAI API call with model: gpt-3.5-turbo")
     response = await openai.client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[
             {
                 "role": "system",
-                "content": "You are a professional HR assistant specializing in creating compelling job descriptions.",
+                "content": "You are a professional HR assistant specializing in creating compelling job descriptions. Focus only on describing the role and responsibilities. Return plain text only, no markdown or special formatting.",
             },
             {"role": "user", "content": prompt},
         ],
-        temperature=0.7,
-        max_tokens=1000,
+        temperature=0.3,
+        max_tokens=500,
     )
     description = response.choices[0].message.content
 
@@ -199,7 +198,7 @@ async def generate_description(generate_jd_data: schemas.GenerateJobDescription)
 async def generate_requirements(generate_jr_data: schemas.GenerateJobRequirement):
     """Generate job requirements using OpenAI"""
     prompt = f"""
-    Create a comprehensive list of requirements for a {generate_jr_data.title} position in the {generate_jr_data.department} department.
+    Create a focused list of requirements for a {generate_jr_data.title} position in the {generate_jr_data.department} department.
     The position is {generate_jr_data.location}-based.
     
     {f"Additional keywords to consider: {generate_jr_data.keywords}" if generate_jr_data.keywords else ""}
@@ -210,20 +209,22 @@ async def generate_requirements(generate_jr_data: schemas.GenerateJobRequirement
     3. Technical requirements
     4. Soft skills and personal attributes
     
-    Format the content with bullet points.
+    Return the content in plain text format only. Do not use any markdown, headers, or special formatting.
+    Use simple bullet points with dashes (-) for each requirement.
+    Keep the requirements specific and measurable.
     """
 
     response = await openai.client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[
             {
                 "role": "system",
-                "content": "You are a professional HR assistant specializing in creating detailed job requirements.",
+                "content": "You are a professional HR assistant specializing in creating detailed job requirements. Focus on specific, measurable requirements. Return plain text only, no markdown or special formatting.",
             },
             {"role": "user", "content": prompt},
         ],
-        temperature=0.7,
-        max_tokens=1000,
+        temperature=0.2,
+        max_tokens=300,
     )
     requirements = response.choices[0].message.content
     return {"requirements": requirements}

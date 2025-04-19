@@ -1,18 +1,20 @@
 export interface JobData {
   id?: number;
-  title?: string;
-  department?: string;
-  location?: string;
-  type?: string;
-  status?: string;
-  description?: string;
-  requirements?: string;
-  benefits?: string;
-  maxExperience?: number;
-  minExperience?: number;
-  maxSalary?: number;
-  minSalary?: number;
-  showSalary?: boolean;
+  title: string;
+  description: string;
+  department: string;
+  city: string;
+  location: string;
+  type: string;
+  min_experience: number;
+  max_experience: number;
+  salary_min: number | null;
+  salary_max: number | null;
+  currency: string;
+  show_salary: boolean;
+  requirements: string;
+  benefits: string;
+  status: string;
   createdAt?: string;
 
   totalCandidatesCount?: number;
