@@ -130,3 +130,13 @@ class GenerateJobRequirement(BaseModel):
 class UpdateInterviewQuestionResponse(BaseModel):
     question_order: int
     answer: str
+
+
+class CreateDSAQuestion(BaseModel):
+    description: str
+    job_id: int
+
+
+class UpdateDSAQuestion(BaseModel):
+    id: int
+    description: str
