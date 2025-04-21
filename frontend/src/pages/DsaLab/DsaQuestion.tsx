@@ -12,6 +12,7 @@ interface QuestionAreaProps {
   description: React.ReactNode; // Allows text or JSX (e.g., with <code>)
   testCases: { input: string; expectedOutput: string }[]; // Array of test cases
   constraints?: string; // Optional constraints text
+  compilationStatus?: string;
 }
 
 function DsaQuestion({
@@ -26,36 +27,46 @@ function DsaQuestion({
   description,
   testCases,
   constraints,
+  compilationStatus
 }: QuestionAreaProps) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
       case 'easy':
-        return 'text-green-400';
+        return 'text-green-500';
       case 'medium':
-        return 'text-yellow-400';
+        return 'text-yellow-500';
       case 'hard':
-        return 'text-red-400';
+        return 'text-red-500';
       default:
-        return 'text-white';
+        return 'text-gray-500';
     }
   };
 
   return (
-    <div className="bg-[#27272a] rounded-xl text-white p-6 h-[86vh]">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold">{title}</h1>
-        <p className="text-sm text-gray-400">
-          <span className="mr-1">||</span> {successRate}
-        </p>
+    <div className="bg-[#18181b] text-white p-4 rounded-lg">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">{title}</h2>
+        <div className="flex items-center gap-4">
+          {compilationStatus && (
+            <span className={`text-sm ${
+              compilationStatus === "Compiled Successfully" ? "text-green-500" :
+              compilationStatus === "Compilation Failed" ? "text-red-500" :
+              "text-yellow-500"
+            }`}>
+              {compilationStatus}
+            </span>
+          )}
+          <span className="text-sm text-gray-400">{successRate}</span>
+        </div>
       </div>
-
+      
       <div className="mb-4">
-        <h2 className="text-xl font-semibold border-b border-gray-600 pb-2">
+        <h3 className="text-lg font-semibold">
           {questionNumber} {questionTitle}
-        </h2>
-        <p className={`text-md font-medium ${getDifficultyColor(difficulty)} mt-2`}>
+        </h3>
+        <span className={`text-sm font-medium ${getDifficultyColor(difficulty)}`}>
           {difficulty}
-        </p>
+        </span>
         {topics.length > 0 && (
           <div className="mt-2">
             <span className="font-medium">Topics: </span>
@@ -84,7 +95,7 @@ function DsaQuestion({
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-2">Sample Test Cases</h3>
+        <h4 className="text-lg font-semibold mb-2">Sample Test Cases</h4>
         <table className="w-full border-collapse">
           <thead>
             <tr>

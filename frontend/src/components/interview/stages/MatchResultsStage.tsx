@@ -35,7 +35,11 @@ export function MatchResultsStage({
   const navigate = useNavigate();
 
   const handleStartInterview = () => {
-    navigate(`/interview/dsa-playground?i_id=${interviewId}`);
+    if (!interviewId) {
+      console.error('No interview ID found');
+      return;
+    }
+    navigate(`/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`);
   };
 
   const handleScheduleLater = () => {
