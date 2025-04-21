@@ -140,3 +140,15 @@ class CreateDSAQuestion(BaseModel):
 class UpdateDSAQuestion(BaseModel):
     id: int
     description: str
+
+
+class CreateDSATestCase(BaseModel):
+    input: str
+    expected_output: str
+    dsa_question_id: int
+
+
+class UpdateDSATestCase(BaseModel):
+    input: Optional[str] = None
+    expected_output: Optional[str] = None
+    id: int
