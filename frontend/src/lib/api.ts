@@ -38,17 +38,17 @@ export const recruiterAPI = {
 };
 
 export const interviewAPI = {
-  getInterviews: async (params?: {
-    limit?: number;
-    start?: number;
-  }) => {
+  getInterviews: async (params?: { limit?: number; start?: number }) => {
     const queryParams = new URLSearchParams();
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.start) queryParams.append('start', params.start.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.start) queryParams.append("start", params.start.toString());
 
-    const res = await api.get(`/interview/recruiter-view/all?${queryParams.toString()}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
+    const res = await api.get(
+      `/interview/recruiter-view/all?${queryParams.toString()}`,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
     return res;
   },
   candidateGetInterview: async () => {
@@ -145,14 +145,20 @@ export const jobAPI = {
   recruiterGetAllJobs: async (params?: {
     limit?: number;
     start?: number;
-    sort?: 'ascending' | 'descending';
-    sort_field?: 'title' | 'department' | 'location' | 'type' | 'show_salary' | 'status';
+    sort?: "ascending" | "descending";
+    sort_field?:
+      | "title"
+      | "department"
+      | "location"
+      | "type"
+      | "show_salary"
+      | "status";
   }) => {
     const queryParams = new URLSearchParams();
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.start) queryParams.append('start', params.start.toString());
-    if (params?.sort) queryParams.append('sort', params.sort);
-    if (params?.sort_field) queryParams.append('sort_field', params.sort_field);
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.start) queryParams.append("start", params.start.toString());
+    if (params?.sort) queryParams.append("sort", params.sort);
+    if (params?.sort_field) queryParams.append("sort_field", params.sort_field);
 
     const res = await api.get(`/job/all?${queryParams.toString()}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -181,14 +187,12 @@ export const jobAPI = {
       show_salary: data.show_salary,
       requirements: data.requirements,
       benefits: data.benefits,
-      status: data.status || 'active'
+      status: data.status || "active",
     };
 
-    const res = await api.post(
-      "/job",
-      transformedData,
-      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-    );
+    const res = await api.post("/job", transformedData, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
     return res;
   },
   candidateGetJob: async (jobId: string) => {
@@ -259,6 +263,14 @@ export const userAPI = {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     return res.data;
+  },
+};
+
+export const dsaAPI = {
+  runCode: async (data) => {
+    await api.post("/interview", data, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+    });
   },
 };
 

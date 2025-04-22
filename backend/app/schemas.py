@@ -160,7 +160,6 @@ class UpdateDSATestCase(BaseModel):
 
 class CreateDSAResponse(BaseModel):
     code: str
-    interview_id: int
     question_id: int
 
 
