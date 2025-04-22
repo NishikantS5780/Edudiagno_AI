@@ -70,7 +70,7 @@ async def create_dsa_response(
                                         .decode()
                                         .rstrip("="),
                                         # "stdinStringAsBase64UrlEncoded": "",
-                                        "callbackUrlOnExecutionCompletion": "https://codeappmedia.in/api/interview/callback",
+                                        "callbackUrlOnExecutionCompletion": "https://codeappmedia.in/api/dsa-response/callback",
                                         "shouldEnablePerProcessAndThreadCpuTimeLimit": False,
                                         "shouldEnablePerProcessAndThreadMemoryLimit": False,
                                         "shouldAllowInternetAccess": False,
