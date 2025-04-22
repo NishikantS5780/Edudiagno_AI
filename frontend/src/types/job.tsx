@@ -16,6 +16,16 @@ export interface JobData {
   benefits: string;
   status: string;
   createdAt?: string;
+  requires_dsa: boolean;
+  dsa_questions?: Array<{
+    title: string;
+    description: string;
+    difficulty: string;
+    test_cases: Array<{
+      input: string;
+      expected_output: string;
+    }>;
+  }>;
 
   totalCandidatesCount?: number;
   pendingInterviewCount?: number;
@@ -35,6 +45,16 @@ export interface CandidateJobData {
   salaryMin?: number;
   salaryMax?: number;
   createdAt?: string;
+  requires_dsa?: boolean;
+  dsa_questions?: Array<{
+    title: string;
+    description: string;
+    difficulty: string;
+    test_cases: Array<{
+      input: string;
+      expected_output: string;
+    }>;
+  }>;
 
   companyId: number;
   companyName: string;
