@@ -298,7 +298,9 @@ async def analyze_resume(
         .returning(Interview)
     )
 
-    interview = db.execute(stmt).scalars().all()[0]
+    result = db.execute(stmt)
+    db.commit()
+    interview = result.scalars().all()[0]
 
     return interview
 
