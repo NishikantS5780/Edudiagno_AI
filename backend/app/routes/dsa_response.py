@@ -1,5 +1,5 @@
 import base64
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, WebSocket
 from sqlalchemy.orm import Session
 
 from app import config, database, schemas
@@ -7,10 +7,17 @@ from app import config, database, schemas
 router = APIRouter()
 
 
-@router.post("")
+@router.websocket("")
 async def create_dsa_response(
-    dsa_response_data: schemas.CreateDSAResponse, db: Session = Depends(database.get_db)
+    websocket: WebSocket,
+    # dsa_response_data: schemas.CreateDSAResponse,
+    db: Session = Depends(database.get_db),
 ):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_json()
+        print(data["hi"])
+
     import aiohttp
 
     async with aiohttp.ClientSession() as session:

@@ -13,7 +13,7 @@ from fastapi import (
     status,
 )
 from sqlalchemy.orm import Session
-from sqlalchemy import delete, select, update
+from sqlalchemy import and_, delete, select, update
 
 from app import database, schemas
 from app.configs import openai
@@ -56,6 +56,47 @@ async def get_interview(
         .join(Recruiter, Job.company_id == Recruiter.id)
         .where(Interview.id == interview_id)
     )
+    result = db.execute(stmt)
+    interview = result.all()[0]._mapping
+    return interview
+
+
+@router.get("/recruiter-view")
+async def get_interview_recruiter_view(
+    db: Session = Depends(database.get_db),
+    interview_id=str,
+    recruiter_id=Depends(authorize_recruiter),
+):
+    stmt = (
+        select(
+            Interview.id,
+            Interview.status,
+            Interview.first_name,
+            Interview.last_name,
+            Interview.email,
+            Interview.phone,
+            Interview.work_experience,
+            Interview.education,
+            Interview.skills,
+            Interview.location,
+            Interview.linkedin_url,
+            Interview.portfolio_url,
+            Interview.resume_url,
+            Interview.resume_text,
+            Interview.resume_match_score,
+            Interview.resume_match_feedback,
+            Interview.overall_score,
+            Interview.technical_skills_score,
+            Interview.communication_skills_score,
+            Interview.problem_solving_skills_score,
+            Interview.cultural_fit_score,
+            Interview.feedback,
+        )
+        .join(Job, Interview.job_id == Job.id)
+        .join(Recruiter, Recruiter.id == Job.company_id)
+        .where(and_(Interview.id == int(interview_id), Recruiter.id == recruiter_id))
+    )
+
     result = db.execute(stmt)
     interview = result.all()[0]._mapping
     return interview
@@ -348,17 +389,27 @@ async def generate_feedback(
 
     interview_analysis = response.choices[0].message.content
     interview_data = json.loads(interview_analysis)
+    print(interview_data)
 
     stmt = (
         update(Interview)
         .values(
             overall_score=int(interview_data["score"]),
             feedback=interview_data["feedback_for_recruiter"],
+            technical_skills_score=interview_data["scoreBreakdown"]["technicalSkills"],
+            communication_skills_score=interview_data["scoreBreakdown"][
+                "communication"
+            ],
+            problem_solving_skills_score=interview_data["scoreBreakdown"][
+                "problemSolving"
+            ],
+            cultural_fit_score=interview_data["scoreBreakdown"]["culturalFit"],
         )
         .returning(Interview)
     )
 
     db.execute(stmt).scalars().all()[0]
+    db.commit()
 
     return {
         "feedback": interview_data["feedback_for_candidate"],

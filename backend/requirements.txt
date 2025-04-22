@@ -14,3 +14,4 @@ pypdf
 
 aiohttp
 aiodns
+websockets
