@@ -91,6 +91,7 @@ class QuizOption(Base):
 
     id = Column(Integer, primary_key=True)
     label = Column(String)
+    correct = Column(Boolean, default=False)
     question_id = Column(Integer, ForeignKey("quiz_questions.id"))
 
     question = relationship("QuizQuestion", back_populates="options")
@@ -218,6 +219,7 @@ class DSATestCaseResponse(Base):
 
     status = Column(String)
     dsa_response_id = Column(Integer, ForeignKey("dsa_responses.id"), primary_key=True)
+    task_id = Column(String)
     dsa_test_case_id = Column(
         Integer, ForeignKey("dsa_test_cases.id"), primary_key=True
     )

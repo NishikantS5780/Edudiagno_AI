@@ -166,3 +166,25 @@ class CreateDSAResponse(BaseModel):
 class UpdateDSAResponse(BaseModel):
     code: str
     id: int
+
+
+class CreateQuizQuestion(BaseModel):
+    description: str
+    job_id: int
+
+
+class UpdateQuizQuestion(BaseModel):
+    description: str
+    id: int
+
+
+class CreateQuizOption(BaseModel):
+    label: str
+    correct: bool
+    question_id: int
+
+
+class UpdateQuizOption(BaseModel):
+    label: str
+    correct: bool
+    id: int

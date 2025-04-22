@@ -67,6 +67,8 @@ from app.routes import (
     dsa_response,
     dsa_test_case,
     interview_question_and_response,
+    quiz_option,
+    quiz_question,
     recruiter,
     job,
     interview,
@@ -96,6 +98,10 @@ app.include_router(
 app.include_router(
     dsa_response.router, prefix="/api/dsa-response", tags=["DSA Response"]
 )
+app.include_router(
+    quiz_question.router, prefix="/api/quiz-question", tags=["Quiz Question"]
+)
+app.include_router(quiz_option.router, prefix="/api/quiz-option", tags=["Quiz Option"])
 
 
 @app.get("/api", tags=["Health"])
