@@ -133,13 +133,17 @@ class UpdateInterviewQuestionResponse(BaseModel):
 
 
 class CreateDSAQuestion(BaseModel):
+    title: str
     description: str
+    difficulty: str
     job_id: int
 
 
 class UpdateDSAQuestion(BaseModel):
     id: int
-    description: str
+    title: Optional[str] = None
+    description: Optional[str] = None
+    difficulty: Optional[str] = None
 
 
 class CreateDSATestCase(BaseModel):
@@ -151,4 +155,15 @@ class CreateDSATestCase(BaseModel):
 class UpdateDSATestCase(BaseModel):
     input: Optional[str] = None
     expected_output: Optional[str] = None
+    id: int
+
+
+class CreateDSAResponse(BaseModel):
+    code: str
+    interview_id: int
+    question_id: int
+
+
+class UpdateDSAResponse(BaseModel):
+    code: str
     id: int

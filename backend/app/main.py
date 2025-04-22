@@ -64,6 +64,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 from app.routes import (
+    dsa_response,
     dsa_test_case,
     interview_question_and_response,
     recruiter,
@@ -91,6 +92,9 @@ app.include_router(
 )
 app.include_router(
     dsa_test_case.router, prefix="/api/dsa-test-case", tags=["DSA Test Case"]
+)
+app.include_router(
+    dsa_response.router, prefix="/api/dsa-response", tags=["DSA Response"]
 )
 
 

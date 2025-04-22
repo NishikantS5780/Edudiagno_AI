@@ -14,7 +14,10 @@ async def create_dsa_question(
     dsa_question_data: schemas.CreateDSAQuestion, db: Session = Depends(database.get_db)
 ):
     dsa_question = DSAQuestion(
-        description=dsa_question_data.description, job_id=dsa_question_data.job_id
+        title=dsa_question_data.title,
+        description=dsa_question_data.description,
+        difficulty=dsa_question_data.difficulty,
+        job_id=dsa_question_data.job_id,
     )
     db.add(dsa_question)
     db.commit()
@@ -39,7 +42,11 @@ async def update_dsa_question(
 ):
     stmt = (
         update(DSAQuestion)
-        .values(description=dsa_question_data.description)
+        .values(
+            title=dsa_question_data.title,
+            description=dsa_question_data.description,
+            difficulty=dsa_question_data.difficulty,
+        )
         .where(DSAQuestion.id == dsa_question_data.id)
         .returning(DSAQuestion.id, DSAQuestion.description)
     )

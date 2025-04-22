@@ -103,7 +103,9 @@ class DSAQuestion(Base):
     __tablename__ = "dsa_questions"
 
     id = Column(Integer, primary_key=True)
+    title = Column(String)
     description = Column(String)
+    difficulty = Column(String)
     created_at = Column(DateTime, default=func.now())
     job_id = Column(Integer, ForeignKey("jobs.id"))
 
