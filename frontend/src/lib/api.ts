@@ -268,7 +268,7 @@ export const userAPI = {
 
 export const dsaAPI = {
   runCode: async (data) => {
-    await api.post("/interview", data, {
+    await api.post("/dsa-response", data, {
       headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
     });
   },
