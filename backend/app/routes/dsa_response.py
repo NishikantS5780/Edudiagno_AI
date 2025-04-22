@@ -2,7 +2,7 @@ import base64
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app import database, schemas
+from app import config, database, schemas
 
 router = APIRouter()
 
@@ -16,9 +16,7 @@ async def create_dsa_response(
     async with aiohttp.ClientSession() as session:
         async with session.post(
             "https://backend.codedamn.com/api/public/request-dsa-code-execution-batch",
-            headers={
-                "FERMION-API-KEY": "7aqzj3mievef6o0islunum4ia3psrqvcyygqzmevdb1og2r3o5868e8lisopvb2x0jhkjj5w6z6aau52wxgctxpkzw8udrgb734idm3z0928l1x1lcdjkii7uj5e1jpl"
-            },
+            headers={"FERMION-API-KEY": config.settings.FERMION_API_KEY},
             json={
                 "data": [
                     {
