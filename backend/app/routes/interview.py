@@ -389,7 +389,6 @@ async def generate_feedback(
 
     interview_analysis = response.choices[0].message.content
     interview_data = json.loads(interview_analysis)
-    print(interview_data)
 
     stmt = (
         update(Interview)

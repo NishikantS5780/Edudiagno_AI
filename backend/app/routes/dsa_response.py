@@ -1,22 +1,53 @@
 import base64
-from fastapi import APIRouter, Depends, WebSocket
+from typing import Dict
+from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
 from app import config, database, schemas
+from app.dependencies.authorization import authorize_candidate
 
 router = APIRouter()
 
 
+class InterviewConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[int, WebSocket] = {}
+
+    async def connect(self, interview_id: int, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections[interview_id] = websocket
+
+    def disconnect(self, interview_id: int):
+        self.active_connections.pop(interview_id, None)
+
+    async def send_data(self, interview_id: int, data):
+        websocket = self.active_connections.get(interview_id)
+        if websocket:
+            await websocket.send_json(data)
+
+
+interview_connection_manager = InterviewConnectionManager()
+
+
 @router.websocket("")
-async def create_dsa_response(
+async def ws(
     websocket: WebSocket,
-    # dsa_response_data: schemas.CreateDSAResponse,
     db: Session = Depends(database.get_db),
+    interview_id=Depends(authorize_candidate),
 ):
-    await websocket.accept()
-    while True:
-        data = await websocket.receive_json()
+    await interview_connection_manager.connect(
+        interview_id=interview_id, websocket=websocket
+    )
+    async for data in websocket.iter_json():
         print(data["hi"])
+
+
+@router.post("")
+async def create_dsa_response(
+    response_data: schemas.CreateDSAResponse,
+    db: Session = Depends(database.get_db),
+    interview_id=Depends(authorize_candidate),
+):
 
     import aiohttp
 
@@ -39,7 +70,7 @@ async def create_dsa_response(
                                         .decode()
                                         .rstrip("="),
                                         # "stdinStringAsBase64UrlEncoded": "",
-                                        # "callbackUrlOnExecutionCompletion": "",
+                                        "callbackUrlOnExecutionCompletion": "https://codeappmedia.in/api/interview/callback",
                                         "shouldEnablePerProcessAndThreadCpuTimeLimit": False,
                                         "shouldEnablePerProcessAndThreadMemoryLimit": False,
                                         "shouldAllowInternetAccess": False,
@@ -69,7 +100,14 @@ async def create_dsa_response(
 
             result = await response.json()
             print("Body:", result)
-    return {}
+    return {"message": "executing"}
+
+
+@router.post("/callback")
+async def execution_callback(request: Request):
+    data = await request.json()
+    print(data)
+    return
 
 
 @router.get("")
