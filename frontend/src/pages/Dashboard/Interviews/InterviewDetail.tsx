@@ -336,11 +336,14 @@ const InterviewDetail = () => {
             <Share2 className="h-4 w-4 mr-2" />
             Share
           </Button>
+
+          <Link to={`/dashboard/interviews/${id}/report`}>
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
-            Download Report
-          </Button>
-        </div>
+                     Download Report
+            </Button>
+            </Link>
+                     </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
