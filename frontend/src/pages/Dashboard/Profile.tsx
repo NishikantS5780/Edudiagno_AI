@@ -10,19 +10,18 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/context/AuthContext";
+import { useUser } from "@/context/UserContext";
 import { Pencil, Shield, UserCircle, AlertCircle } from "lucide-react";
-import ProfileCompletion from "@/components/profile/ProfileCompletion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { recruiterAPI } from "@/lib/api";
 
 const Profile = () => {
   const { toast } = useToast();
-  const { user, updateUserProfile, updateProfileProgress } = useAuth();
+  const { recruiter } = useUser();
   const [isLoading, setIsLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(user?.company_logo || null);
+  const [profileImage, setProfileImage] = useState<string | null>(recruiter?.company_logo || null);
   const location = useLocation();
-  const isNewUser = location.state?.isNewUser || user?.is_profile_complete === false;
+  const isNewUser = location.state?.isNewUser || recruiter?.is_profile_complete === false;
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("profile");
  
@@ -40,27 +39,27 @@ const Profile = () => {
 
   // Initialize profile data with actual user data
   const [profileData, setProfileData] = useState({
-    name: user ? `${user.first_name} ${user.last_name}` : "",
-    email: user?.email || "",
-    company: user?.company_name || "",
-    title: user?.title || "",
-    phone: user?.phone || "",
-    timezone: user?.timezone || "America/New_York",
-    language: user?.language || "English",
+    name: recruiter ? `${recruiter.first_name} ${recruiter.last_name}` : "",
+    email: recruiter?.email || "",
+    company: recruiter?.company_name || "",
+    title: recruiter?.title || "",
+    phone: recruiter?.phone || "",
+    timezone: recruiter?.timezone || "America/New_York",
+    language: recruiter?.language || "English",
   });
 
   // Initialize company settings with actual user data
   const [companySettings, setCompanySettings] = useState({
-    companyName: user?.company_name || "",
-    website: user?.website || "",
-    industry: user?.industry || "Technology",
-    size: user?.company_size || "51-200 employees",
+    companyName: recruiter?.company_name || "",
+    website: recruiter?.website || "",
+    industry: recruiter?.industry || "Technology",
+    size: recruiter?.company_size || "51-200 employees",
     logo: profileImage,
-    address: user?.address || "",
-    city: user?.city || "",
-    state: user?.state || "",
-    zip: user?.zip || "",
-    country: user?.country || "United States",
+    address: recruiter?.address || "",
+    city: recruiter?.city || "",
+    state: recruiter?.state || "",
+    zip: recruiter?.zip || "",
+    country: recruiter?.country || "United States",
   });
 
   // Add this near the top of the component with other state declarations
@@ -194,16 +193,16 @@ const Profile = () => {
   // Calculate and update profile progress when component mounts or data changes
   useEffect(() => {
     const updateProgress = async () => {
-      if (user) {
+      if (recruiter) {
         const progress = calculateProfileProgress();
-        if (progress !== user.profileProgress) {
-          await updateProfileProgress(progress);
+        if (progress !== recruiter.profileProgress) {
+          await recruiter.updateProfileProgress(progress);
         }
       }
     };
 
     updateProgress();
-  }, [user, profileData, companySettings]);
+  }, [recruiter, profileData, companySettings]);
 
   useEffect(() => {
    // Check for query param indicating first login
@@ -232,7 +231,7 @@ const Profile = () => {
       const first_name = nameParts[0];
       const last_name = nameParts.slice(1).join(" ");
       
-      await updateUserProfile({
+      await recruiter.updateUserProfile({
         first_name,
         last_name,
         email: profileData.email,
@@ -267,7 +266,7 @@ const Profile = () => {
     setIsLoading(true);
     
     try {
-      await updateUserProfile({
+      await recruiter.updateUserProfile({
         company_name: companySettings.companyName,
         website: companySettings.website,
         industry: companySettings.industry,
@@ -361,8 +360,6 @@ const Profile = () => {
              </Card>
            </div>
          )}
- 
-         <ProfileCompletion />
  
          <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 mb-8">
