@@ -188,3 +188,8 @@ class UpdateQuizOption(BaseModel):
     label: str
     correct: bool
     id: int
+
+
+class CreateQuizResponse(BaseModel):
+    question_id: int
+    option_id: int

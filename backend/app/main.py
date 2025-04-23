@@ -69,6 +69,7 @@ from app.routes import (
     interview_question_and_response,
     quiz_option,
     quiz_question,
+    quiz_response,
     recruiter,
     job,
     interview,
@@ -102,6 +103,9 @@ app.include_router(
     quiz_question.router, prefix="/api/quiz-question", tags=["Quiz Question"]
 )
 app.include_router(quiz_option.router, prefix="/api/quiz-option", tags=["Quiz Option"])
+app.include_router(
+    quiz_response.router, prefix="/api/quiz-response", tags=["Quiz Response"]
+)
 
 
 @app.get("/api", tags=["Health"])
