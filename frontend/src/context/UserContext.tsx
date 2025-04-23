@@ -4,7 +4,7 @@ import {
   RecruiterLoginData,
   RecruiterRegistrationData,
 } from "@/types/recruiter";
-import { createContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { replace, useNavigate } from "react-router-dom";
 
 interface UserContextType {
@@ -18,6 +18,14 @@ interface UserContextType {
 export const UserContext = createContext<UserContextType | undefined>(
   undefined
 );
+
+export const useUser = () => {
+  const context = useContext(UserContext);
+  if (context === undefined) {
+    throw new Error("useUser must be used within a UserProvider");
+  }
+  return context;
+};
 
 export const UserProvider = ({ children }) => {
   const [recruiter, setRecruiter] = useState<RecruiterData>();
