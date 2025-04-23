@@ -61,6 +61,7 @@ import RequireProfileVerified from "@/components/common/RequireProfileVerified";
 import InterviewPage from "@/pages/Interview/InterviewPage";
 import DsaExecution from "./pages/DsaLab/DsaExecution";
 import { NotificationProvider } from "@/context/NotificationContext";
+import MCQTest from "@/pages/MCQTest";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,106 +84,171 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthProvider>
-          <UserProvider>
-            <NotificationProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/features" element={<Features />} />
-                  <Route path="/pricing" element={<Pricing />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/case-studies" element={<CaseStudies />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/privacy" element={<Privacy />} />
-                  <Route path="/careers" element={<Careers />} />
-                  <Route path="/integrations" element={<Integrations />} />
-                  <Route path="/changelog" element={<Changelog />} />
-                  <Route path="/how-it-works" element={<HowItWorks />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
+        <UserProvider>
+          <NotificationProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/features" element={<Features />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/case-studies" element={<CaseStudies />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/careers" element={<Careers />} />
+                <Route path="/integrations" element={<Integrations />} />
+                <Route path="/changelog" element={<Changelog />} />
+                <Route path="/how-it-works" element={<HowItWorks />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
 
-                  <Route path="/dsa" element={<DsaExecution />} />
+                <Route path="/dsa" element={<DsaExecution />} />
 
-                  <Route path="/interview" element={<InterviewPage />} />
-                  <Route
-                    path="/interview/compatibility"
-                    element={<InterviewFlow />}
-                  />
-                  <Route path="/interview/setup" element={<CandidatePreCheck />} />
-                  <Route
-                    path="/interview/video-interview"
-                    element={<VideoInterview />}
-                  />
+                <Route path="/interview" element={<InterviewPage />} />
+                <Route
+                  path="/interview/compatibility"
+                  element={<InterviewFlow />}
+                />
+                <Route
+                  path="/interview/setup"
+                  element={<CandidatePreCheck />}
+                />
+                <Route
+                  path="/interview/video-interview"
+                  element={<VideoInterview />}
+                />
 
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <RequireAuth>
-                        <Dashboard />
-                      </RequireAuth>
-                    }
-                  />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <RequireAuth>
+                      <Dashboard />
+                    </RequireAuth>
+                  }
+                />
 
-                  <Route
-                    path="/dashboard/jobs"
-                    element={
-                      <RequireAuth>
-                        <JobsPage />
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="/dashboard/jobs/new"
-                    element={
-                      <RequireAuth>
-                        <RequireProfileVerified>
-                          <NewJob />
-                        </RequireProfileVerified>
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="/dashboard/jobs/:id"
-                    element={
-                      <RequireAuth>
-                        <RequireProfileVerified>
-                          <JobDetail />
-                        </RequireProfileVerified>
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="/dashboard/jobs/:id/edit"
-                    element={
-                      <RequireAuth>
-                        <RequireProfileVerified>
-                          <JobEdit />
-                        </RequireProfileVerified>
-                      </RequireAuth>
-                    }
-                  />
+                <Route
+                  path="/dashboard/jobs"
+                  element={
+                    <RequireAuth>
+                      <JobsPage />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/dashboard/jobs/new"
+                  element={
+                    <RequireAuth>
+                      <RequireProfileVerified>
+                        <NewJob />
+                      </RequireProfileVerified>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/dashboard/jobs/:id"
+                  element={
+                    <RequireAuth>
+                      <RequireProfileVerified>
+                        <JobDetail />
+                      </RequireProfileVerified>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/dashboard/jobs/:id/edit"
+                  element={
+                    <RequireAuth>
+                      <RequireProfileVerified>
+                        <JobEdit />
+                      </RequireProfileVerified>
+                    </RequireAuth>
+                  }
+                />
 
-                  <Route
-                    path="/dashboard/interviews"
-                    element={
-                      <RequireAuth>
-                        <InterviewsPage />
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="/dashboard/interviews/:id"
-                    element={
-                      <RequireAuth>
+                <Route
+                  path="/dashboard/interviews"
+                  element={
+                    <RequireAuth>
+                      <InterviewsPage />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/dashboard/interviews/:id"
+                  element={
+                    <RequireAuth>
+                      <InterviewDetail />
+                    </RequireAuth>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/interviews/new"
+                  element={
+                    <RequireAuth>
+                      <RequireProfileVerified>
                         <InterviewDetail />
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
+                      </RequireProfileVerified>
+                    </RequireAuth>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/analytics"
+                  element={
+                    <RequireAuth>
+                      <Analytics />
+                    </RequireAuth>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/profile"
+                  element={
+                    <RequireAuth>
+                      <Profile />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/dashboard/settings"
+                  element={
+                    <RequireAuth>
+                      <Settings />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/dashboard/help"
+                  element={
+                    <RequireAuth>
+                      <Help />
+                    </RequireAuth>
+                  }
+                />
+
+                <Route path="/interview" element={<PublicInterview />} />
+                <Route path="/interview/flow" element={<InterviewFlow />} />
+                <Route
+                  path="/interview/precheck"
+                  element={<CandidatePreCheck />}
+                />
+                <Route
+                  path="/interview/dsa-playground"
+                  element={<DSAPlayground />}
+                />
+                <Route path="/interview/video" element={<VideoInterview />} />
+                <Route path="/dsa-lab" element={<DsaExecution />} />
+
+                <Route path="/mcq" element={<MCQTest />} />
+
+                <Route path="*" element={<NotFound />} />
+
+                <Route
                   path="/dashboard/interviews/:id/report"
                   element={
                   <RequireAuth>
@@ -191,65 +257,11 @@ const App = () => {
                   }
                   />
 
-                  <Route
-                    path="/dashboard/interviews/new"
-                    element={
-                      <RequireAuth>
-                        <RequireProfileVerified>
-                          <InterviewDetail />
-                        </RequireProfileVerified>
-                      </RequireAuth>
-                    }
-                  />
-
-                  <Route
-                    path="/dashboard/analytics"
-                    element={
-                      <RequireAuth>
-                        <Analytics />
-                      </RequireAuth>
-                    }
-                  />
-
-                  <Route
-                    path="/dashboard/profile"
-                    element={
-                      <RequireAuth>
-                        <Profile />
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="/dashboard/settings"
-                    element={
-                      <RequireAuth>
-                        <Settings />
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="/dashboard/help"
-                    element={
-                      <RequireAuth>
-                        <Help />
-                      </RequireAuth>
-                    }
-                  />
-
-                  <Route path="/interview" element={<PublicInterview />} />
-                  <Route path="/interview/flow" element={<InterviewFlow />} />
-                  <Route path="/interview/precheck" element={<CandidatePreCheck />} />
-                  <Route path="/interview/dsa-playground" element={<DSAPlayground />} />
-                  <Route path="/interview/video" element={<VideoInterview />} />
-                  <Route path="/dsa-lab" element={<DsaExecution />} />
-
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <ChatbotButton />
-              </TooltipProvider>
-            </NotificationProvider>
-          </UserProvider>
-        </AuthProvider>
+              </Routes>
+              <ChatbotButton />
+            </TooltipProvider>
+          </NotificationProvider>
+        </UserProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

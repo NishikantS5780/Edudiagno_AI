@@ -28,9 +28,12 @@ async def create_dsa_question(
 
 @router.get("")
 async def get_dsa_question(job_id: str, db: Session = Depends(database.get_db)):
-    stmt = select(DSAQuestion.id, DSAQuestion.description).where(
-        DSAQuestion.job_id == int(job_id)
-    )
+    stmt = select(
+        DSAQuestion.id,
+        DSAQuestion.title,
+        DSAQuestion.description,
+        DSAQuestion.difficulty,
+    ).where(DSAQuestion.job_id == int(job_id))
     result = db.execute(stmt)
     dsa_questions = result.all()
     return [dsa_question._mapping for dsa_question in dsa_questions]

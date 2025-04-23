@@ -2,6 +2,26 @@ export interface RecruiterData {
   verified?: boolean;
   name: string;
   companyLogo?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  company_name?: string;
+  title?: string;
+  phone?: string;
+  timezone?: string;
+  language?: string;
+  website?: string;
+  industry?: string;
+  company_size?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  is_profile_complete?: boolean;
+  profileProgress?: number;
+  updateProfileProgress?: (progress: number) => Promise<void>;
+  updateUserProfile?: (data: any) => Promise<void>;
 }
 
 export interface RecruiterRegistrationData {

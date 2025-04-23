@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app import database, schemas
 from app.dependencies.authorization import authorize_candidate, authorize_recruiter
-from app.models import QuizOption, QuizQuestion
+from app.models import Interview, Job, QuizOption, QuizQuestion
 
 router = APIRouter()
 
@@ -25,17 +25,26 @@ async def create_quiz_question(
 
 
 @router.get("")
-async def get_quiz_question(
-    question_id: str,
-    db: Session = Depends(database.get_db),
+async def get_quiz_questions_for_interview(
+    db: Session = Depends(database.get_db), interview_id=Depends(authorize_candidate)
 ):
-    stmt = select(QuizQuestion.description).where(QuizQuestion.id == int(question_id))
-    quiz_question = db.execute(stmt).all()[0]._mapping
-    stmt = select(QuizOption.label, QuizOption.correct).where(
-        QuizOption.question_id == int(question_id)
+    stmt = (
+        select(QuizQuestion.id, QuizQuestion.description)
+        .join(Job, QuizQuestion.job_id == Job.id)
+        .join(Interview, Interview.job_id == Job.id)
+        .where(Interview.id == interview_id)
     )
-    options = [option._mapping for option in db.execute(stmt).all()]
-    return {"question": quiz_question, "options": options}
+    quiz_questions = [
+        dict(quiz_question._mapping) for quiz_question in db.execute(stmt).all()
+    ]
+
+    for quiz_question in quiz_questions:
+        stmt = select(QuizOption.id, QuizOption.label, QuizOption.correct).where(
+            QuizOption.question_id == quiz_question["id"]
+        )
+        options = [option._mapping for option in db.execute(stmt).all()]
+        quiz_question["options"] = options
+    return quiz_questions
 
 
 @router.put("")
