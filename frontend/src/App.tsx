@@ -43,6 +43,7 @@ import JobDetail from "@/pages/Dashboard/Jobs/JobDetail";
 import JobEdit from "@/pages/Dashboard/Jobs/JobEdit";
 import InterviewsPage from "@/pages/Dashboard/Interviews/InterviewsPage";
 import InterviewDetail from "@/pages/Dashboard/Interviews/InterviewDetail";
+import InterviewsReport from "@/pages/Dashboard/Interviews/InterviewReport"; 
 import Analytics from "@/pages/Dashboard/Analytics";
 import Profile from "@/pages/Dashboard/Profile";
 import Settings from "@/pages/Dashboard/Settings";
@@ -246,6 +247,16 @@ const App = () => {
                 <Route path="/mcq" element={<MCQTest />} />
 
                 <Route path="*" element={<NotFound />} />
+
+                <Route
+                  path="/dashboard/interviews/:id/report"
+                  element={
+                  <RequireAuth>
+                    <InterviewsReport />
+                    </RequireAuth>
+                  }
+                  />
+
               </Routes>
               <ChatbotButton />
             </TooltipProvider>
