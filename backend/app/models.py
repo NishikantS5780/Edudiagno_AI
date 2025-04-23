@@ -64,9 +64,13 @@ class Job(Base):
 
     # Relationships
     company = relationship("Recruiter", back_populates="jobs")
-    interviews = relationship("Interview", back_populates="job")
-    quiz_questions = relationship("QuizQuestion", back_populates="job")
-    dsa_questions = relationship("DSAQuestion", back_populates="job")
+    interviews = relationship("Interview", back_populates="job", cascade="all, delete")
+    quiz_questions = relationship(
+        "QuizQuestion", back_populates="job", cascade="all, delete"
+    )
+    dsa_questions = relationship(
+        "DSAQuestion", back_populates="job", cascade="all, delete"
+    )
 
 
 class QuizQuestion(Base):
