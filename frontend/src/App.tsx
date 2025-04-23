@@ -60,6 +60,7 @@ import RequireProfileVerified from "@/components/common/RequireProfileVerified";
 import InterviewPage from "@/pages/Interview/InterviewPage";
 import DsaExecution from "./pages/DsaLab/DsaExecution";
 import { NotificationProvider } from "@/context/NotificationContext";
+import MCQTest from "@/pages/MCQTest";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -233,6 +234,8 @@ const App = () => {
                   <Route path="/interview/dsa-playground" element={<DSAPlayground />} />
                   <Route path="/interview/video" element={<VideoInterview />} />
                   <Route path="/dsa-lab" element={<DsaExecution />} />
+
+                  <Route path="/mcq" element={<MCQTest />} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

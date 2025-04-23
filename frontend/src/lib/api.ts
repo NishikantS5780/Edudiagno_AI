@@ -172,7 +172,8 @@ export const jobAPI = {
     return res;
   },
   createJob: async (data: JobData) => {
-    const transformedData = {
+    // First create the job without DSA questions
+    const jobData = {
       title: data.title,
       description: data.description,
       department: data.department,
@@ -190,10 +191,43 @@ export const jobAPI = {
       status: data.status || "active",
     };
 
-    const res = await api.post("/job", transformedData, {
+    const jobResponse = await api.post("/job", jobData, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-    return res;
+
+    // If job has DSA questions, create them
+    if (data.requires_dsa && data.dsa_questions && data.dsa_questions.length > 0) {
+      for (const question of data.dsa_questions) {
+        // Create DSA question
+        const dsaQuestionData = {
+          title: question.title,
+          description: question.description,
+          difficulty: question.difficulty,
+          job_id: jobResponse.data.id
+        };
+
+        const questionResponse = await api.post("/dsa-question", dsaQuestionData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+
+        // Create test cases for this question
+        if (question.test_cases && question.test_cases.length > 0) {
+          for (const testCase of question.test_cases) {
+            const testCaseData = {
+              input: testCase.input,
+              expected_output: testCase.expected_output,
+              dsa_question_id: questionResponse.data.id
+            };
+
+            await api.post("/dsa-test-case", testCaseData, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            });
+          }
+        }
+      }
+    }
+
+    return jobResponse;
   },
   candidateGetJob: async (jobId: string) => {
     const res = await api.get(`/job/candidate-view?id=${jobId}`);

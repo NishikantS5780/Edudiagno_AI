@@ -90,21 +90,34 @@ const NewJob = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // Create job with all data
       const response = await jobAPI.createJob(jobData);
+      
       if (response.status >= 200 && response.status < 300) {
         addNotification({
           type: 'job',
           title: 'New Job Created',
-          message: `Your job posting "${jobData.title}" is now live.`
+          message: `Your job posting "${jobData.title}" is now live.${
+            jobData.requires_dsa ? ' DSA questions have been added.' : ''
+          }`
         });
         toast.success("Job created successfully");
         navigate("/dashboard/jobs");
       } else {
         throw new Error("Failed to create job");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating job:", error);
-      toast.error("Failed to create job");
+      let errorMessage = "Failed to create job";
+      
+      // Handle specific error messages
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
