@@ -59,6 +59,7 @@ import RequireProfileVerified from "@/components/common/RequireProfileVerified";
 import InterviewPage from "@/pages/Interview/InterviewPage";
 import { NotificationProvider } from "@/context/NotificationContext";
 import MCQTest from "@/pages/MCQTest";
+import InterviewReport from "@/pages/Dashboard/Interviews/InterviewReport";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -230,6 +231,15 @@ const App = () => {
                 <Route path="/interview/video" element={<VideoInterview />} />
 
                 <Route path="/mcq" element={<MCQTest />} />
+
+                <Route
+                  path="/dashboard/interviews/:id/report"
+                  element={
+                    <RequireAuth>
+                      <InterviewReport />
+                    </RequireAuth>
+                  }
+                />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
