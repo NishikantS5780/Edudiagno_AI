@@ -152,6 +152,15 @@ export const interviewAPI = {
     );
     return res;
   },
+  getInterviewQuestionsAndResponses: async (interviewId: string) => {
+    const res = await api.get(
+      `/interview-question-and-response?interview_id=${interviewId}`,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
+    return res;
+  },
 };
 
 export const jobAPI = {
