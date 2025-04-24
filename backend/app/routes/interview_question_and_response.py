@@ -21,7 +21,7 @@ async def get_interview_question_and_response(
         InterviewQuestionAndResponse.interview_id == int(interview_id)
     )
     result = db.execute(stmt)
-    interview_question_and_response = result.scalars().all()[0]
+    interview_question_and_response = result.scalars().all()
     return interview_question_and_response
 
 
