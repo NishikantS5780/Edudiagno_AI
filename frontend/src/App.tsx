@@ -58,7 +58,6 @@ import { UserContext, UserProvider } from "./context/UserContext";
 import LoadingSpinner from "./components/common/LoadingSpinner";
 import RequireProfileVerified from "@/components/common/RequireProfileVerified";
 import InterviewPage from "@/pages/Interview/InterviewPage";
-import DsaExecution from "./pages/DsaLab/DsaExecution";
 import { NotificationProvider } from "@/context/NotificationContext";
 import MCQTest from "@/pages/MCQTest";
 
@@ -103,8 +102,6 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
-
-                <Route path="/dsa" element={<DsaExecution />} />
 
                 <Route path="/interview" element={<InterviewPage />} />
                 <Route
@@ -241,7 +238,6 @@ const App = () => {
                   element={<DSAPlayground />}
                 />
                 <Route path="/interview/video" element={<VideoInterview />} />
-                <Route path="/dsa-lab" element={<DsaExecution />} />
 
                 <Route path="/mcq" element={<MCQTest />} />
 
