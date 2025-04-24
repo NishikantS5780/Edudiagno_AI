@@ -141,20 +141,19 @@ const demoQuestions = {
 const MCQTest = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { interviewId, companyName } = location.state || {};
+  const searchParams = new URLSearchParams(location.search);
+  const interviewId = searchParams.get('i_id');
+  const companyName = searchParams.get('company');
+  const { interviewId: existingInterviewId, companyName: existingCompanyName } = location.state || {};
   const [activeSection, setActiveSection] = useState<'aptitude' | 'technical'>('aptitude');
   const [currentQuestions, setCurrentQuestions] = useState(demoQuestions.aptitude);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<number[]>(Array(5).fill(-1));
-  const [showResults, setShowResults] = useState(false);
-  const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes per section
-  const [isTestComplete, setIsTestComplete] = useState(false);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [isCountingDown, setIsCountingDown] = useState(false);
-  const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [aptitudeCompleted, setAptitudeCompleted] = useState(false);
   const [technicalCompleted, setTechnicalCompleted] = useState(false);
 
@@ -162,20 +161,15 @@ const MCQTest = () => {
     setCurrentQuestions(demoQuestions[activeSection]);
     setCurrentQuestionIndex(0);
     setAnswers(Array(5).fill(-1));
-    setShowResults(false);
-    setScore(0);
-    setTimeLeft(600);
   }, [activeSection]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
     
-    if (isTestStarted && timeLeft > 0 && !isTestComplete) {
+    if (isTestStarted && timeLeft > 0) {
       timer = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
-    } else if (timeLeft === 0 && !isTestComplete) {
-      handleSubmit();
     }
 
     return () => {
@@ -183,7 +177,7 @@ const MCQTest = () => {
         clearInterval(timer);
       }
     };
-  }, [timeLeft, isTestComplete, isTestStarted]);
+  }, [timeLeft, isTestStarted]);
 
   useEffect(() => {
     let countdownTimer: NodeJS.Timeout;
@@ -217,8 +211,7 @@ const MCQTest = () => {
       toast.warning(`You have ${unanswered} unanswered questions. Are you sure you want to submit?`);
       return;
     }
-    calculateScore();
-    setIsTestComplete(true);
+    handleTestComplete();
   };
 
   const calculateScore = () => {
@@ -228,7 +221,6 @@ const MCQTest = () => {
         correctAnswers++;
       }
     });
-    setScore(correctAnswers);
   };
 
   const formatTime = (seconds: number) => {
@@ -248,10 +240,12 @@ const MCQTest = () => {
   };
 
   const handleTestComplete = () => {
-    if (interviewId && companyName) {
-      navigate(`/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`);
-    } else {
-      navigate('/interview/dsa-playground');
+    const urlParams = new URLSearchParams(window.location.search);
+    const i_id = urlParams.get('i_id');
+    const company = urlParams.get('company');
+    
+    if (i_id && company) {
+      navigate(`/interview/dsa-playground?i_id=${i_id}&company=${company}`);
     }
   };
 
@@ -265,7 +259,16 @@ const MCQTest = () => {
     if (currentQuestionIndex < currentQuestions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      handleSubmit();
+      if (activeSection === 'aptitude' && !aptitudeCompleted) {
+        setAptitudeCompleted(true);
+        setActiveSection('technical');
+        setCurrentQuestionIndex(0);
+        setAnswers(Array(5).fill(-1));
+        setTimeLeft(600);
+      } else if (activeSection === 'technical' && !technicalCompleted) {
+        setTechnicalCompleted(true);
+        handleTestComplete();
+      }
     }
   };
 
@@ -403,258 +406,136 @@ const MCQTest = () => {
     );
   }
 
-  if (isTestComplete) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card className="border-border">
-              <CardHeader className="border-b border-border">
-                <CardTitle className="text-2xl text-center">Test Results</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6 py-6">
-                <div className="text-center">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <h2 className="text-4xl font-bold mb-2">{score}/{currentQuestions.length}</h2>
-                    <p className="text-muted-foreground">
-                      {score === currentQuestions.length ? "Perfect score! 🎉" : "Keep practicing! 💪"}
-                    </p>
-                  </motion.div>
-                </div>
-                <div className="space-y-4">
-                  {currentQuestions.map((question, index) => (
-                    <motion.div
-                      key={question.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="p-4 border border-border rounded-lg hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        {answers[index] === question.correctAnswer ? (
-                          <CheckCircle2 className="text-green-500" />
-                        ) : (
-                          <XCircle className="text-red-500" />
-                        )}
-                        <span className="font-medium">Question {index + 1}</span>
-                        <span className="text-sm text-muted-foreground ml-2">
-                          ({question.category})
-                        </span>
-                      </div>
-                      <p className="mb-2">{question.question}</p>
-                      <div className="space-y-2">
-                        {question.options.map((option, optIndex) => (
-                          <div
-                            key={optIndex}
-                            className={`p-2 rounded transition-colors ${
-                              optIndex === question.correctAnswer
-                                ? "bg-green-100 dark:bg-green-900/20"
-                                : optIndex === answers[index] && optIndex !== question.correctAnswer
-                                ? "bg-red-100 dark:bg-red-900/20"
-                                : "hover:bg-accent"
-                            }`}
-                          >
-                            {option}
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-                <Button
-                  className="w-full"
-                  onClick={handleTestComplete}
-                >
-                  Continue to DSA Playground
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">MCQ Assessment</h1>
-          <p className="text-lg text-muted-foreground">
-            Complete both sections to proceed to the next stage
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-center mb-4 text-foreground">MCQ Assessment</h1>
+          
+          {/* Progress Indicator */}
+          <div className="flex justify-center gap-8 mb-6">
+            <div className="flex flex-col items-center">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
+                activeSection === 'aptitude' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : aptitudeCompleted 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-muted text-muted-foreground'
+              }`}>
+                <Brain className="h-6 w-6" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Aptitude</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
+                activeSection === 'technical' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : technicalCompleted 
+                    ? 'bg-green-600 text-white' 
+                    : !aptitudeCompleted 
+                      ? 'bg-muted text-muted-foreground' 
+                      : 'bg-muted text-muted-foreground'
+              }`}>
+                <Code className="h-6 w-6" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Technical</span>
+            </div>
+          </div>
+
+          <p className="text-center text-muted-foreground mb-8">
+            {activeSection === 'aptitude' 
+              ? "Complete the aptitude questions to proceed to technical section"
+              : "Complete the technical questions to finish the assessment"}
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2">
-          {/* Aptitude Section */}
-          <Card className="border-2 border-primary/20">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Brain className="h-6 w-6 text-primary" />
-                <CardTitle>Aptitude Section</CardTitle>
-              </div>
-              <CardDescription>
-                Test your logical and analytical skills
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Questions</span>
-                  <span className="text-sm text-muted-foreground">10</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Time</span>
-                  <span className="text-sm text-muted-foreground">10 minutes</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Status</span>
-                  <Badge variant={aptitudeCompleted ? "success" : "secondary"}>
-                    {aptitudeCompleted ? "Completed" : "Pending"}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                className="w-full" 
-                onClick={() => handleSectionChange('aptitude')}
-                disabled={aptitudeCompleted}
-              >
-                {aptitudeCompleted ? "Completed" : "Start Aptitude Test"}
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* Technical Section */}
-          <Card className="border-2 border-primary/20">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Code className="h-6 w-6 text-primary" />
-                <CardTitle>Technical Section</CardTitle>
-              </div>
-              <CardDescription>
-                Test your technical knowledge and expertise
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Questions</span>
-                  <span className="text-sm text-muted-foreground">10</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Time</span>
-                  <span className="text-sm text-muted-foreground">10 minutes</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Status</span>
-                  <Badge variant={technicalCompleted ? "success" : "secondary"}>
-                    {technicalCompleted ? "Completed" : "Pending"}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                className="w-full" 
-                onClick={() => handleSectionChange('technical')}
-                disabled={!aptitudeCompleted || technicalCompleted}
-              >
-                {technicalCompleted ? "Completed" : "Start Technical Test"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-
         {/* Test Interface */}
-        {activeSection && (
-          <Card className="mt-8">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>
-                    {activeSection === 'aptitude' ? 'Aptitude Test' : 'Technical Test'}
-                  </CardTitle>
-                  <CardDescription>
-                    {activeSection === 'aptitude' 
-                      ? 'Answer the following aptitude questions' 
-                      : 'Answer the following technical questions'}
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    Time Remaining: {formatTime(timeLeft)}
-                  </span>
-                </div>
+        <Card className="bg-card">
+          <CardHeader className="border-b">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl text-card-foreground">
+                  {activeSection === 'aptitude' ? 'Aptitude Test' : 'Technical Test'}
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Question {currentQuestionIndex + 1} of {currentQuestions.length}
+                </CardDescription>
               </div>
-            </CardHeader>
-            <CardContent>
-              {/* Existing question rendering code */}
-              {currentQuestions.map((question, index) => (
-                <motion.div
-                  key={question.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="space-y-4"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Question {index + 1}</span>
-                    <span className="text-sm text-muted-foreground">
-                      ({question.category})
-                    </span>
-                  </div>
-                  <h2 className="text-lg font-medium">
-                    {question.question}
-                  </h2>
-                  <RadioGroup
-                    value={answers[index]?.toString()}
-                    onValueChange={(value) => handleAnswerSelect(index, parseInt(value))}
-                    className="space-y-3"
+              <div className="flex items-center gap-2 bg-muted px-4 py-2 rounded-lg">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <motion.div
+              key={currentQuestionIndex}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <div className="space-y-2">
+                <span className="text-sm font-medium text-muted-foreground">
+                  {currentQuestions[currentQuestionIndex].category}
+                </span>
+                <h2 className="text-lg font-medium text-card-foreground">
+                  {currentQuestions[currentQuestionIndex].question}
+                </h2>
+              </div>
+              
+              <RadioGroup
+                value={answers[currentQuestionIndex]?.toString()}
+                onValueChange={(value) => handleAnswerSelect(currentQuestionIndex, parseInt(value))}
+                className="space-y-3"
+              >
+                {currentQuestions[currentQuestionIndex].options.map((option, optIndex) => (
+                  <motion.div
+                    key={optIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: optIndex * 0.1 }}
+                    className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:border-primary hover:bg-accent transition-colors cursor-pointer"
                   >
-                    {question.options.map((option, optIndex) => (
-                      <motion.div
-                        key={optIndex}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: optIndex * 0.1 }}
-                        className="flex items-center space-x-2 p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer"
-                      >
-                        <RadioGroupItem value={optIndex.toString()} id={`option-${index}-${optIndex}`} />
-                        <Label htmlFor={`option-${index}-${optIndex}`} className="cursor-pointer">{option}</Label>
-                      </motion.div>
-                    ))}
-                  </RadioGroup>
-                </motion.div>
-              ))}
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentQuestionIndex === 0}
-              >
-                Previous
-              </Button>
-              <Button
-                onClick={handleNext}
-                disabled={answers.some(answer => answer === -1)}
-              >
-                {currentQuestionIndex === currentQuestions.length - 1 ? "Submit" : "Next"}
-              </Button>
-            </CardFooter>
-          </Card>
-        )}
+                    <RadioGroupItem 
+                      value={optIndex.toString()} 
+                      id={`option-${currentQuestionIndex}-${optIndex}`} 
+                    />
+                    <Label 
+                      htmlFor={`option-${currentQuestionIndex}-${optIndex}`} 
+                      className="cursor-pointer text-card-foreground"
+                    >
+                      {option}
+                    </Label>
+                  </motion.div>
+                ))}
+              </RadioGroup>
+            </motion.div>
+          </CardContent>
+          <CardFooter className="flex justify-between pt-6 border-t">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentQuestionIndex === 0}
+              className="w-32"
+            >
+              Previous
+            </Button>
+            <Button
+              onClick={handleNext}
+              disabled={answers[currentQuestionIndex] === -1}
+              className="w-40"
+            >
+              {currentQuestionIndex === currentQuestions.length - 1 
+                ? activeSection === 'aptitude' 
+                  ? "Next Section" 
+                  : "Submit"
+                : "Next"}
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );
