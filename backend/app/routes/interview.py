@@ -12,6 +12,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, delete, select, update
 
@@ -185,6 +186,24 @@ async def upload_resume(
     interview = result.scalars().all()[0]
 
     return interview
+
+
+@router.get("/resume")
+async def get_resume(
+    interview_id: str,
+    recruiter_id=Depends(authorize_recruiter),
+    db: Session = Depends(database.get_db),
+):
+    stmt = select(Interview.resume_url).where(Interview.id == int(interview_id))
+    interviews = db.execute(stmt).all()
+    file_path = None
+    if len(interviews):
+        file_path = interviews[0]._mapping["resume_url"]
+
+    if not file_path:
+        return {"message": "no content"}
+
+    return FileResponse(file_path, headers={"Content-Type": "application/pdf"})
 
 
 @router.put("")
