@@ -18,14 +18,22 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
+type MatchAnalysis = {
+  matchScore: number;
+  matchFeedback: string;
+};
+
+interface ResumeUploadStageProps {
+  jobTitle: string;
+  companyName: string;
+  jobId: number;
+}
+
+export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUploadStageProps) {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [candidateData, setCandidateData] = useState<InterviewData>();
-  const [matchAnalysis, setMatchAnalysis] = useState<{
-    matchScore: number;
-    matchFeedback: string;
-  }>(null);
+  const [matchAnalysis, setMatchAnalysis] = useState<MatchAnalysis>({ matchScore: 0, matchFeedback: '' });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -39,6 +47,7 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
       const res = await resumeAPI.extractResumeData(file);
       const data = res.data;
       setCandidateData({
+        id: 0,
         firstName: data.first_name,
         lastName: data.last_name,
         email: data.email,
@@ -50,6 +59,18 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
         skills: data.skills.join(","),
         linkedinUrl: data.linkedin_url,
         portfolioUrl: data.portfolio_url,
+        resumeMatchScore: 0,
+        resumeMatchFeedback: '',
+        status: 'pending',
+        overallScore: 0,
+        feedback: '',
+        createdAt: new Date().toISOString(),
+        jobId: 0,
+        technical_skills_score: 0,
+        communication_skills_score: 0,
+        problem_solving_skills_score: 0,
+        cultural_fit_score: 0,
+        resumeUrl: '',
       });
       setIsLoading(false);
     };
@@ -70,6 +91,10 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
     setIsSubmitting(true);
     const createInterview = async () => {
       try {
+        if (!candidateData) {
+          toast.error("Please complete the form first");
+          return;
+        }
         const res = await interviewAPI.createInterview(candidateData, jobId);
         const data = res.data;
         setCandidateData({
@@ -85,6 +110,18 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
           skills: data.skills,
           linkedinUrl: data.linkedin_url,
           portfolioUrl: data.portfoio_url,
+          resumeMatchScore: 0,
+          resumeMatchFeedback: '',
+          status: 'pending',
+          overallScore: 0,
+          feedback: '',
+          createdAt: new Date().toISOString(),
+          jobId: 0,
+          technical_skills_score: 0,
+          communication_skills_score: 0,
+          problem_solving_skills_score: 0,
+          cultural_fit_score: 0,
+          resumeUrl: '',
         });
         const token = res.headers["authorization"].split("Bearer ")[1];
         localStorage.setItem("i_token", token);
@@ -100,7 +137,7 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
           matchScore: Number(analysisData.resume_match_score),
           matchFeedback: analysisData.resume_match_feedback,
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error processing resume:", error);
         let errorMessage = "Error processing your resume. Please try again.";
 
@@ -123,24 +160,23 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }) {
   };
 
   const handleStartInterview = () => {
-    navigate(`/interview/setup?i_id=${candidateData.id}`);
+    navigate(`/interview/setup?i_id=${candidateData?.id ?? ''}`);
   };
 
   const handleMatchAnalysis = async (analysis: MatchAnalysis) => {
     setMatchAnalysis(analysis);
-    setMatchScore(Number(analysis.matchScore));
-    setMatchFeedback(analysis.matchFeedback);
-    setShowMatchResults(true);
+    setMatchAnalysis(prev => ({ ...prev, matchScore: Number(analysis.matchScore) }));
+    setMatchAnalysis(prev => ({ ...prev, matchFeedback: analysis.matchFeedback }));
   };
 
   if (isCompleted && matchAnalysis) {
     return (
       <MatchResultsStage
-        matchScore={matchAnalysis.matchScore.toString()}
+        matchScore={matchAnalysis.matchScore}
         matchFeedback={matchAnalysis.matchFeedback}
         jobTitle={jobTitle}
         companyName={companyName}
-        interviewId={candidateData.id}
+        interviewId={candidateData?.id?.toString() ?? ''}
         onScheduleLater={() => {
           // Here you would typically make an API call to schedule the interview for later
           toast.success("Interview scheduled for later. Check your email for details.");
