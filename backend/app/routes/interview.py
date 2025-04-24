@@ -106,10 +106,13 @@ async def get_interview_recruiter_view(
 @router.get("/recruiter-view/all")
 async def get_interview(
     request: Request,
+    job_id: str = None,
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
     stmt = select(Interview).join(Job).where(Job.company_id == recruiter_id)
+    if job_id:
+        stmt = stmt.where(Interview.job_id == int(job_id))
     result = db.execute(stmt)
     interviews = result.scalars().all()
     return interviews

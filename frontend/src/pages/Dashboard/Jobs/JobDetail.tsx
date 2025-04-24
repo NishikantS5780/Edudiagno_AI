@@ -16,21 +16,31 @@ import {
   Video,
   Copy,
   Share2,
+  Mail,
+  Phone,
+  MapPin,
+  GraduationCap,
+  Briefcase,
+  Link as LinkIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
-import { jobAPI } from "@/lib/api";
+import { jobAPI, interviewAPI } from "@/lib/api";
 import { JobData } from "@/types/job";
+import { InterviewData } from "@/types/interview";
+import DsaManagement from "@/components/jobs/DsaManagement";
 
 const JobDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [job, setJob] = useState<JobData | null>(null);
+  const [interviews, setInterviews] = useState<InterviewData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     fetchJobDetails();
+    fetchInterviews();
   }, [id]);
 
   const fetchJobDetails = async () => {
@@ -40,20 +50,58 @@ const JobDetail = () => {
       setJob({
         id: data.id,
         title: data.title,
+        description: data.description,
         department: data.department,
+        city: data.city || '',
         location: data.location,
         type: data.type,
-        status: data.status,
-        description: data.description,
+        min_experience: data.min_experience || 0,
+        max_experience: data.max_experience || 0,
+        salary_min: data.salary_min,
+        salary_max: data.salary_max,
+        currency: data.currency || 'USD',
+        show_salary: data.show_salary || false,
         requirements: data.requirements,
         benefits: data.benefits,
+        status: data.status,
         createdAt: data.created_at,
+        requires_dsa: data.requires_dsa || false,
+        dsa_questions: data.dsa_questions || []
       });
     } catch (error) {
       console.error("Error fetching job details:", error);
       toast.error("Failed to load job details");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchInterviews = async () => {
+    try {
+      const response = await interviewAPI.getInterviews({ job_id: id });
+      const formattedInterviews = response.data.map((interview: any) => ({
+        id: interview.id,
+        status: interview.status,
+        firstName: interview.first_name,
+        lastName: interview.last_name,
+        email: interview.email,
+        phone: interview.phone,
+        workExperience: interview.work_experience,
+        education: interview.education,
+        skills: interview.skills,
+        location: interview.location,
+        linkedinUrl: interview.linkedin_url,
+        portfolioUrl: interview.portfolio_url,
+        resumeUrl: interview.resume_url,
+        resumeMatchScore: interview.resume_match_score,
+        resumeMatchFeedback: interview.resume_match_feedback,
+        overallScore: interview.overall_score,
+        feedback: interview.feedback
+      }));
+      setInterviews(formattedInterviews);
+    } catch (error) {
+      console.error("Error fetching interviews:", error);
+      toast.error("Failed to load candidates");
     }
   };
 
@@ -192,7 +240,7 @@ const JobDetail = () => {
                 <TabsList>
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="candidates">Candidates</TabsTrigger>
-                  <TabsTrigger value="interviews">Interviews</TabsTrigger>
+                  <TabsTrigger value="dsa">DSA Questions</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" className="space-y-6">
                   <div className="space-y-4">
@@ -215,16 +263,138 @@ const JobDetail = () => {
                   </div>
                 </TabsContent>
                 <TabsContent value="candidates">
-                  <div className="text-center py-8">
-                    <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-muted-foreground">No candidates yet</p>
+                  <div className="space-y-4">
+                    {interviews.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-muted-foreground">No candidates yet</p>
+                      </div>
+                    ) : (
+                      interviews.map((interview) => (
+                        <Card key={interview.id}>
+                          <CardContent className="p-6">
+                            <div className="space-y-4">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <h3 className="text-lg font-semibold">
+                                    {interview.firstName} {interview.lastName}
+                                  </h3>
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                                    <Mail className="h-4 w-4" />
+                                    {interview.email}
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="ml-2">
+                                  {interview.status}
+                                </Badge>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Phone className="h-4 w-4 text-muted-foreground" />
+                                    {interview.phone}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                                    {interview.location}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                                    {interview.education}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                    {interview.workExperience ? `${interview.workExperience} years experience` : 'Experience not specified'}
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  {interview.linkedinUrl && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                      <a
+                                        href={interview.linkedinUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline"
+                                      >
+                                        LinkedIn Profile
+                                      </a>
+                                    </div>
+                                  )}
+                                  {interview.portfolioUrl && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                      <a
+                                        href={interview.portfolioUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline"
+                                      >
+                                        Portfolio
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {interview.resumeMatchScore && (
+                                <div className="mt-4">
+                                  <h4 className="font-medium mb-2">Resume Match Score</h4>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-full bg-muted rounded-full h-2">
+                                      <div
+                                        className="bg-primary h-2 rounded-full"
+                                        style={{
+                                          width: `${interview.resumeMatchScore}%`,
+                                        }}
+                                      />
+                                    </div>
+                                    <span className="text-sm font-medium">
+                                      {interview.resumeMatchScore}%
+                                    </span>
+                                  </div>
+                                  {interview.resumeMatchFeedback && (
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                      {interview.resumeMatchFeedback}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {interview.overallScore && (
+                                <div className="mt-4">
+                                  <h4 className="font-medium mb-2">Interview Score</h4>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-full bg-muted rounded-full h-2">
+                                      <div
+                                        className="bg-primary h-2 rounded-full"
+                                        style={{
+                                          width: `${interview.overallScore}%`,
+                                        }}
+                                      />
+                                    </div>
+                                    <span className="text-sm font-medium">
+                                      {interview.overallScore}%
+                                    </span>
+                                  </div>
+                                  {interview.feedback && (
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                      {interview.feedback}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
                   </div>
                 </TabsContent>
-                <TabsContent value="interviews">
-                  <div className="text-center py-8">
-                    <Video className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-muted-foreground">No interviews yet</p>
-                  </div>
+                <TabsContent value="dsa">
+                  {job && <DsaManagement jobId={job.id} />}
                 </TabsContent>
               </Tabs>
             </CardContent>

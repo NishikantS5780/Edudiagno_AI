@@ -6,13 +6,83 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Code, Clock, CheckCircle, Terminal } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useQuery } from "@tanstack/react-query"
+import api from "@/lib/api"
+import { Loader2 } from "lucide-react"
+
+interface DSAQuestion {
+  id: number
+  title: string
+  description: string
+  difficulty: string
+  constraints: string
+}
+
+interface TestCase {
+  id: number
+  input: string
+  expected_output: string
+}
 
 const DSAPlayground = () => {
   const [searchParams] = useSearchParams()
-  const companyName = searchParams.get('company') || 'Company'
+  const interviewId = searchParams.get('i_id')
   const [activeTab, setActiveTab] = React.useState("welcome")
   const [compilationStatus, setCompilationStatus] = React.useState<string>("")
   const [successRate, setSuccessRate] = React.useState<string>("")
+
+  // Fetch interview data to get job_id
+  const { data: interviewData, isLoading: isLoadingInterview } = useQuery({
+    queryKey: ['interview', interviewId],
+    queryFn: async () => {
+      const response = await api.get("/interview", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` }
+      })
+      return response.data
+    },
+    enabled: !!interviewId
+  })
+
+  // Fetch DSA question using job_id
+  const { data: dsaQuestion, isLoading: isLoadingQuestion } = useQuery({
+    queryKey: ['dsa-question', interviewData?.job_id],
+    queryFn: async () => {
+      const response = await api.get(`/dsa-question`, {
+        params: { job_id: interviewData?.job_id }
+      })
+      // Get the first question from the array
+      return response.data[0]
+    },
+    enabled: !!interviewData?.job_id
+  })
+
+  // Fetch test cases using question_id
+  const { data: testCases, isLoading: isLoadingTestCases } = useQuery({
+    queryKey: ['dsa-test-cases', dsaQuestion?.id],
+    queryFn: async () => {
+      const response = await api.get(`/dsa-test-case`, {
+        params: { question_id: dsaQuestion?.id }
+      })
+      return response.data
+    },
+    enabled: !!dsaQuestion?.id
+  })
+
+  if (isLoadingInterview || isLoadingQuestion || isLoadingTestCases) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!dsaQuestion || !testCases) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <p className="text-red-500">No DSA question or test cases found</p>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen flex flex-col">
@@ -36,7 +106,7 @@ const DSAPlayground = () => {
           <TabsContent value="welcome" className="flex-1 overflow-auto p-4">
             <div className="max-w-3xl mx-auto h-full flex flex-col">
               <div className="text-center mb-4">
-                <h1 className="text-3xl font-bold mb-2">Welcome to {companyName}'s DSA Assessment</h1>
+                <h1 className="text-3xl font-bold mb-2">Welcome to DSA Assessment</h1>
                 <p className="text-muted-foreground">Let's test your problem-solving skills</p>
               </div>
               
@@ -114,27 +184,26 @@ const DSAPlayground = () => {
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
                     <Terminal className="h-5 w-5 text-primary" />
-                    <CardTitle>{companyName} DSA Assessment</CardTitle>
+                    <CardTitle>DSA Assessment</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-auto">
                   <DsaQuestion
-                    title={`${companyName} - Question 1`}
+                    title={`Question ${dsaQuestion.id}`}
                     successRate={successRate}
-                    questionNumber="1."
-                    questionTitle="Two Sum"
-                    difficulty="Easy"
+                    questionNumber={`${dsaQuestion.id}.`}
+                    questionTitle={dsaQuestion.title}
+                    difficulty={dsaQuestion.difficulty}
                     description={
                       <>
-                        Given an array of integers <code>nums</code> and an integer <code>target</code>, return indices of the two numbers such that they add up to <code>target</code>.
+                        {dsaQuestion.description}
                       </>
                     }
-                    testCases={[
-                      { input: "nums = [2,7,11,15], target = 9", expectedOutput: "[0,1]" },
-                      { input: "nums = [3,2,4], target = 6", expectedOutput: "[1,2]" },
-                      { input: "nums = [3,3], target = 6", expectedOutput: "[0,1]" }
-                    ]}
-                    constraints="You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order."
+                    testCases={testCases.map((testCase: TestCase) => ({
+                      input: testCase.input,
+                      expectedOutput: testCase.expected_output
+                    }))}
+                    constraints={dsaQuestion.constraints}
                     compilationStatus={compilationStatus}
                   />
                 </CardContent>
@@ -142,7 +211,7 @@ const DSAPlayground = () => {
               <Card className="h-full">
                 <CardContent className="p-0 h-full">
                   <CodeExecutionPanel 
-                    expectedOutput="[0,1]"
+                    expectedOutput={testCases[0]?.expected_output || ""}
                     onCompilationStatusChange={setCompilationStatus}
                     onSuccessRateChange={setSuccessRate}
                   />
