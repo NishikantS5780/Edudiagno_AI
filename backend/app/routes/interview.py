@@ -49,6 +49,7 @@ async def get_interview(
             Interview.resume_match_feedback,
             Interview.overall_score,
             Interview.feedback,
+            Interview.job_id,
             Job.title,
             Recruiter.company_name,
         )
