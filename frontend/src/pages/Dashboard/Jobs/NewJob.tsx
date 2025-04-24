@@ -48,6 +48,7 @@ const jobFormSchema = z.object({
   status: z.string().default("active"),
   currency: z.string().optional(),
   requires_dsa: z.boolean().default(false),
+  requires_mcq: z.boolean().default(false),
   dsa_questions: z.array(z.object({
     title: z.string(),
     description: z.string(),
@@ -56,6 +57,11 @@ const jobFormSchema = z.object({
       input: z.string(),
       expected_output: z.string()
     }))
+  })).optional(),
+  mcq_questions: z.array(z.object({
+    title: z.string(),
+    options: z.array(z.string()),
+    correct_option: z.number()
   })).optional()
 });
 
@@ -66,6 +72,7 @@ const NewJob = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("job-details");
   const [jobData, setJobData] = useState<JobData>({
+    id: 0,
     title: "",
     description: "",
     department: "",
@@ -81,8 +88,11 @@ const NewJob = () => {
     requirements: "",
     benefits: "",
     status: "active",
+    createdAt: new Date().toISOString(),
     requires_dsa: false,
-    dsa_questions: []
+    requires_mcq: false,
+    dsa_questions: [],
+    mcq_questions: []
   });
   const { addNotification } = useNotifications();
 
@@ -192,6 +202,43 @@ const NewJob = () => {
     });
   };
 
+  const handleMcqQuestionAdd = () => {
+    setJobData({
+      ...jobData,
+      mcq_questions: [
+        ...(jobData.mcq_questions || []),
+        {
+          title: "",
+          options: ["", "", "", ""],
+          correct_option: 0
+        }
+      ]
+    });
+  };
+
+  const handleMcqQuestionUpdate = (index: number, field: string, value: any) => {
+    const updatedQuestions = [...(jobData.mcq_questions || [])];
+    if (field === "options") {
+      const optionIndex = parseInt(value.optionIndex);
+      const optionValue = value.value;
+      updatedQuestions[index] = {
+        ...updatedQuestions[index],
+        options: updatedQuestions[index].options.map((opt, idx) => 
+          idx === optionIndex ? optionValue : opt
+        )
+      };
+    } else {
+      updatedQuestions[index] = {
+        ...updatedQuestions[index],
+        [field]: field === "correct_option" ? parseInt(value) : value
+      };
+    }
+    setJobData({
+      ...jobData,
+      mcq_questions: updatedQuestions
+    });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -211,20 +258,10 @@ const NewJob = () => {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="job-details">Job Details</TabsTrigger>
-              <TabsTrigger 
-                value="dsa-questions" 
-                disabled={!jobData.requires_dsa}
-                className={!jobData.requires_dsa ? "opacity-50 cursor-not-allowed" : ""}
-              >
-                DSA Questions
-                {!jobData.requires_dsa && (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    (Enable DSA Assessment first)
-                  </span>
-                )}
-              </TabsTrigger>
+              <TabsTrigger value="dsa-questions">DSA Questions</TabsTrigger>
+              <TabsTrigger value="mcq-questions">MCQ Questions</TabsTrigger>
             </TabsList>
 
             <TabsContent value="job-details">
@@ -664,6 +701,103 @@ const NewJob = () => {
                               </div>
                             </div>
                           </div>
+                        </Card>
+                      ))}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="mcq-questions">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Multiple Choice Questions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="requires_mcq"
+                      checked={jobData.requires_mcq}
+                      onCheckedChange={(checked) =>
+                        setJobData({ ...jobData, requires_mcq: checked })
+                      }
+                    />
+                    <Label>Requires MCQ Assessment</Label>
+                  </div>
+
+                  {!jobData.requires_mcq ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        Enable MCQ assessment to add questions
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          onClick={handleMcqQuestionAdd}
+                        >
+                          Add MCQ Question
+                        </Button>
+                      </div>
+
+                      {jobData.mcq_questions?.map((question, questionIndex) => (
+                        <Card key={questionIndex}>
+                          <CardContent className="space-y-6 pt-6">
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <Label>Question Title</Label>
+                                <Input
+                                  value={question.title}
+                                  onChange={(e) =>
+                                    handleMcqQuestionUpdate(questionIndex, "title", e.target.value)
+                                  }
+                                  placeholder="Enter your question here"
+                                />
+                              </div>
+
+                              <div className="space-y-4">
+                                <Label>Options</Label>
+                                {question.options.map((option, optionIndex) => (
+                                  <div key={optionIndex} className="flex items-center space-x-2">
+                                    <Input
+                                      value={option}
+                                      onChange={(e) =>
+                                        handleMcqQuestionUpdate(questionIndex, "options", {
+                                          optionIndex,
+                                          value: e.target.value
+                                        })
+                                      }
+                                      placeholder={`Option ${optionIndex + 1}`}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Correct Answer</Label>
+                                <Select
+                                  value={question.correct_option.toString()}
+                                  onValueChange={(value) =>
+                                    handleMcqQuestionUpdate(questionIndex, "correct_option", value)
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select correct option" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {question.options.map((_, index) => (
+                                      <SelectItem key={index} value={index.toString()}>
+                                        Option {index + 1}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </CardContent>
                         </Card>
                       ))}
                     </>
