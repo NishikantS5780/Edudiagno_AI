@@ -29,7 +29,8 @@ export interface JobData {
   }>;
   mcq_questions?: Array<{
     title: string;
-    options: Array<string>;
-    correct_option: number;
+    type: "single" | "multiple" | "true_false";
+    options: string[];
+    correct_options: number[];
   }>;
 } 

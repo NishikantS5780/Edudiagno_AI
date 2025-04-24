@@ -39,7 +39,7 @@ export function MatchResultsStage({
       console.error('No interview ID found');
       return;
     }
-    navigate(`/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`);
+    navigate(`/mcq?i_id=${interviewId}&company=${companyName}`);
   };
 
   const handleScheduleLater = () => {

@@ -58,7 +58,7 @@ import LoadingSpinner from "./components/common/LoadingSpinner";
 import RequireProfileVerified from "@/components/common/RequireProfileVerified";
 import InterviewPage from "@/pages/Interview/InterviewPage";
 import { NotificationProvider } from "@/context/NotificationContext";
-import MCQTest from "@/pages/MCQTest";
+import MCQTest from "@/pages/Interview/MCQTest";
 import InterviewReport from "@/pages/Dashboard/Interviews/InterviewReport";
 
 const queryClient = new QueryClient({
@@ -71,7 +71,8 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  const { isLoading } = useContext(UserContext);
+  const userContext = useContext(UserContext);
+  const isLoading = userContext?.isLoading ?? false;
 
   if (isLoading) {
     <div className="min-h-screen flex items-center justify-center">
