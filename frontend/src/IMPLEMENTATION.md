@@ -1,4 +1,3 @@
-
 # EduDiagno Project Structure & Implementation Guide
 
 ## Project Overview
@@ -190,3 +189,19 @@ The application can be deployed to any hosting platform that supports React appl
 - Create and manage assessment templates
 - Configure questions and scoring rubrics
 - Review and analyze results
+
+### Dashboard Routes
+- `/dashboard` - Main dashboard
+- `/dashboard/jobs` - Job listings and management
+- `/dashboard/candidates` - Candidate management
+- `/dashboard/interviews` - Interview scheduling and management
+- `/dashboard/help` - Help and support
+- `/dashboard/settings` - User settings
+
+### Dashboard Components
+- The `Dashboard.tsx` component shows key metrics and recent activity
+- The `Jobs.tsx` component manages job postings and applications
+- The `Candidates.tsx` component handles candidate profiles and applications
+- The `Interviews.tsx` component manages interview scheduling and results
+- The `Help.tsx` component provides support and documentation
+- The `Settings.tsx` component manages user preferences and account settings
