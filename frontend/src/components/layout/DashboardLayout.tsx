@@ -13,6 +13,7 @@ import {
   X,
   LogOut,
   Bell,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,11 +42,10 @@ interface SidebarLink {
   icon: React.ElementType;
 }
 
-const sidebarLinks: SidebarLink[] = [
+const navigation: SidebarLink[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Jobs", href: "/dashboard/jobs", icon: Briefcase },
-  { name: "Interviews", href: "/dashboard/interviews", icon: Calendar },
-  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart2 },
+  { name: "Interviews", href: "/dashboard/interviews", icon: Video },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
@@ -98,7 +98,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
           </div>
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {sidebarLinks.map((link) => {
+            {navigation.map((link) => {
               const isActive = location.pathname === link.href;
               return (
                 <Link

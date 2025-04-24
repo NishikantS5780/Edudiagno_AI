@@ -1,7 +1,10 @@
-import React, { useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import { interviewAPI, jobAPI } from "@/lib/api";
+import { InterviewData } from "@/types/interview";
+import { JobData } from "@/types/job";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,36 +12,49 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
-  Calendar,
-  Clock,
-  CheckCircle,
-  Download,
-  Share2,
-  Video,
-  MessageSquare,
-  BarChart3,
-  FileText,
-  Copy,
-  Check,
-  ThumbsUp,
-  ThumbsDown,
-  AlertTriangle,
   ArrowRight,
-  Play,
+  Calendar,
+  CheckCircle,
+  Clock,
+  ThumbsDown,
+  ThumbsUp,
+  Video,
+  Copy,
+  Share2,
+  Mail,
+  Phone,
+  MapPin,
+  GraduationCap,
+  Briefcase,
+  Link as LinkIcon,
 } from "lucide-react";
-import { toast } from "sonner";
-import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+interface ScoreBreakdown {
+  technicalSkills: number;
+  communication: number;
+  problemSolving: number;
+  culturalFit: number;
+}
+
+interface Keyword {
+  term: string;
+  count: number;
+  sentiment: string;
+}
 
 interface Question {
   id: string;
   text: string;
   type: string;
-  category: string;
+  answer: string;
+  score: number;
 }
 
 interface RecordedResponse {
@@ -48,200 +64,8 @@ interface RecordedResponse {
   transcript: string;
   analysis: string;
   score: number;
-  videoUrl?: string;
+  videoUrl: string;
 }
-
-interface ScoreBreakdown {
-  technicalSkills: number;
-  communication: number;
-  problemSolving: number;
-  culturalFit: number;
-}
-
-interface TranscriptEntry {
-  speaker: string;
-  text: string;
-  timestamp: string;
-}
-
-interface Keyword {
-  term: string;
-  count: number;
-  sentiment: string;
-}
-
-interface Interview {
-  id: string;
-  candidate: {
-    name: string;
-    email: string;
-    avatar: string;
-    resume: string;
-  };
-  job: {
-    title: string;
-    department: string;
-    id: string;
-  };
-  score: number;
-  status: string;
-  date: string;
-  time: string;
-  duration: string;
-  feedback?: string;
-  notes?: string;
-  aiNotes?: string;
-  scoreBreakdown: ScoreBreakdown;
-  transcript: TranscriptEntry[];
-  keywords: Keyword[];
-  recommendations: string[];
-  questions: Question[];
-  recordedResponses: RecordedResponse[];
-}
-
-const interviewData = {
-  id: "int-1",
-  candidate: {
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    avatar: "",
-    resume: "https://example.com/resume.pdf",
-  },
-  job: {
-    title: "Senior Frontend Developer",
-    department: "Engineering",
-    id: "job-1",
-  },
-  score: 87,
-  status: "completed",
-  date: "April 5, 2023",
-  time: "2:30 PM EST",
-  duration: "32 minutes",
-  scoreBreakdown: {
-    technicalSkills: 92,
-    communication: 85,
-    problemSolving: 88,
-    culturalFit: 83,
-  },
-  aiNotes:
-    "Jane demonstrated strong technical knowledge, particularly in React and modern JavaScript. She articulated complex concepts clearly and showed good problem-solving skills. Her experience aligns well with the role requirements. She could improve slightly on explaining her approach to team collaboration.",
-  transcript: [
-    {
-      speaker: "AI",
-      text: "Hello Jane, I'm the AI interviewer for the Senior Frontend Developer position at Acme Inc. How are you today?",
-      timestamp: "00:00:15",
-    },
-    {
-      speaker: "Candidate",
-      text: "I'm doing well, thank you for asking! I'm excited to be interviewing for this role.",
-      timestamp: "00:00:22",
-    },
-    {
-      speaker: "AI",
-      text: "Great! Let's start by discussing your experience with React. Can you tell me about a complex React application you've built and some challenges you faced?",
-      timestamp: "00:00:30",
-    },
-    {
-      speaker: "Candidate",
-      text: "Sure. In my current role, I led the development of a data visualization dashboard using React, Redux, and D3.js. The application needed to handle real-time updates from multiple data sources while maintaining performance. One of the biggest challenges was optimizing the rendering of large datasets without sacrificing responsiveness...",
-      timestamp: "00:00:40",
-    },
-    {
-      speaker: "AI",
-      text: "That's impressive. How did you approach solving the performance issues with large datasets?",
-      timestamp: "00:01:30",
-    },
-    {
-      speaker: "Candidate",
-      text: "We implemented several optimization strategies. First, we used virtualization with react-window to render only the visible rows in large tables. We also implemented memoization with React.memo and useMemo to prevent unnecessary re-renders. For the most complex visualizations, we offloaded some calculations to Web Workers to keep the main thread free...",
-      timestamp: "00:01:45",
-    },
-  ],
-  keywords: [
-    { term: "React", count: 12, sentiment: "positive" },
-    { term: "Performance optimization", count: 8, sentiment: "positive" },
-    { term: "Team collaboration", count: 5, sentiment: "positive" },
-    { term: "Testing", count: 3, sentiment: "neutral" },
-    { term: "Leadership", count: 6, sentiment: "positive" },
-  ],
-  recommendations: [
-    "Candidate shows strong technical proficiency that matches job requirements",
-    "Communication skills are excellent, with clear articulation of complex concepts",
-    "Has relevant experience leading development teams",
-    "Consider scheduling a follow-up interview focused on system design",
-  ],
-  recordedResponses: [
-    {
-      id: "r1",
-      questionId: "q1",
-      audioUrl: "https://example.com/recordings/q1.mp3",
-      transcript: "Sample transcript 1",
-      analysis: "Sample analysis 1",
-      score: 85,
-      videoUrl: "https://example.com/recordings/q1.webm",
-    },
-    {
-      id: "r2",
-      questionId: "q2",
-      audioUrl: "https://example.com/recordings/q2.mp3",
-      transcript: "Sample transcript 2",
-      analysis: "Sample analysis 2",
-      score: 90,
-      videoUrl: "https://example.com/recordings/q2.webm",
-    },
-    {
-      id: "r3",
-      questionId: "q3",
-      audioUrl: "https://example.com/recordings/q3.mp3",
-      transcript: "Sample transcript 3",
-      analysis: "Sample analysis 3",
-      score: 82,
-      videoUrl: "https://example.com/recordings/q3.webm",
-    },
-    {
-      id: "r4",
-      questionId: "q4",
-      audioUrl: "https://example.com/recordings/q4.mp3",
-      transcript: "Sample transcript 4",
-      analysis: "Sample analysis 4",
-      score: 88,
-      videoUrl: "https://example.com/recordings/q4.webm",
-    },
-    {
-      id: "r5",
-      questionId: "q5",
-      audioUrl: "https://example.com/recordings/q5.mp3",
-      transcript: "Sample transcript 5",
-      analysis: "Sample analysis 5",
-      score: 91,
-      videoUrl: "https://example.com/recordings/q5.webm",
-    },
-  ],
-  questions: [
-    {
-      id: "q1",
-      text: "Tell me about your experience with educational assessment tools.",
-      type: "behavioral",
-      category: "experience",
-    },
-    {
-      id: "q2",
-      text: "How would you handle a situation where a student disagrees with their assessment results?",
-      type: "situational",
-      category: "conflict resolution",
-    },
-    {
-      id: "q3",
-      text: "What metrics do you consider most important when evaluating educational outcomes?",
-      type: "technical",
-      category: "assessment",
-    },
-  ],
-};
-
-const getInterviewData = (id: string): Interview => {
-  return interviewData as Interview;
-};
 
 const InterviewDetail = () => {
   const { id } = useParams();
@@ -250,8 +74,87 @@ const InterviewDetail = () => {
   const [interviewTab, setInterviewTab] = useState("overview");
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [interview, setInterview] = useState<InterviewData | null>(null);
+  const [job, setJob] = useState<JobData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const interview = getInterviewData(id);
+  useEffect(() => {
+    const fetchInterview = async () => {
+      try {
+        const response = await interviewAPI.getInterviews();
+        console.log('Raw interview API response:', response);
+        const interviewData = response.data.find((i: any) => i.id.toString() === id);
+        console.log('Found interview data:', interviewData);
+        
+        if (!interviewData) {
+          toast.error("Interview not found");
+          navigate("/dashboard/interviews");
+          return;
+        }
+
+        setInterview({
+          id: interviewData.id,
+          status: interviewData.status,
+          firstName: interviewData.first_name,
+          lastName: interviewData.last_name,
+          email: interviewData.email,
+          phone: interviewData.phone,
+          workExperience: interviewData.work_experience,
+          education: interviewData.education,
+          skills: interviewData.skills,
+          location: interviewData.location,
+          linkedinUrl: interviewData.linkedin_url,
+          portfolioUrl: interviewData.portfolio_url,
+          resumeUrl: interviewData.resume_url,
+          resumeMatchScore: interviewData.resume_match_score,
+          resumeMatchFeedback: interviewData.resume_match_feedback,
+          overallScore: interviewData.overall_score,
+          feedback: interviewData.feedback,
+          createdAt: interviewData.created_at,
+          jobId: interviewData.job_id,
+          technical_skills_score: interviewData.technical_skills_score,
+          communication_skills_score: interviewData.communication_skills_score,
+          problem_solving_skills_score: interviewData.problem_solving_skills_score,
+          cultural_fit_score: interviewData.cultural_fit_score
+        });
+
+        // Fetch job details
+        if (interviewData.job_id) {
+          const jobResponse = await jobAPI.recruiterGetJob(interviewData.job_id.toString());
+          const jobData = jobResponse.data;
+          setJob({
+            id: jobData.id,
+            title: jobData.title,
+            description: jobData.description,
+            department: jobData.department,
+            city: jobData.city || '',
+            location: jobData.location,
+            type: jobData.type,
+            min_experience: jobData.min_experience || 0,
+            max_experience: jobData.max_experience || 0,
+            salary_min: jobData.salary_min,
+            salary_max: jobData.salary_max,
+            currency: jobData.currency || 'USD',
+            show_salary: jobData.show_salary || false,
+            requirements: jobData.requirements,
+            benefits: jobData.benefits,
+            status: jobData.status,
+            createdAt: jobData.created_at,
+            requires_dsa: jobData.requires_dsa || false,
+            dsa_questions: jobData.dsa_questions || []
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching interview:", error);
+        toast.error("Failed to load interview details");
+        navigate("/dashboard/interviews");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInterview();
+  }, [id, navigate]);
 
   const copyInterviewLink = () => {
     const link = `${window.location.origin}/interviews?job_id=${id}`;
@@ -272,6 +175,18 @@ const InterviewDetail = () => {
             <CheckCircle className="h-3 w-3 mr-1" /> Completed
           </Badge>
         );
+      case "pending":
+        return (
+          <Badge variant="outline" className="bg-warning/10 text-warning">
+            <Clock className="h-3 w-3 mr-1" /> Pending
+          </Badge>
+        );
+      case "cancelled":
+        return (
+          <Badge variant="outline" className="bg-destructive/10 text-destructive">
+            <ThumbsDown className="h-3 w-3 mr-1" /> Cancelled
+          </Badge>
+        );
       default:
         return null;
     }
@@ -283,114 +198,59 @@ const InterviewDetail = () => {
     return "text-destructive";
   };
 
-  const getSentimentIcon = (sentiment: string) => {
-    switch (sentiment) {
-      case "positive":
-        return <ThumbsUp className="h-3 w-3 text-success" />;
-      case "negative":
-        return <ThumbsDown className="h-3 w-3 text-destructive" />;
-      case "neutral":
-      default:
-        return null;
-    }
-  };
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-  const playVideo = (index: number) => {
-    setCurrentVideoIndex(index);
-    setIsPlaying(true);
-
-    const videoElement = document.getElementById(
-      `video-response-${index}`
-    ) as HTMLVideoElement;
-    if (videoElement) {
-      videoElement.play().catch((err) => {
-        console.error("Error playing video:", err);
-        toast.error("Error playing video");
-      });
-    }
-  };
+  if (!interview) {
+    return null;
+  }
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigate("/dashboard/interviews")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-2xl font-bold">Interview Details</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={copyInterviewLink}>
-            {isLinkCopied ? (
-              <Check className="h-4 w-4 mr-2" />
-            ) : (
-              <Copy className="h-4 w-4 mr-2" />
-            )}
-            {isLinkCopied ? "Copied" : "Copy Link"}
-          </Button>
-          <Button variant="outline">
-            <Share2 className="h-4 w-4 mr-2" />
-            Share
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Download Report
-          </Button>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card className="md:col-span-2">
           <CardHeader className="flex flex-row items-center gap-4 pb-2">
             <Avatar className="h-14 w-14">
-              <AvatarImage
-                src={interview.candidate.avatar}
-                alt={interview.candidate.name}
-              />
               <AvatarFallback className="text-lg">
-                {interview.candidate.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
+                {interview.firstName[0]}{interview.lastName[0]}
               </AvatarFallback>
             </Avatar>
             <div>
               <CardTitle className="text-xl">
-                {interview.candidate.name}
+                {interview.firstName} {interview.lastName}
               </CardTitle>
-              <CardDescription>{interview.candidate.email}</CardDescription>
+              <CardDescription>{interview.email}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Interview for</p>
-                <p className="font-medium">
-                  <Link
-                    to={`/dashboard/jobs/${interview.job.id}`}
-                    className="hover:underline"
-                  >
-                    {interview.job.title}
-                  </Link>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {interview.job.department}
-                </p>
+                <p className="text-sm text-muted-foreground">Location</p>
+                <p className="font-medium">{interview.location}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Resume</p>
-                <Button variant="link" className="p-0 h-auto" asChild>
-                  <a
-                    href={interview.candidate.resume}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View Resume <ArrowRight className="h-4 w-4 ml-1" />
-                  </a>
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto" 
+                  onClick={() => {
+                    if (interview?.resumeUrl) {
+                      // Construct the full URL for the resume
+                      const resumeUrl = `${import.meta.env.VITE_API_URL}/${interview.resumeUrl}`;
+                      window.open(resumeUrl, '_blank');
+                    } else {
+                      toast.error("Resume not available");
+                    }
+                  }}
+                >
+                  View Resume <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
             </div>
@@ -410,202 +270,181 @@ const InterviewDetail = () => {
               <span>Date:</span>
               <div className="flex items-center text-sm">
                 <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-                {interview.date}
+                {new Date(interview.createdAt || '').toLocaleDateString()}
               </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Time:</span>
-              <div className="flex items-center text-sm">
-                <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                {interview.time}
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Duration:</span>
-              <span>{interview.duration}</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Overall Score:</span>
               <span
                 className={`text-xl font-bold ${getScoreColor(
-                  interview.score
+                  interview.overallScore || 0
                 )}`}
               >
-                {interview.score}%
+                {interview.overallScore || 0}%
               </span>
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+              <div>
+                <p className="text-sm text-muted-foreground">Technical Skills</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full"
+                      style={{
+                        width: `${interview?.technical_skills_score || 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-sm font-medium">
+                    {interview?.technical_skills_score || 0}%
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Communication Skills</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full"
+                      style={{
+                        width: `${interview?.communication_skills_score || 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-sm font-medium">
+                    {interview?.communication_skills_score || 0}%
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Problem Solving</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full"
+                      style={{
+                        width: `${interview?.problem_solving_skills_score || 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-sm font-medium">
+                    {interview?.problem_solving_skills_score || 0}%
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Cultural Fit</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full"
+                      style={{
+                        width: `${interview?.cultural_fit_score || 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-sm font-medium">
+                    {interview?.cultural_fit_score || 0}%
+                  </span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs
-        value={interviewTab}
-        onValueChange={setInterviewTab}
-        className="space-y-4"
-      >
-        <TabsList className="grid grid-cols-4">
-          <TabsTrigger value="overview">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="transcript">
-            <FileText className="h-4 w-4 mr-2" />
-            Transcript
-          </TabsTrigger>
-          <TabsTrigger value="video">
-            <Video className="h-4 w-4 mr-2" />
-            Video
-          </TabsTrigger>
-          <TabsTrigger value="insights">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            AI Insights
-          </TabsTrigger>
+      <Tabs value={interviewTab} onValueChange={setInterviewTab}>
+        <TabsList className="w-full flex justify-start mb-6 overflow-x-auto">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="feedback">Feedback</TabsTrigger>
+          <TabsTrigger value="video">Video</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Score Breakdown</CardTitle>
-              <CardDescription>
-                Detailed assessment of candidate performance
-              </CardDescription>
+              <CardTitle className="text-lg">Candidate Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span>Technical Skills</span>
-                  <span
-                    className={getScoreColor(
-                      interview.scoreBreakdown.technicalSkills
-                    )}
-                  >
-                    {interview.scoreBreakdown.technicalSkills}%
-                  </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Education</p>
+                  <p className="font-medium">{interview.education}</p>
                 </div>
-                <Progress
-                  value={interview.scoreBreakdown.technicalSkills}
-                  className="h-2"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span>Communication</span>
-                  <span
-                    className={getScoreColor(
-                      interview.scoreBreakdown.communication
-                    )}
-                  >
-                    {interview.scoreBreakdown.communication}%
-                  </span>
+                <div>
+                  <p className="text-sm text-muted-foreground">Experience</p>
+                  <p className="font-medium">
+                    {interview.workExperience ? `${interview.workExperience} years` : 'Not specified'}
+                  </p>
                 </div>
-                <Progress
-                  value={interview.scoreBreakdown.communication}
-                  className="h-2"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span>Problem Solving</span>
-                  <span
-                    className={getScoreColor(
-                      interview.scoreBreakdown.problemSolving
-                    )}
-                  >
-                    {interview.scoreBreakdown.problemSolving}%
-                  </span>
+                <div>
+                  <p className="text-sm text-muted-foreground">Skills</p>
+                  <p className="font-medium">{interview.skills}</p>
                 </div>
-                <Progress
-                  value={interview.scoreBreakdown.problemSolving}
-                  className="h-2"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span>Cultural Fit</span>
-                  <span
-                    className={getScoreColor(
-                      interview.scoreBreakdown.culturalFit
-                    )}
-                  >
-                    {interview.scoreBreakdown.culturalFit}%
-                  </span>
+                <div>
+                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p className="font-medium">{interview.phone}</p>
                 </div>
-                <Progress
-                  value={interview.scoreBreakdown.culturalFit}
-                  className="h-2"
-                />
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">AI Recommendations</CardTitle>
-              <CardDescription>Based on candidate performance</CardDescription>
+              <CardTitle>Resume Match Analysis</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {interview.recommendations.map((recommendation, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                    <span>{recommendation}</span>
-                  </li>
-                ))}
-              </ul>
+            <CardContent className="space-y-4">
+              {job ? (
+                <>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Job Title</p>
+                    <p className="font-medium">{job.title}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Match Score</p>
+                    <div className="flex items-center gap-2">
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div
+                          className="bg-primary h-2 rounded-full"
+                          style={{
+                            width: `${interview.resumeMatchScore || 0}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium">
+                        {interview.resumeMatchScore || 0}%
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Feedback</p>
+                    <p className="font-medium">
+                      {interview.resumeMatchFeedback || "No feedback available"}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground">
+                    Job details not available for match analysis
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="transcript" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Interview Transcript</CardTitle>
-              <CardDescription>
-                Complete conversation between AI and candidate
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-[600px] overflow-y-auto">
-              <div className="space-y-6">
-                {interview.transcript.map((entry, index) => (
-                  <div key={index} className="flex gap-4">
-                    <div className="flex-shrink-0 w-20 text-sm text-muted-foreground">
-                      {entry.timestamp}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium mb-1">{entry.speaker}</div>
-                      <div className="text-sm">{entry.text}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Key Terms</CardTitle>
-              <CardDescription>
-                Frequently mentioned terms and sentiment analysis
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {interview.keywords.map((keyword, index) => (
-                  <Badge
-                    key={index}
-                    variant="outline"
-                    className="flex items-center gap-1 p-2"
-                  >
-                    {keyword.term} ({keyword.count})
-                    {getSentimentIcon(keyword.sentiment)}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="feedback" className="space-y-6">
+          {interview.feedback && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Interview Feedback</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap">{interview.feedback}</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="video" className="space-y-6">
@@ -613,161 +452,16 @@ const InterviewDetail = () => {
             <CardHeader>
               <CardTitle className="text-lg">Interview Recordings</CardTitle>
               <CardDescription>
-                Candidate's recorded responses to each question
+                Candidate's recorded responses
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                <div className="aspect-video bg-muted rounded-md flex items-center justify-center relative">
-                  {interview.recordedResponses &&
-                  interview.recordedResponses.length > 0 ? (
-                    <video
-                      id={`video-response-${currentVideoIndex}`}
-                      src={
-                        interview.recordedResponses[currentVideoIndex].videoUrl
-                      }
-                      className="w-full h-full rounded-md"
-                      controls
-                      onEnded={() => setIsPlaying(false)}
-                      onPause={() => setIsPlaying(false)}
-                      onPlay={() => setIsPlaying(true)}
-                    />
-                  ) : (
-                    <div className="text-center p-10">
-                      <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground">
-                        No recordings available
-                      </p>
-                    </div>
-                  )}
-
-                  {!isPlaying &&
-                    interview.recordedResponses &&
-                    interview.recordedResponses.length > 0 && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-16 w-16 rounded-full bg-background/80 hover:bg-background/100"
-                          onClick={() => playVideo(currentVideoIndex)}
-                        >
-                          <Play className="h-8 w-8" />
-                        </Button>
-                      </div>
-                    )}
-                </div>
-
-                {interview.recordedResponses &&
-                  interview.recordedResponses.length > 0 && (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        {interview.questions.map((question, index) => (
-                          <Card
-                            key={question.id}
-                            className={`cursor-pointer transition-all hover:border-primary ${
-                              currentVideoIndex === index
-                                ? "border-primary bg-primary/5"
-                                : ""
-                            }`}
-                            onClick={() => setCurrentVideoIndex(index)}
-                          >
-                            <CardContent className="p-4 flex flex-col items-center">
-                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mb-2">
-                                {index + 1}
-                              </div>
-                              <p className="text-xs text-center line-clamp-2">
-                                {question.text}
-                              </p>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-
-                      <div className="flex justify-between">
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            setCurrentVideoIndex((prev) =>
-                              Math.max(0, prev - 1)
-                            )
-                          }
-                          disabled={currentVideoIndex === 0}
-                        >
-                          Previous Answer
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            setCurrentVideoIndex((prev) =>
-                              Math.min(interview.questions.length - 1, prev + 1)
-                            )
-                          }
-                          disabled={
-                            currentVideoIndex === interview.questions.length - 1
-                          }
-                        >
-                          Next Answer
-                        </Button>
-                      </div>
-                    </>
-                  )}
-
-                <div className="flex justify-end mt-4">
-                  <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download All Recordings
-                  </Button>
-                </div>
+              <div className="text-center p-10">
+                <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">
+                  No recordings available
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="insights" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">AI Interview Notes</CardTitle>
-              <CardDescription>
-                Detailed observations from the AI interviewer
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-relaxed">{interview.aiNotes}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2 text-yellow-500" />
-                Areas for Follow-up
-              </CardTitle>
-              <CardDescription>
-                Topics that may require additional discussion
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2">
-                  <ArrowRight className="h-4 w-4 mt-1 flex-shrink-0" />
-                  <span>
-                    Probe further on experience with large-scale applications
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <ArrowRight className="h-4 w-4 mt-1 flex-shrink-0" />
-                  <span>
-                    Ask for specific examples of leadership in challenging
-                    situations
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <ArrowRight className="h-4 w-4 mt-1 flex-shrink-0" />
-                  <span>
-                    Verify knowledge of latest frontend testing methodologies
-                  </span>
-                </li>
-              </ul>
             </CardContent>
           </Card>
         </TabsContent>
@@ -780,12 +474,6 @@ const InterviewDetail = () => {
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Interviews
-        </Button>
-        <Button asChild>
-          <Link to={`/dashboard/candidates/profile/${id}`}>
-            View Candidate Profile
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Link>
         </Button>
       </div>
     </DashboardLayout>

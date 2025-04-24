@@ -451,14 +451,23 @@ export default function VideoInterview() {
     setShowEditDialog(true);
   };
 
-  const handleSubmitEditedResponse = () => {
-    setHasRecordedCurrentQuestion(true);
-    addUserMessage(editedResponse);
-    setConversationHistory((prev) => {
-      const newHistory = [...prev, { role: "user", content: editedResponse }];
-      return newHistory;
-    });
-    setShowEditDialog(false);
+  const handleSubmitEditedResponse = async () => {
+    try {
+      // Submit the answer to the backend
+      await interviewAPI.submitTextResponse(currentQuestionIndex, editedResponse);
+
+      // Update local state
+      setHasRecordedCurrentQuestion(true);
+      addUserMessage(editedResponse);
+      setConversationHistory((prev) => {
+        const newHistory = [...prev, { role: "user", content: editedResponse }];
+        return newHistory;
+      });
+      setShowEditDialog(false);
+    } catch (error) {
+      console.error("Error submitting answer:", error);
+      toast.error("Failed to submit answer");
+    }
   };
 
   const stopCamera = () => {

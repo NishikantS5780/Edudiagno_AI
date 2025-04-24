@@ -139,6 +139,19 @@ export const interviewAPI = {
     });
     return res.data;
   },
+  submitTextResponse: async (question_order: number, answer: string) => {
+    const res = await api.put(
+      "/interview-question-and-response/submit-text-response",
+      {
+        question_order,
+        answer
+      },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+      }
+    );
+    return res;
+  },
 };
 
 export const jobAPI = {

@@ -43,7 +43,6 @@ import JobDetail from "@/pages/Dashboard/Jobs/JobDetail";
 import JobEdit from "@/pages/Dashboard/Jobs/JobEdit";
 import InterviewsPage from "@/pages/Dashboard/Interviews/InterviewsPage";
 import InterviewDetail from "@/pages/Dashboard/Interviews/InterviewDetail";
-import Analytics from "@/pages/Dashboard/Analytics";
 import Profile from "@/pages/Dashboard/Profile";
 import Settings from "@/pages/Dashboard/Settings";
 import Help from "@/pages/Dashboard/Help";
@@ -189,15 +188,6 @@ const App = () => {
                       <RequireProfileVerified>
                         <InterviewDetail />
                       </RequireProfileVerified>
-                    </RequireAuth>
-                  }
-                />
-
-                <Route
-                  path="/dashboard/analytics"
-                  element={
-                    <RequireAuth>
-                      <Analytics />
                     </RequireAuth>
                   }
                 />

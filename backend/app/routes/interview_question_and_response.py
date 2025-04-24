@@ -143,6 +143,24 @@ async def text_update_answer(
     db: Session = Depends(database.get_db),
     interview_id=Depends(authorize_candidate),
 ):
+    # Add logging to debug
+    print(f"Attempting to update answer for interview_id: {interview_id}, question_order: {data.question_order}")
+    
+    # First check if the question exists
+    stmt = select(InterviewQuestionAndResponse).where(
+        and_(
+            InterviewQuestionAndResponse.interview_id == interview_id,
+            InterviewQuestionAndResponse.order_number == data.question_order,
+        )
+    )
+    question = db.execute(stmt).scalars().first()
+    if not question:
+        print(f"No question found for interview_id: {interview_id}, question_order: {data.question_order}")
+        raise HTTPException(status_code=404, detail="Question not found")
+    if question.answer is not None:
+        print(f"Question already answered for interview_id: {interview_id}, question_order: {data.question_order}")
+        raise HTTPException(status_code=400, detail="Question already answered")
+
     stmt = (
         update(InterviewQuestionAndResponse)
         .values(answer=data.answer)
@@ -165,8 +183,8 @@ async def text_update_answer(
     questions_and_responses = result.all()
 
     if len(questions_and_responses) < 1:
+        print(f"No unanswered question found for interview_id: {interview_id}, question_order: {data.question_order}")
         raise HTTPException(status_code=500, detail="no unanswered question found")
 
     question_and_response = questions_and_responses[0]._mapping
-
     return question_and_response
