@@ -35,11 +35,7 @@ export function MatchResultsStage({
   const navigate = useNavigate();
 
   const handleStartInterview = () => {
-    if (!interviewId) {
-      console.error('No interview ID found');
-      return;
-    }
-    navigate(`/mcq?i_id=${interviewId}&company=${companyName}`);
+    navigate(`/interview/overview?i_id=${interviewId}&company=${companyName}`);
   };
 
   const handleScheduleLater = () => {

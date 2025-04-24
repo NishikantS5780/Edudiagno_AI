@@ -60,6 +60,7 @@ import InterviewPage from "@/pages/Interview/InterviewPage";
 import { NotificationProvider } from "@/context/NotificationContext";
 import MCQTest from "@/pages/Interview/MCQTest";
 import InterviewReport from "@/pages/Dashboard/Interviews/InterviewReport";
+import InterviewOverview from "@/pages/Interview/InterviewOverview";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -241,6 +242,8 @@ const App = () => {
                     </RequireAuth>
                   }
                 />
+
+                <Route path="/interview/overview" element={<InterviewOverview />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
