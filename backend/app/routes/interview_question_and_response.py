@@ -15,10 +15,10 @@ router = APIRouter()
 
 @router.get("")
 async def get_interview_question_and_response(
-    request: Request, id: str, db: Session = Depends(database.get_db)
+    request: Request, interview_id: str, db: Session = Depends(database.get_db)
 ):
     stmt = select(InterviewQuestionAndResponse).where(
-        InterviewQuestionAndResponse.id == int(id)
+        InterviewQuestionAndResponse.interview_id == int(interview_id)
     )
     result = db.execute(stmt)
     interview_question_and_response = result.scalars().all()[0]
