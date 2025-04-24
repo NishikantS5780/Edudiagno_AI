@@ -33,6 +33,7 @@ import {
   GraduationCap,
   Briefcase,
   Link as LinkIcon,
+  FileText,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -58,7 +59,7 @@ interface Question {
 }
 
 interface RecordedResponse {
-  id: string;
+    id: string;
   questionId: string;
   audioUrl: string;
   transcript: string;
@@ -214,51 +215,98 @@ const InterviewDetail = () => {
   }
 
   if (!interview) {
-    return null;
-  }
+        return null;
+    }
 
   return (
     <DashboardLayout>
+      <div className="mb-6">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/dashboard/interviews")}
+          className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          Back to Interviews
+          </Button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card className="md:col-span-2">
-          <CardHeader className="flex flex-row items-center gap-4 pb-2">
+          <CardHeader className="flex flex-row items-start justify-between pb-2">
+            <div className="flex items-center gap-4">
             <Avatar className="h-14 w-14">
               <AvatarFallback className="text-lg">
-                {interview.firstName[0]}{interview.lastName[0]}
+                  {interview.firstName[0]}{interview.lastName[0]}
               </AvatarFallback>
             </Avatar>
             <div>
               <CardTitle className="text-xl">
-                {interview.firstName} {interview.lastName}
+                  {interview.firstName} {interview.lastName}
               </CardTitle>
-              <CardDescription>{interview.email}</CardDescription>
+                <CardDescription>{interview.email}</CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={interview.status === 'completed' ? 'success' : 'warning'}>
+                {interview.status}
+              </Badge>
+              <Button variant="outline" onClick={() => navigate(`/dashboard/interviews/${id}/report`)}>
+                View Report
+              </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-muted-foreground">Location</p>
+                <p className="text-sm text-muted-foreground mb-1">Phone</p>
+                <p className="font-medium">{interview.phone}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Location</p>
                 <p className="font-medium">{interview.location}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Resume</p>
-                <Button 
-                  variant="link" 
-                  className="p-0 h-auto" 
-                  onClick={() => {
-                    if (interview?.resumeUrl) {
-                      // Construct the full URL for the resume
-                      const resumeUrl = `${import.meta.env.VITE_API_URL}/${interview.resumeUrl}`;
-                      window.open(resumeUrl, '_blank');
-                    } else {
-                      toast.error("Resume not available");
-                    }
-                  }}
-                >
-                  View Resume <ArrowRight className="h-4 w-4 ml-1" />
-                </Button>
+                <p className="text-sm text-muted-foreground mb-1">Education</p>
+                <p className="font-medium">{interview.education}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Experience</p>
+                <p className="font-medium">
+                  {interview.workExperience ? `${interview.workExperience} years` : 'Not specified'}
+                </p>
               </div>
             </div>
+            <div className="mt-6">
+              <p className="text-sm text-muted-foreground mb-2">Skills</p>
+              <div className="font-medium flex flex-wrap gap-2">
+                {interview.skills?.split(',').map((skill, index) => (
+                  <span key={index} className="whitespace-nowrap">
+                    {skill.trim()}
+                    {index < interview.skills.split(',').length - 1 ? ',' : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {interview.resumeUrl && (
+              <div className="mt-6">
+                <a
+                  href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/uploads/resume/${interview.id}`}
+                  download={`${interview.firstName}_${interview.lastName}_resume_${new Date().toISOString().split('T')[0]}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex"
+                >
+                  <Button
+                    variant="secondary"
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Download Resume
+                  </Button>
+                </a>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -299,7 +347,7 @@ const InterviewDetail = () => {
                         width: `${interview?.technical_skills_score || 0}%`,
                       }}
                     />
-                  </div>
+      </div>
                   <span className="text-sm font-medium">
                     {interview?.technical_skills_score || 0}%
                   </span>
@@ -353,9 +401,9 @@ const InterviewDetail = () => {
                   </span>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
       </div>
 
       <Tabs value={interviewTab} onValueChange={setInterviewTab}>
@@ -367,34 +415,6 @@ const InterviewDetail = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Candidate Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Education</p>
-                  <p className="font-medium">{interview.education}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Experience</p>
-                  <p className="font-medium">
-                    {interview.workExperience ? `${interview.workExperience} years` : 'Not specified'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Skills</p>
-                  <p className="font-medium">{interview.skills}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-medium">{interview.phone}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Resume Match Analysis</CardTitle>
@@ -416,7 +436,7 @@ const InterviewDetail = () => {
                             width: `${interview.resumeMatchScore || 0}%`,
                           }}
                         />
-                      </div>
+                    </div>
                       <span className="text-sm font-medium">
                         {interview.resumeMatchScore || 0}%
                       </span>
@@ -434,7 +454,7 @@ const InterviewDetail = () => {
                   <p className="text-muted-foreground">
                     Job details not available for match analysis
                   </p>
-                </div>
+              </div>
               )}
             </CardContent>
           </Card>
@@ -442,14 +462,14 @@ const InterviewDetail = () => {
 
         <TabsContent value="feedback" className="space-y-6">
           {interview.feedback && (
-            <Card>
-              <CardHeader>
+          <Card>
+            <CardHeader>
                 <CardTitle className="text-lg">Interview Feedback</CardTitle>
-              </CardHeader>
-              <CardContent>
+            </CardHeader>
+            <CardContent>
                 <p className="text-sm whitespace-pre-wrap">{interview.feedback}</p>
-              </CardContent>
-            </Card>
+            </CardContent>
+          </Card>
           )}
         </TabsContent>
 
@@ -462,11 +482,11 @@ const InterviewDetail = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center p-10">
-                <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  No recordings available
-                </p>
+                    <div className="text-center p-10">
+                      <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-muted-foreground">
+                        No recordings available
+                      </p>
               </div>
             </CardContent>
           </Card>
@@ -493,7 +513,7 @@ const InterviewDetail = () => {
                         </Badge>
                         <span className="text-sm text-muted-foreground">
                           Question {qr.order_number + 1}
-                        </span>
+                  </span>
                       </div>
                       <div className="bg-muted/50 rounded-lg p-4">
                         <p className="text-sm font-medium text-muted-foreground mb-2">Question</p>
@@ -521,16 +541,6 @@ const InterviewDetail = () => {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <div className="mt-8 flex justify-end gap-4">
-        <Button
-          variant="outline"
-          onClick={() => navigate("/dashboard/interviews")}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Interviews
-        </Button>
-      </div>
     </DashboardLayout>
   );
 };
