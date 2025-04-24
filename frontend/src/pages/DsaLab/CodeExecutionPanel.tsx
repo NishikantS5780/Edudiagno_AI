@@ -39,7 +39,7 @@ function CodeExecutionPanel({
 
   React.useEffect(() => console.log(taskId), [taskId]);
 
-  const availableLanguages: string[] = ["C", "Python", "Java", "Cpp", "Nodejs"];
+  const availableLanguages: string[] = ["C", "Python", "Java", "Cpp", "Nodejs","Sqlite_3_48_0"];
 
   // const expectedOutput = "Hello"; // set What result is required here nowww ...
   const codeTemplates: Record<string, string> = {
@@ -47,7 +47,7 @@ function CodeExecutionPanel({
     Python: 'print("Hello, World!")',
     Java: 'public class Main {\n\tpublic static void main(String[] args) {\n\t\tSystem.out.println("Hello, World!");\n\t}\n}',
     Cpp: '#include <iostream>\nint main() {\n\tstd::cout << "Hello, World!" << std::endl;\n\treturn 0;\n}',
-    // 'sqlite_3_48_0': 'SELECT "Hello, World!" AS message;',
+    Sqlite_3_48_0: "SELECT 'Hello, World!' AS message;",
     Nodejs: 'console.log("Hello, World!");',
   };
   const monacoLanguages: Record<string, string> = {
@@ -55,7 +55,7 @@ function CodeExecutionPanel({
     Python: "python",
     Java: "java",
     Cpp: "cpp",
-    // 'sqlite_3_48_0': 'sql',
+    Sqlite_3_48_0: 'sql',
     Nodejs: "javascript",
   };
   const [selectedLanguage, setSelectedLanguage] = React.useState<string>("C");
@@ -93,7 +93,7 @@ function CodeExecutionPanel({
               data: {
                 language: selectedLanguage,
                 runConfig: {
-                  customMatcherToUseForExpectedOutput: "ExactMatch",
+                  customMatcherToUseForExpectedOutput: "IgnoreWhitespaceAtStartAndEndForEveryLine",
                   expectedOutputAsBase64UrlEncoded: btoa(expectedOutput)
                     .replace(/\+/g, "-")
                     .replace(/\//g, "_")
@@ -252,8 +252,11 @@ function CodeExecutionPanel({
               ?.replace(/-/g, "+")
               ?.replace(/_/g, "/");
             if (err) {
-              console.log("error = ", atob(err));
-              setCodeError(atob(err));
+              const decodedError = atob(err);
+              console.log("error = ", decodedError);
+              if (!decodedError.includes("cannot read ~/.sqliterc")) {
+                setCodeError(decodedError);
+              }
             }
 
             let output = runResult.programRunData.stdoutBase64UrlEncoded

@@ -116,10 +116,10 @@ export const interviewAPI = {
     );
     return res.data;
   },
-  submitAudioResponse: async (audioFile: File, question_order_number) => {
+  submitAudioResponse: async (audioFile: File, question_order_number: number) => {
     const formData = new FormData();
     formData.append("audio_file", audioFile);
-    formData.append("question_id", question_order_number);
+    formData.append("question_id", question_order_number.toString());
 
     const res = await api.put(
       "interview-question-and-response/submit-audio-response",
@@ -138,6 +138,28 @@ export const interviewAPI = {
       headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
     });
     return res.data;
+  },
+  submitTextResponse: async (question_order: number, answer: string) => {
+    const res = await api.put(
+      "/interview-question-and-response/submit-text-response",
+      {
+        question_order,
+        answer
+      },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+      }
+    );
+    return res;
+  },
+  getInterviewQuestionsAndResponses: async (interviewId: string) => {
+    const res = await api.get(
+      `/interview-question-and-response?interview_id=${interviewId}`,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
+    return res;
   },
 };
 
@@ -275,7 +297,7 @@ export const textAPI = {
 };
 
 export const resumeAPI = {
-  extractResumeData: async (resume) => {
+  extractResumeData: async (resume: File) => {
     const formdata = new FormData();
     formdata.append("file", resume);
     const res = await api.post("/resume/parse", formdata, {
@@ -301,7 +323,7 @@ export const userAPI = {
 };
 
 export const dsaAPI = {
-  runCode: async (data) => {
+  runCode: async (data: any) => {
     await api.post("/dsa-response", data, {
       headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
     });

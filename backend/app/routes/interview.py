@@ -356,48 +356,58 @@ async def generate_feedback(
             Candidate: {question_and_response.answer}
         """
 
-    prompt = f"""Analyze the interview responses and provide detailed feedback. Consider the job requirements and evaluate the candidate's performance across multiple dimensions.
+    prompt = f"""
+        You are evaluating an interview transcript. The candidate is applying for a specific job. Carefully analyze their responses and assess their performance. Be critical, especially when answers are insufficient or irrelevant.
 
-    Return ONLY a JSON object with these exact fields:
-    {{
-        "feedback_for_candidate": "Detailed feedback about the interview performance",
-        "feedback_for_recruiter": "Comprehensive analysis for the recruiter",
-        "score": number between 0 and 100,
-        "scoreBreakdown": {{
-            "technicalSkills": number between 0 and 100,
-            "communication": number between 0 and 100,
-            "problemSolving": number between 0 and 100,
-            "culturalFit": number between 0 and 100
-        }},
-        "suggestions": [
-            "List of specific suggestions for improvement",
-            "Each suggestion should be actionable and specific"
-        ],
-        "keywords": [
-            {{
-                "term": "string",
-                "count": number,
-                "sentiment": "positive" | "neutral" | "negative"
-            }}
-        ]
-    }}
+        Follow these rules:
+        - If the candidate gave minimal responses (e.g., just "hello" or didn't answer), clearly reflect this in the score and feedback.
+        - Use the job role's requirements (implied or given) to evaluate the candidate's suitability.
+        - Do NOT be generous with scores if there is no evidence of skill.
+        - Feedback for the recruiter should reflect how well the candidate performed, highlighting strengths, weaknesses, red flags, and overall potential for the role.
+        - Consider the job requirements and evaluate the candidate's performance across multiple dimensions.
 
-    Conversation:
-    {conversation}
+        Return ONLY a JSON object with this exact format:
+        {{
+            "feedback_for_candidate": "Detailed, specific feedback on their performance, mentioning what they did well or poorly",
+            "feedback_for_recruiter": "Detailed evaluation of the candidate's responses. Explain whether the candidate is suitable, why or why not, and which areas were lacking or strong.",
+            "score": number between 0 and 100,
+            "scoreBreakdown": {{
+                "technicalSkills": number between 0 and 100,
+                "communication": number between 0 and 100,
+                "problemSolving": number between 0 and 100,
+                "culturalFit": number between 0 and 100
+            }},
+            "suggestions": [
+                "Each item must be a concrete, actionable suggestion for the candidate",
+                "Be specific: e.g., 'Provide examples when answering', 'Work on articulating thoughts clearly'"
+            ],
+            "keywords": [
+                {{
+                    "term": "string",
+                    "count": number,
+                    "sentiment": "positive" | "neutral" | "negative"
+                }}
+            ]
+        }}
 
-    Job Description:
-    {data.description}
+        Conversation:
+        {conversation}
 
-    Job Requirements:
-    {data.requirements}
+        Job Description:
+        {data.description}
 
-    Important:
-    - Return ONLY the JSON object, no other text
-    - All fields must be present
-    - All scores must be numbers between 0 and 100
-    - Keywords should be relevant to the job and interview
-    - Suggestions should be specific and actionable
-    """
+        Job Requirements:
+        {data.requirements}
+
+        Important:
+        - Return ONLY the JSON object, no other text
+        - All fields must be present
+        - All scores must be numbers between 0 and 100
+        - Keywords should be relevant to the job and interview
+        - Suggestions should be specific and actionable
+        - Be critical and honest in your evaluation
+        - Consider both the content and quality of responses
+        """
 
     response = await openai.client.chat.completions.create(
         model="gpt-3.5-turbo",

@@ -43,7 +43,6 @@ import JobDetail from "@/pages/Dashboard/Jobs/JobDetail";
 import JobEdit from "@/pages/Dashboard/Jobs/JobEdit";
 import InterviewsPage from "@/pages/Dashboard/Interviews/InterviewsPage";
 import InterviewDetail from "@/pages/Dashboard/Interviews/InterviewDetail";
-import Analytics from "@/pages/Dashboard/Analytics";
 import Profile from "@/pages/Dashboard/Profile";
 import Settings from "@/pages/Dashboard/Settings";
 import Help from "@/pages/Dashboard/Help";
@@ -60,6 +59,7 @@ import RequireProfileVerified from "@/components/common/RequireProfileVerified";
 import InterviewPage from "@/pages/Interview/InterviewPage";
 import { NotificationProvider } from "@/context/NotificationContext";
 import MCQTest from "@/pages/MCQTest";
+import InterviewReport from "@/pages/Dashboard/Interviews/InterviewReport";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -194,15 +194,6 @@ const App = () => {
                 />
 
                 <Route
-                  path="/dashboard/analytics"
-                  element={
-                    <RequireAuth>
-                      <Analytics />
-                    </RequireAuth>
-                  }
-                />
-
-                <Route
                   path="/dashboard/profile"
                   element={
                     <RequireAuth>
@@ -240,6 +231,15 @@ const App = () => {
                 <Route path="/interview/video" element={<VideoInterview />} />
 
                 <Route path="/mcq" element={<MCQTest />} />
+
+                <Route
+                  path="/dashboard/interviews/:id/report"
+                  element={
+                    <RequireAuth>
+                      <InterviewReport />
+                    </RequireAuth>
+                  }
+                />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>

@@ -5,17 +5,24 @@ export interface InterviewData {
   lastName: string;
   email: string;
   phone: string;
-  workExperience: number | null;
+  workExperience: number;
   education: string;
   skills: string;
   location: string;
-  linkedinUrl: string | null;
-  portfolioUrl: string | null;
-  resumeUrl: string | null;
-  resumeMatchScore: number | null;
-  resumeMatchFeedback: string | null;
-  overallScore: number | null;
-  feedback: string | null;
+  linkedinUrl: string;
+  portfolioUrl: string;
+  resumeUrl: string;
+  resumeText: string;
+  resumeMatchScore: number;
+  resumeMatchFeedback: string;
+  overallScore: number;
+  feedback: string;
+  createdAt: string;
+  jobId: number;
+  technical_skills_score: number;
+  communication_skills_score: number;
+  problem_solving_skills_score: number;
+  cultural_fit_score: number;
 }
 
 export interface GetInterviewsParams {
