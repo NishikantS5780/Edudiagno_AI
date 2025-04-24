@@ -77,6 +77,7 @@ const InterviewDetail = () => {
   const [interview, setInterview] = useState<InterviewData | null>(null);
   const [job, setJob] = useState<JobData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [questionsAndResponses, setQuestionsAndResponses] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchInterview = async () => {
@@ -144,6 +145,10 @@ const InterviewDetail = () => {
             dsa_questions: jobData.dsa_questions || []
           });
         }
+
+        // Fetch questions and responses
+        const qrResponse = await interviewAPI.getInterviewQuestionsAndResponses(id!);
+        setQuestionsAndResponses(qrResponse.data);
       } catch (error) {
         console.error("Error fetching interview:", error);
         toast.error("Failed to load interview details");
@@ -358,6 +363,7 @@ const InterviewDetail = () => {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
           <TabsTrigger value="video">Video</TabsTrigger>
+          <TabsTrigger value="questions">Questions & Responses</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -462,6 +468,55 @@ const InterviewDetail = () => {
                   No recordings available
                 </p>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="questions" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Interview Questions & Responses</CardTitle>
+              <CardDescription>
+                Review the candidate's responses to interview questions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {questionsAndResponses.length > 0 ? (
+                <div className="space-y-8">
+                  {questionsAndResponses
+                    .sort((a, b) => a.order_number - b.order_number)
+                    .map((qr, index) => (
+                    <div key={index} className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="capitalize">
+                          {qr.question_type}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Question {qr.order_number + 1}
+                        </span>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        <p className="text-sm font-medium text-muted-foreground mb-2">Question</p>
+                        <p className="text-sm">{qr.question}</p>
+                      </div>
+                      <div className="bg-background rounded-lg p-4">
+                        <p className="text-sm font-medium text-muted-foreground mb-2">Response</p>
+                        {qr.answer ? (
+                          <p className="text-sm">{qr.answer}</p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No response yet</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground">
+                    No questions and responses available
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
