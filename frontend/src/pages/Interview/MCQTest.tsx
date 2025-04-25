@@ -20,7 +20,8 @@ interface QuizQuestion {
     label: string;
     correct: boolean;
   }[];
-  type: 'single' | 'multiple' | 'true_false';
+  type: 'technical' | 'aptitude';
+  answerType: 'single' | 'multiple' | 'true_false';
 }
 
 const MCQTest = () => {
@@ -30,9 +31,16 @@ const MCQTest = () => {
   const interviewId = searchParams.get('i_id');
   const companyName = searchParams.get('company');
   const { interviewId: existingInterviewId, companyName: existingCompanyName } = location.state || {};
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [questions, setQuestions] = useState<{
+    technical: QuizQuestion[];
+    aptitude: QuizQuestion[];
+  }>({ technical: [], aptitude: [] });
+  const [currentSection, setCurrentSection] = useState<'technical' | 'aptitude'>('aptitude');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<(number | number[])[]>([]);
+  const [answers, setAnswers] = useState<{
+    technical: (number | number[])[];
+    aptitude: (number | number[])[];
+  }>({ technical: [], aptitude: [] });
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -51,24 +59,35 @@ const MCQTest = () => {
         // Process questions to determine their type
         const processedQuestions = response.data.map((question: any) => {
           const correctOptions = question.options.filter((opt: any) => opt.correct).length;
-          let type: 'single' | 'multiple' | 'true_false' = 'single';
+          let answerType: 'single' | 'multiple' | 'true_false' = 'single';
           
           if (question.options.length === 2) {
-            type = 'true_false';
+            answerType = 'true_false';
           } else if (correctOptions > 1) {
-            type = 'multiple';
+            answerType = 'multiple';
           }
           
           return {
             ...question,
-            type
+            answerType
           };
         });
+
+        // Separate questions by type
+        const technicalQuestions = processedQuestions.filter((q: QuizQuestion) => q.type === 'technical');
+        const aptitudeQuestions = processedQuestions.filter((q: QuizQuestion) => q.type === 'aptitude');
         
-        console.log('Processed questions:', processedQuestions);
-        
-        setQuestions(processedQuestions);
-        setAnswers(Array(processedQuestions.length).fill([]));
+        setQuestions({
+          technical: technicalQuestions,
+          aptitude: aptitudeQuestions
+        });
+
+        // Initialize answers arrays
+        setAnswers({
+          technical: technicalQuestions.map((q: QuizQuestion) => q.answerType === 'multiple' ? [] : -1),
+          aptitude: aptitudeQuestions.map((q: QuizQuestion) => q.answerType === 'multiple' ? [] : -1)
+        });
+
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching quiz questions:', error);
@@ -117,25 +136,29 @@ const MCQTest = () => {
   }, [countdown, isCountingDown]);
 
   const handleAnswerSelect = (questionIndex: number, optionId: number) => {
-    const question = questions[questionIndex];
-    const newAnswers = [...answers];
+    const currentQuestions = questions[currentSection];
+    const question = currentQuestions[questionIndex];
+    const newAnswers = { ...answers };
+    const sectionAnswers = [...newAnswers[currentSection]];
     
-    if (question.type === 'single' || question.type === 'true_false') {
-      newAnswers[questionIndex] = optionId;
-    } else if (question.type === 'multiple') {
-      const currentAnswers = (newAnswers[questionIndex] as number[]) || [];
+    if (question.answerType === 'single' || question.answerType === 'true_false') {
+      sectionAnswers[questionIndex] = optionId;
+    } else if (question.answerType === 'multiple') {
+      const currentAnswers = (sectionAnswers[questionIndex] as number[]) || [];
       if (currentAnswers.includes(optionId)) {
-        newAnswers[questionIndex] = currentAnswers.filter(id => id !== optionId);
+        sectionAnswers[questionIndex] = currentAnswers.filter(id => id !== optionId);
       } else {
-        newAnswers[questionIndex] = [...currentAnswers, optionId];
+        sectionAnswers[questionIndex] = [...currentAnswers, optionId];
       }
     }
     
+    newAnswers[currentSection] = sectionAnswers;
     setAnswers(newAnswers);
   };
 
   const handleSubmit = async () => {
-    const unanswered = answers.filter(answer => 
+    const currentAnswers = answers[currentSection];
+    const unanswered = currentAnswers.filter(answer => 
       Array.isArray(answer) ? answer.length === 0 : answer === -1
     ).length;
     
@@ -144,24 +167,47 @@ const MCQTest = () => {
       return;
     }
 
-    try {
-      const responses = questions.map((question, index) => {
-        const answer = answers[index];
-        // For multiple choice, submit each selected option as a separate response
-        if (Array.isArray(answer)) {
-          return answer.map(optionId => ({
-            question_id: question.id,
-            option_id: optionId
-          }));
-        }
-        // For single choice and true/false
-        return [{
-          question_id: question.id,
-          option_id: answer
-        }];
-      }).flat(); // Flatten the array of arrays into a single array
+    if (currentSection === 'aptitude' && questions.technical.length > 0) {
+      // Move to technical section
+      setCurrentSection('technical');
+      setCurrentQuestionIndex(0);
+      return;
+    }
 
-      await quizAPI.submitQuizResponses(responses);
+    try {
+      // Commenting out the quiz response submission temporarily
+      /*
+      const allResponses = [
+        ...questions.aptitude.map((question, index) => {
+          const answer = answers.aptitude[index];
+          if (Array.isArray(answer)) {
+            return answer.map(optionId => ({
+              question_id: question.id,
+              option_id: optionId
+            }));
+          }
+          return [{
+            question_id: question.id,
+            option_id: answer
+          }];
+        }),
+        ...questions.technical.map((question, index) => {
+          const answer = answers.technical[index];
+          if (Array.isArray(answer)) {
+            return answer.map(optionId => ({
+              question_id: question.id,
+              option_id: optionId
+            }));
+          }
+          return [{
+            question_id: question.id,
+            option_id: answer
+          }];
+        })
+      ].flat();
+
+      await quizAPI.submitQuizResponses(allResponses);
+      */
       handleTestComplete();
     } catch (error) {
       toast.error("Failed to submit answers");
@@ -201,42 +247,49 @@ const MCQTest = () => {
   };
 
   const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
+    if (currentQuestionIndex < questions[currentSection].length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     }
   };
 
-  const renderQuestionOptions = (question: QuizQuestion) => {
-    if (question.type === 'true_false') {
+  const renderQuestionOptions = (question: QuizQuestion, questionIndex: number) => {
+    if (question.answerType === 'true_false') {
       return (
         <div className="space-y-4">
-          {question.options.map((option) => (
-            <div key={option.id} className="flex items-center space-x-2">
-              <RadioGroupItem 
-                value={option.id.toString()} 
-                id={`option-${option.id}`}
-                checked={answers[currentQuestionIndex] === option.id}
-              />
-              <Label htmlFor={`option-${option.id}`} className="text-lg">
-                {option.label || (option.id === question.options[0].id ? 'True' : 'False')}
-              </Label>
-            </div>
-          ))}
+          <RadioGroup
+            value={answers[currentSection][questionIndex]?.toString()}
+            onValueChange={(value) => handleAnswerSelect(questionIndex, parseInt(value))}
+            name={`question-${currentSection}-${question.id}`}
+          >
+            {question.options.map((option) => (
+              <div key={option.id} className="flex items-center space-x-2">
+                <RadioGroupItem 
+                  value={option.id.toString()} 
+                  id={`option-${currentSection}-${question.id}-${option.id}`}
+                />
+                <Label htmlFor={`option-${currentSection}-${question.id}-${option.id}`} className="text-lg">
+                  {option.label}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
         </div>
       );
     }
 
-    if (question.type === 'multiple') {
+    if (question.answerType === 'multiple') {
       return (
         <div className="space-y-4">
           {question.options.map((option) => (
             <div key={option.id} className="flex items-center space-x-2">
               <Checkbox
-                id={`option-${option.id}`}
-                checked={(answers[currentQuestionIndex] as number[])?.includes(option.id)}
-                onCheckedChange={() => handleAnswerSelect(currentQuestionIndex, option.id)}
+                id={`option-${currentSection}-${question.id}-${option.id}`}
+                checked={Array.isArray(answers[currentSection][questionIndex]) 
+                  ? (answers[currentSection][questionIndex] as number[]).includes(option.id)
+                  : false}
+                onCheckedChange={() => handleAnswerSelect(questionIndex, option.id)}
               />
-              <Label htmlFor={`option-${option.id}`} className="text-lg">
+              <Label htmlFor={`option-${currentSection}-${question.id}-${option.id}`} className="text-lg">
                 {option.label}
               </Label>
             </div>
@@ -245,41 +298,28 @@ const MCQTest = () => {
       );
     }
 
-    if (question.type === 'single') {
+    if (question.answerType === 'single') {
       return (
         <RadioGroup
-          value={Array.isArray(answers[currentQuestionIndex]) 
-            ? (answers[currentQuestionIndex] as number[])[0]?.toString() 
-            : answers[currentQuestionIndex]?.toString()}
-          onValueChange={(value) => handleAnswerSelect(currentQuestionIndex, parseInt(value))}
+          value={answers[currentSection][questionIndex]?.toString()}
+          onValueChange={(value) => handleAnswerSelect(questionIndex, parseInt(value))}
+          name={`question-${currentSection}-${question.id}`}
           className="space-y-2"
         >
           {question.options.map((option) => (
             <div key={option.id} className="flex items-center space-x-2">
-              <RadioGroupItem value={option.id.toString()} id={`${question.id}-${option.id}`} />
-              <Label htmlFor={`${question.id}-${option.id}`}>{option.label}</Label>
+              <RadioGroupItem 
+                value={option.id.toString()} 
+                id={`option-${currentSection}-${question.id}-${option.id}`}
+              />
+              <Label htmlFor={`option-${currentSection}-${question.id}-${option.id}`}>{option.label}</Label>
             </div>
           ))}
         </RadioGroup>
       );
     }
 
-    return (
-      <div className="space-y-4">
-        {question.options.map((option) => (
-          <div key={option.id} className="flex items-center space-x-2">
-            <RadioGroupItem 
-              value={option.id.toString()} 
-              id={`option-${option.id}`}
-              checked={answers[currentQuestionIndex] === option.id}
-            />
-            <Label htmlFor={`option-${option.id}`} className="text-lg">
-              {option.label}
-            </Label>
-          </div>
-        ))}
-      </div>
-    );
+    return null;
   };
 
   if (isLoading) {
@@ -290,7 +330,7 @@ const MCQTest = () => {
     );
   }
 
-  if (questions.length === 0) {
+  if (questions.aptitude.length === 0 && questions.technical.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-md">
@@ -313,7 +353,7 @@ const MCQTest = () => {
             <CardHeader>
               <CardTitle className="text-2xl font-bold">MCQ Test</CardTitle>
               <CardDescription>
-                Welcome to the MCQ test section. This test consists of {questions.length} questions.
+                Welcome to the MCQ test section. This test consists of {questions.aptitude.length + questions.technical.length} questions.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -329,7 +369,7 @@ const MCQTest = () => {
                   <Brain className="h-5 w-5 text-primary" />
                   <div>
                     <p className="font-medium">Total Questions</p>
-                    <p className="text-sm text-muted-foreground">{questions.length}</p>
+                    <p className="text-sm text-muted-foreground">{questions.aptitude.length + questions.technical.length}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 p-4 rounded-lg border">
@@ -370,26 +410,59 @@ const MCQTest = () => {
               <CardHeader>
                 <CardTitle className="text-lg">Questions</CardTitle>
                 <CardDescription>
-                  {answers.filter(a => a !== undefined && (Array.isArray(a) ? a.length > 0 : true)).length} of {questions.length} answered
+                  {currentSection === 'aptitude' 
+                    ? `${answers.aptitude.filter(a => a !== -1 && (Array.isArray(a) ? a.length > 0 : true)).length} of ${questions.aptitude.length} answered`
+                    : `${answers.technical.filter(a => a !== -1 && (Array.isArray(a) ? a.length > 0 : true)).length} of ${questions.technical.length} answered`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-5 gap-2">
-                  {questions.map((_, index) => (
-                    <Button
-                      key={index}
-                      variant={currentQuestionIndex === index ? "default" : "outline"}
-                      size="sm"
-                      className={`w-full h-10 ${
-                        answers[index] !== undefined && (Array.isArray(answers[index]) ? answers[index].length > 0 : true)
-                          ? "bg-green-100 hover:bg-green-200 dark:bg-green-900/20"
-                          : ""
-                      }`}
-                      onClick={() => setCurrentQuestionIndex(index)}
-                    >
-                      {index + 1}
-                    </Button>
-                  ))}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-medium mb-2">Aptitude Questions</h3>
+                    <div className="grid grid-cols-5 gap-2">
+                      {questions.aptitude.map((_, index) => (
+                        <Button
+                          key={index}
+                          variant={answers.aptitude[index] !== undefined && (Array.isArray(answers.aptitude[index]) ? answers.aptitude[index].length > 0 : true)
+                            ? "default"
+                            : "outline"}
+                          size="sm"
+                          className={`w-full h-10 ${
+                            answers.aptitude[index] !== undefined && (Array.isArray(answers.aptitude[index]) ? answers.aptitude[index].length > 0 : true)
+                              ? "bg-green-100 hover:bg-green-200 dark:bg-green-900/20 text-foreground"
+                              : ""
+                          }`}
+                          onClick={() => setCurrentSection('aptitude')}
+                        >
+                          {index + 1}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  {questions.technical.length > 0 && (
+                    <div>
+                      <h3 className="font-medium mb-2">Technical Questions</h3>
+                      <div className="grid grid-cols-5 gap-2">
+                        {questions.technical.map((_, index) => (
+                          <Button
+                            key={index}
+                            variant={answers.technical[index] !== undefined && (Array.isArray(answers.technical[index]) ? answers.technical[index].length > 0 : true)
+                              ? "default"
+                              : "outline"}
+                            size="sm"
+                            className={`w-full h-10 ${
+                              answers.technical[index] !== undefined && (Array.isArray(answers.technical[index]) ? answers.technical[index].length > 0 : true)
+                                ? "bg-green-100 hover:bg-green-200 dark:bg-green-900/20 text-foreground"
+                                : ""
+                            }`}
+                            onClick={() => setCurrentSection('technical')}
+                          >
+                            {index + 1}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -402,116 +475,36 @@ const MCQTest = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <CardTitle>MCQ Test</CardTitle>
+                      <CardTitle>MCQ Test - {currentSection === 'aptitude' ? 'Aptitude' : 'Technical'} Section</CardTitle>
                       <CardDescription>
                         Time Remaining: {formatTime(timeLeft)}
                       </CardDescription>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      Question {currentQuestionIndex + 1} of {questions.length}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progress</span>
-                      <span>
-                        {Math.round((answers.filter(a => a !== undefined && (Array.isArray(a) ? a.length > 0 : true)).length / questions.length) * 100)}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={(answers.filter(a => a !== undefined && (Array.isArray(a) ? a.length > 0 : true)).length / questions.length) * 100} 
-                      className="h-2"
-                    />
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                {questions.map((question, index) => (
+                {questions[currentSection].map((question, index) => (
                   <div 
                     key={question.id} 
-                    className={`p-6 rounded-lg border ${
-                      index === currentQuestionIndex 
-                        ? 'border-primary' 
-                        : 'border-border'
-                    }`}
+                    className="p-6 rounded-lg border border-border"
                   >
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold">Question {index + 1}</h3>
                       <Badge variant="outline">
-                        {question.type === 'true_false' ? 'True/False' : 
-                         question.type === 'multiple' ? 'Multiple Choice' : 
+                        {question.answerType === 'true_false' ? 'True/False' : 
+                         question.answerType === 'multiple' ? 'Multiple Choice' : 
                          'Single Choice'}
                       </Badge>
                     </div>
                     <p className="text-base mb-4">{question.description}</p>
-                    {question.type === 'single' && (
-                      <RadioGroup
-                        value={Array.isArray(answers[index]) 
-                          ? (answers[index] as number[])[0]?.toString() 
-                          : answers[index]?.toString()}
-                        onValueChange={(value) => handleAnswerSelect(index, parseInt(value))}
-                        className="space-y-2"
-                      >
-                        {question.options.map((option) => (
-                          <div key={option.id} className="flex items-center space-x-2">
-                            <RadioGroupItem value={option.id.toString()} id={`${question.id}-${option.id}`} />
-                            <Label htmlFor={`${question.id}-${option.id}`} className="text-base">
-                              {option.label}
-                            </Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    )}
-                    {question.type === 'multiple' && (
-                      <div className="space-y-2">
-                        {question.options.map((option) => (
-                          <div key={option.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`${question.id}-${option.id}`}
-                              checked={(answers[index] as number[])?.includes(option.id)}
-                              onCheckedChange={() => handleAnswerSelect(index, option.id)}
-                            />
-                            <Label htmlFor={`${question.id}-${option.id}`} className="text-base">
-                              {option.label}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {question.type === 'true_false' && (
-                      <div className="space-y-2">
-                        {question.options.map((option) => (
-                          <div key={option.id} className="flex items-center space-x-2">
-                            <RadioGroupItem 
-                              value={option.id.toString()} 
-                              id={`${question.id}-${option.id}`}
-                            />
-                            <Label htmlFor={`${question.id}-${option.id}`} className="text-base">
-                              {option.label || (option.id === question.options[0].id ? 'True' : 'False')}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {renderQuestionOptions(question, index)}
                   </div>
                 ))}
               </CardContent>
-              <CardFooter className="flex justify-between border-t pt-6">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentQuestionIndex === 0}
-                >
-                  Previous
-                </Button>
+              <CardFooter className="flex justify-end border-t pt-6">
                 <Button onClick={handleSubmit}>
-                  Submit
-                </Button>
-                <Button
-                  onClick={handleNext}
-                  disabled={currentQuestionIndex === questions.length - 1}
-                >
-                  Next
+                  {currentSection === 'aptitude' && questions.technical.length > 0 ? 'Next Section' : 'Submit'}
                 </Button>
               </CardFooter>
             </Card>
