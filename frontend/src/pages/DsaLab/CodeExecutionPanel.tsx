@@ -8,12 +8,14 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import api, { dsaAPI } from "@/lib/api";
 
 interface CodeExecutionPanelProps {
+  questionId: number;
   expectedOutput: string;
   onCompilationStatusChange?: (status: string) => void;
   onSuccessRateChange?: (rate: string) => void;
 }
 
 function CodeExecutionPanel({
+  questionId,
   expectedOutput,
   onCompilationStatusChange,
   onSuccessRateChange,
@@ -39,7 +41,14 @@ function CodeExecutionPanel({
 
   React.useEffect(() => console.log(taskId), [taskId]);
 
-  const availableLanguages: string[] = ["C", "Python", "Java", "Cpp", "Nodejs","Sqlite_3_48_0"];
+  const availableLanguages: string[] = [
+    "C",
+    "Python",
+    "Java",
+    "Cpp",
+    "Nodejs",
+    "Sqlite_3_48_0",
+  ];
 
   // const expectedOutput = "Hello"; // set What result is required here nowww ...
   const codeTemplates: Record<string, string> = {
@@ -55,7 +64,7 @@ function CodeExecutionPanel({
     Python: "python",
     Java: "java",
     Cpp: "cpp",
-    Sqlite_3_48_0: 'sql',
+    Sqlite_3_48_0: "sql",
     Nodejs: "javascript",
   };
   const [selectedLanguage, setSelectedLanguage] = React.useState<string>("C");
@@ -93,7 +102,8 @@ function CodeExecutionPanel({
               data: {
                 language: selectedLanguage,
                 runConfig: {
-                  customMatcherToUseForExpectedOutput: "IgnoreWhitespaceAtStartAndEndForEveryLine",
+                  customMatcherToUseForExpectedOutput:
+                    "IgnoreWhitespaceAtStartAndEndForEveryLine",
                   expectedOutputAsBase64UrlEncoded: btoa(expectedOutput)
                     .replace(/\+/g, "-")
                     .replace(/\//g, "_")
@@ -310,6 +320,30 @@ function CodeExecutionPanel({
         {/* Header with controls */}
         <div className="flex justify-between items-center p-4 bg-[#27272a] border-b border-[#3f3f46]">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setOutput("");
+                setCodeError("");
+                setSyntaxError("");
+                setRunStatus("");
+
+                const currentCode = code || codeTemplates[selectedLanguage];
+                setCode(currentCode);
+
+                fetch(import.meta.env.VITE_API_BASE_URL, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    code: currentCode,
+                    question_id: questionId,
+                  }),
+                });
+              }}
+            >
+              Run Via Backend
+            </button>
             <button
               className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-green-500/20"
               onClick={handleCodeRun}
