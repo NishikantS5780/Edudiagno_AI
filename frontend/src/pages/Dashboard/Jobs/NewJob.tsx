@@ -65,6 +65,7 @@ const jobFormSchema = z.object({
   mcq_questions: z.array(z.object({
     title: z.string(),
     type: z.enum(["single", "multiple", "true_false"]),
+    question_type: z.enum(["technical", "aptitude"]),
     options: z.array(z.string()),
     correct_options: z.array(z.number())
   })).optional()
@@ -78,7 +79,8 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
       // Create the quiz question
       const questionResponse = await api.post('/quiz-question', {
         description: question.title,
-        job_id: jobId
+        job_id: jobId,
+        type: question.question_type // Only send the question type (technical/aptitude)
       }, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -168,6 +170,14 @@ const NewJob = () => {
     mcq_questions: []
   });
   const { addNotification } = useNotifications();
+
+  interface MCQQuestion {
+    title: string;
+    type: "single" | "multiple" | "true_false";
+    question_type: "technical" | "aptitude";
+    options: string[];
+    correct_options: number[];
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -281,17 +291,16 @@ const NewJob = () => {
   };
 
   const handleMcqQuestionAdd = () => {
+    const newQuestion: MCQQuestion = {
+      title: "",
+      type: "single",
+      question_type: "technical",
+      options: ["", "", "", ""],
+      correct_options: [0]
+    };
     setJobData({
       ...jobData,
-      mcq_questions: [
-        ...(jobData.mcq_questions || []),
-        {
-          title: "",
-          type: "single",
-          options: ["", "", "", ""],
-          correct_options: [0]
-        }
-      ]
+      mcq_questions: [...(jobData.mcq_questions || []), newQuestion]
     });
   };
 
@@ -311,12 +320,19 @@ const NewJob = () => {
       updatedQuestions[index] = {
         ...updatedQuestions[index],
         type: value,
-        correct_options: [0]
+        correct_options: [0], // Default to first option being correct
+        // For true/false questions, automatically set up True and False options
+        options: value === "true_false" ? ["True", "False"] : ["", "", "", ""]
       };
     } else if (field === "correct_options") {
       updatedQuestions[index] = {
         ...updatedQuestions[index],
         correct_options: value
+      };
+    } else if (field === "question_type") {
+      updatedQuestions[index] = {
+        ...updatedQuestions[index],
+        question_type: value
       };
     } else {
       updatedQuestions[index] = {
@@ -332,124 +348,134 @@ const NewJob = () => {
 
   const renderMcqQuestion = (question: any, index: number) => {
     return (
-      <Card key={index} className="mb-4">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Question {index + 1}</CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                const updatedQuestions = [...(jobData.mcq_questions || [])];
-                updatedQuestions.splice(index, 1);
-                setJobData({ ...jobData, mcq_questions: updatedQuestions });
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Question Type</Label>
-            <Select
-              value={question.type}
-              onValueChange={(value) => handleMcqQuestionUpdate(index, "type", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select question type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="single">Single Correct Answer</SelectItem>
-                <SelectItem value="multiple">Multiple Correct Answers</SelectItem>
-                <SelectItem value="true_false">True/False</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Question Text</Label>
+      <div key={index} className="space-y-4 p-4 border rounded-lg">
+        <div className="flex justify-between items-start">
+          <div className="space-y-2 flex-1">
+            <Label>Question {index + 1}</Label>
             <Textarea
               value={question.title}
               onChange={(e) => handleMcqQuestionUpdate(index, "title", e.target.value)}
-              placeholder="Enter your question here"
+              placeholder="Enter your question"
             />
+            <div className="flex gap-4">
+              <div className="space-y-2">
+                <Label>Question Type</Label>
+                <Select
+                  value={question.question_type}
+                  onValueChange={(value) => handleMcqQuestionUpdate(index, "question_type", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select question type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="technical">Technical</SelectItem>
+                    <SelectItem value="aptitude">Aptitude</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Answer Type</Label>
+                <Select
+                  value={question.type}
+                  onValueChange={(value) => handleMcqQuestionUpdate(index, "type", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select answer type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single Choice</SelectItem>
+                    <SelectItem value="multiple">Multiple Choice</SelectItem>
+                    <SelectItem value="true_false">True/False</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
-
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const updatedQuestions = [...(jobData.mcq_questions || [])];
+              updatedQuestions.splice(index, 1);
+              setJobData({ ...jobData, mcq_questions: updatedQuestions });
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="space-y-2">
+          <Label>Options</Label>
           {question.type === "true_false" ? (
             <div className="space-y-2">
-              <Label>Correct Answer</Label>
-              <Select
+              <RadioGroup
                 value={question.correct_options[0]?.toString()}
                 onValueChange={(value) => handleMcqQuestionUpdate(index, "correct_options", [parseInt(value)])}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select correct answer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">True</SelectItem>
-                  <SelectItem value="1">False</SelectItem>
-                </SelectContent>
-              </Select>
+                <div className="flex flex-col space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="0" id={`true-${index}`} />
+                    <Label htmlFor={`true-${index}`}>True</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="1" id={`false-${index}`} />
+                    <Label htmlFor={`false-${index}`}>False</Label>
+                  </div>
+                </div>
+              </RadioGroup>
             </div>
           ) : (
-            <>
-              <div className="space-y-2">
-                <Label>Options</Label>
-                {question.options.map((option: string, optionIndex: number) => (
-                  <div key={optionIndex} className="flex items-center space-x-2">
-                    <Input
-                      value={option}
-                      onChange={(e) => handleMcqQuestionUpdate(index, "options", {
-                        optionIndex,
-                        value: e.target.value
-                      })}
-                      placeholder={`Option ${optionIndex + 1}`}
-                    />
-                    {question.type === "single" ? (
-                      <RadioGroup
-                        value={question.correct_options[0]?.toString()}
-                        onValueChange={(value) => handleMcqQuestionUpdate(index, "correct_options", [parseInt(value)])}
-                      >
-                        <RadioGroupItem value={optionIndex.toString()} />
-                      </RadioGroup>
-                    ) : (
-                      <Checkbox
-                        checked={question.correct_options.includes(optionIndex)}
-                        onCheckedChange={(checked) => {
-                          const currentCorrect = [...question.correct_options];
-                          if (checked) {
-                            currentCorrect.push(optionIndex);
-                          } else {
-                            const index = currentCorrect.indexOf(optionIndex);
-                            if (index > -1) {
-                              currentCorrect.splice(index, 1);
-                            }
-                          }
-                          handleMcqQuestionUpdate(index, "correct_options", currentCorrect);
-                        }}
-                      />
-                    )}
-                  </div>
-                ))}
+            question.options.map((option: string, optionIndex: number) => (
+              <div key={optionIndex} className="flex items-center space-x-2">
+                <Input
+                  value={option}
+                  onChange={(e) => handleMcqQuestionUpdate(index, "options", {
+                    optionIndex,
+                    value: e.target.value
+                  })}
+                  placeholder={`Option ${optionIndex + 1}`}
+                />
+                {question.type === "single" ? (
+                  <RadioGroup
+                    value={question.correct_options[0]?.toString()}
+                    onValueChange={(value) => handleMcqQuestionUpdate(index, "correct_options", [parseInt(value)])}
+                  >
+                    <RadioGroupItem value={optionIndex.toString()} />
+                  </RadioGroup>
+                ) : (
+                  <Checkbox
+                    checked={question.correct_options.includes(optionIndex)}
+                    onCheckedChange={(checked) => {
+                      const currentCorrect = [...question.correct_options];
+                      if (checked) {
+                        currentCorrect.push(optionIndex);
+                      } else {
+                        const index = currentCorrect.indexOf(optionIndex);
+                        if (index > -1) {
+                          currentCorrect.splice(index, 1);
+                        }
+                      }
+                      handleMcqQuestionUpdate(index, "correct_options", currentCorrect);
+                    }}
+                  />
+                )}
               </div>
-              {question.type === "single" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const updatedQuestions = [...(jobData.mcq_questions || [])];
-                    updatedQuestions[index].options.push("");
-                    setJobData({ ...jobData, mcq_questions: updatedQuestions });
-                  }}
-                >
-                  Add Option
-                </Button>
-              )}
-            </>
+            ))
           )}
-        </CardContent>
-      </Card>
+        </div>
+        {question.type === "single" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const updatedQuestions = [...(jobData.mcq_questions || [])];
+              updatedQuestions[index].options.push("");
+              setJobData({ ...jobData, mcq_questions: updatedQuestions });
+            }}
+          >
+            Add Option
+          </Button>
+        )}
+      </div>
     );
   };
 
