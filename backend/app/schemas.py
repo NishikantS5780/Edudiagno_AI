@@ -170,11 +170,13 @@ class UpdateDSAResponse(BaseModel):
 
 class CreateQuizQuestion(BaseModel):
     description: str
+    type: str
     job_id: int
 
 
 class UpdateQuizQuestion(BaseModel):
     description: str
+    type: str
     id: int
 
 

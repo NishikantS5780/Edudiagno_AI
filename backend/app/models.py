@@ -85,6 +85,7 @@ class QuizQuestion(Base):
 
     id = Column(Integer, primary_key=True)
     description = Column(String)
+    type = Column(String)
     created_at = Column(DateTime, default=func.now())
     job_id = Column(Integer, ForeignKey("jobs.id", ondelete="CASCADE"))
 

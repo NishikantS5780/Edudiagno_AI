@@ -16,7 +16,7 @@ async def create_quiz_question(
     recruiter_id=Depends(authorize_recruiter),
 ):
     quiz_question = QuizQuestion(
-        description=quiz_data.description, job_id=quiz_data.job_id
+        description=quiz_data.description, type=quiz_data.type, job_id=quiz_data.job_id
     )
     db.add(quiz_question)
     db.commit()
@@ -29,7 +29,7 @@ async def get_quiz_questions_for_interview(
     db: Session = Depends(database.get_db), interview_id=Depends(authorize_candidate)
 ):
     stmt = (
-        select(QuizQuestion.id, QuizQuestion.description)
+        select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
         .join(Job, QuizQuestion.job_id == Job.id)
         .join(Interview, Interview.job_id == Job.id)
         .where(Interview.id == interview_id)
@@ -55,9 +55,9 @@ async def update_quiz_question(
 ):
     stmt = (
         update(QuizQuestion)
-        .values(description=quiz_data.description)
+        .values(description=quiz_data.description, type=quiz_data.type)
         .where(QuizQuestion.id == quiz_data.id)
-        .returning(QuizQuestion.description)
+        .returning(QuizQuestion.description, QuizQuestion.type)
     )
     result = db.execute(stmt)
     db.commit()
