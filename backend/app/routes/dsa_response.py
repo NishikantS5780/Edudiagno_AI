@@ -129,6 +129,7 @@ async def create_dsa_response(
                         "dsa_test_case_id": test_cases[i]["id"],
                     }
                 )
+            stmt = None
             stmt = (
                 insert(DSATestCaseResponse)
                 .values(dsa_test_case_responses)
