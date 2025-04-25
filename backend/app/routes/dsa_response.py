@@ -59,7 +59,7 @@ async def create_dsa_response(
     upsert_stmt = stmt.on_conflict_do_update(
         index_elements=["interview_id", "question_id"],
         set_={
-            "code": response_data.code,
+            "code": stmt.excluded.code,
         },
     ).returning(DSAResponse.id)
 
