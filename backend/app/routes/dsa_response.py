@@ -1,7 +1,8 @@
 import base64
 from typing import Dict
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
-from sqlalchemy import insert, select
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app import config, database, schemas
