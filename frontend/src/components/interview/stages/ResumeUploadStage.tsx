@@ -242,7 +242,17 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
                     Full Name
                   </label>
                   <Input
-                    value={candidateData.firstName + candidateData.lastName}
+                    value={candidateData.firstName + " " + candidateData.lastName}
+                    onChange={(e) => {
+                      const [firstName, ...lastNameParts] = e.target.value.split(" ");
+                      if (candidateData) {
+                        setCandidateData({
+                          ...candidateData,
+                          firstName: firstName || "",
+                          lastName: lastNameParts.join(" ") || ""
+                        });
+                      }
+                    }}
                     placeholder="John Doe"
                     disabled={isSubmitting || isCompleted}
                   />
@@ -254,6 +264,14 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
                   </label>
                   <Input
                     value={candidateData.email}
+                    onChange={(e) => {
+                      if (candidateData) {
+                        setCandidateData({
+                          ...candidateData,
+                          email: e.target.value
+                        });
+                      }
+                    }}
                     type="email"
                     placeholder="you@example.com"
                     disabled={isSubmitting || isCompleted}
@@ -266,6 +284,14 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
                   </label>
                   <Input
                     value={candidateData.phone}
+                    onChange={(e) => {
+                      if (candidateData) {
+                        setCandidateData({
+                          ...candidateData,
+                          phone: e.target.value
+                        });
+                      }
+                    }}
                     placeholder="(123) 456-7890"
                     disabled={isSubmitting || isCompleted}
                   />

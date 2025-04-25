@@ -87,32 +87,51 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
 
       const questionId = questionResponse.data.id;
 
-      // Create options for the question
-      for (let i = 0; i < question.options.length; i++) {
-        const option = question.options[i];
-        let isCorrect = false;
-
-        if (question.type === 'single') {
-          // For single choice, only one option is correct
-          isCorrect = question.correct_options[0] === i;
-        } else if (question.type === 'multiple') {
-          // For multiple choice, check if this option is in correct_options array
-          isCorrect = question.correct_options.includes(i);
-        } else if (question.type === 'true_false') {
-          // For true/false, the first option is "True" and second is "False"
-          // The correct_options array contains the index of the correct answer (0 for True, 1 for False)
-          isCorrect = question.correct_options[0] === i;
-        }
-
+      if (question.type === 'true_false') {
+        // For true/false questions, create only two options: True and False
         await api.post('/quiz-option', {
-          label: option,
-          correct: isCorrect,
+          label: 'True',
+          correct: question.correct_options[0] === 0,
           question_id: questionId
         }, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
+
+        await api.post('/quiz-option', {
+          label: 'False',
+          correct: question.correct_options[0] === 1,
+          question_id: questionId
+        }, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+      } else {
+        // For single and multiple choice questions, create all options
+        for (let i = 0; i < question.options.length; i++) {
+          const option = question.options[i];
+          let isCorrect = false;
+
+          if (question.type === 'single') {
+            // For single choice, only one option is correct
+            isCorrect = question.correct_options[0] === i;
+          } else if (question.type === 'multiple') {
+            // For multiple choice, check if this option is in correct_options array
+            isCorrect = question.correct_options.includes(i);
+          }
+
+          await api.post('/quiz-option', {
+            label: option,
+            correct: isCorrect,
+            question_id: questionId
+          }, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+        }
       }
     }
   } catch (error) {
@@ -768,6 +787,17 @@ const NewJob = () => {
                     />
                     <Label>Requires DSA Assessment</Label>
                   </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="requires_mcq"
+                      checked={jobData.requires_mcq}
+                      onCheckedChange={(checked) =>
+                        setJobData({ ...jobData, requires_mcq: checked })
+                      }
+                    />
+                    <Label>Requires MCQ Assessment</Label>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -910,21 +940,10 @@ const NewJob = () => {
                   <CardTitle>Multiple Choice Questions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="requires_mcq"
-                      checked={jobData.requires_mcq}
-                      onCheckedChange={(checked) =>
-                        setJobData({ ...jobData, requires_mcq: checked })
-                      }
-                    />
-                    <Label>Requires MCQ Assessment</Label>
-                  </div>
-
                   {!jobData.requires_mcq ? (
                     <div className="text-center py-8">
                       <p className="text-muted-foreground">
-                        Enable MCQ assessment to add questions
+                        Enable MCQ assessment in the Job Details tab to add questions
                       </p>
                     </div>
                   ) : (

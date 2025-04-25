@@ -330,4 +330,19 @@ export const dsaAPI = {
   },
 };
 
+export const quizAPI = {
+  getQuizQuestions: async () => {
+    const res = await api.get("/quiz-question", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+    });
+    return res;
+  },
+  submitQuizResponses: async (responses: { question_id: number; option_id: number }[]) => {
+    const res = await api.post("/quiz-response", responses, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+    });
+    return res;
+  },
+};
+
 export default api;
