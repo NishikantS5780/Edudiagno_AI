@@ -65,7 +65,7 @@ async def create_dsa_response(
 
     result = db.execute(upsert_stmt)
     db.commit()
-    dsa_response_id = result.all()[0]["id"]
+    dsa_response_id = result.all()[0]._mapping["id"]
 
     stmt = select(DSATestCase.id, DSATestCase.input, DSATestCase.expected_output).where(
         DSATestCase.dsa_question_id == response_data.question_id
