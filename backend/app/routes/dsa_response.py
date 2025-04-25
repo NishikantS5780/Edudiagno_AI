@@ -152,6 +152,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
         .where(DSATestCaseResponse.task_id == taskUID)
     )
     db.execute(stmt)
+    db.commit()
 
 
 @router.get("")
