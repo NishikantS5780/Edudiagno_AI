@@ -16,6 +16,7 @@ import * as z from "zod";
 import { Save, ArrowLeft, Trash2 } from "lucide-react";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { jobAPI } from "@/lib/api";
+import { api } from "@/lib/api";
 import { JobData } from "@/types/job";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +25,9 @@ import AIGeneratePopup from "@/components/jobs/AIGeneratePopup";
 import { useNotifications } from "@/context/NotificationContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import axios from "axios";
 
 const jobFormSchema = z.object({
   title: z
@@ -48,6 +52,7 @@ const jobFormSchema = z.object({
   status: z.string().default("active"),
   currency: z.string().optional(),
   requires_dsa: z.boolean().default(false),
+  requires_mcq: z.boolean().default(false),
   dsa_questions: z.array(z.object({
     title: z.string(),
     description: z.string(),
@@ -56,16 +61,91 @@ const jobFormSchema = z.object({
       input: z.string(),
       expected_output: z.string()
     }))
+  })).optional(),
+  mcq_questions: z.array(z.object({
+    title: z.string(),
+    type: z.enum(["single", "multiple", "true_false"]),
+    options: z.array(z.string()),
+    correct_options: z.array(z.number())
   })).optional()
 });
 
 type JobFormValues = z.infer<typeof jobFormSchema>;
+
+const saveMcqQuestions = async (jobId: number, questions: any[]) => {
+  try {
+    for (const question of questions) {
+      // Create the quiz question
+      const questionResponse = await api.post('/quiz-question', {
+        description: question.title,
+        job_id: jobId
+      }, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const questionId = questionResponse.data.id;
+
+      if (question.type === 'true_false') {
+        // For true/false questions, create only two options: True and False
+        await api.post('/quiz-option', {
+          label: 'True',
+          correct: question.correct_options[0] === 0,
+          question_id: questionId
+        }, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        await api.post('/quiz-option', {
+          label: 'False',
+          correct: question.correct_options[0] === 1,
+          question_id: questionId
+        }, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+      } else {
+        // For single and multiple choice questions, create all options
+        for (let i = 0; i < question.options.length; i++) {
+          const option = question.options[i];
+          let isCorrect = false;
+
+          if (question.type === 'single') {
+            // For single choice, only one option is correct
+            isCorrect = question.correct_options[0] === i;
+          } else if (question.type === 'multiple') {
+            // For multiple choice, check if this option is in correct_options array
+            isCorrect = question.correct_options.includes(i);
+          }
+
+          await api.post('/quiz-option', {
+            label: option,
+            correct: isCorrect,
+            question_id: questionId
+          }, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error saving MCQ questions:', error);
+    throw error;
+  }
+};
 
 const NewJob = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("job-details");
   const [jobData, setJobData] = useState<JobData>({
+    id: 0,
     title: "",
     description: "",
     department: "",
@@ -81,8 +161,11 @@ const NewJob = () => {
     requirements: "",
     benefits: "",
     status: "active",
+    createdAt: new Date().toISOString(),
     requires_dsa: false,
-    dsa_questions: []
+    requires_mcq: false,
+    dsa_questions: [],
+    mcq_questions: []
   });
   const { addNotification } = useNotifications();
 
@@ -94,12 +177,17 @@ const NewJob = () => {
       const response = await jobAPI.createJob(jobData);
       
       if (response.status >= 200 && response.status < 300) {
+        // If MCQ questions are enabled, save them
+        if (jobData.requires_mcq && jobData.mcq_questions && jobData.mcq_questions.length > 0) {
+          await saveMcqQuestions(response.data.id, jobData.mcq_questions);
+        }
+
         addNotification({
           type: 'job',
           title: 'New Job Created',
           message: `Your job posting "${jobData.title}" is now live.${
             jobData.requires_dsa ? ' DSA questions have been added.' : ''
-          }`
+          }${jobData.requires_mcq ? ' MCQ questions have been added.' : ''}`
         });
         toast.success("Job created successfully");
         navigate("/dashboard/jobs");
@@ -192,6 +280,179 @@ const NewJob = () => {
     });
   };
 
+  const handleMcqQuestionAdd = () => {
+    setJobData({
+      ...jobData,
+      mcq_questions: [
+        ...(jobData.mcq_questions || []),
+        {
+          title: "",
+          type: "single",
+          options: ["", "", "", ""],
+          correct_options: [0]
+        }
+      ]
+    });
+  };
+
+  const handleMcqQuestionUpdate = (index: number, field: string, value: any) => {
+    const updatedQuestions = [...(jobData.mcq_questions || [])];
+    if (field === "options") {
+      const optionIndex = parseInt(value.optionIndex);
+      const optionValue = value.value;
+      updatedQuestions[index] = {
+        ...updatedQuestions[index],
+        options: updatedQuestions[index].options.map((opt, idx) => 
+          idx === optionIndex ? optionValue : opt
+        )
+      };
+    } else if (field === "type") {
+      // Reset correct options when type changes
+      updatedQuestions[index] = {
+        ...updatedQuestions[index],
+        type: value,
+        correct_options: [0]
+      };
+    } else if (field === "correct_options") {
+      updatedQuestions[index] = {
+        ...updatedQuestions[index],
+        correct_options: value
+      };
+    } else {
+      updatedQuestions[index] = {
+        ...updatedQuestions[index],
+        [field]: value
+      };
+    }
+    setJobData({
+      ...jobData,
+      mcq_questions: updatedQuestions
+    });
+  };
+
+  const renderMcqQuestion = (question: any, index: number) => {
+    return (
+      <Card key={index} className="mb-4">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Question {index + 1}</CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const updatedQuestions = [...(jobData.mcq_questions || [])];
+                updatedQuestions.splice(index, 1);
+                setJobData({ ...jobData, mcq_questions: updatedQuestions });
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Question Type</Label>
+            <Select
+              value={question.type}
+              onValueChange={(value) => handleMcqQuestionUpdate(index, "type", value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select question type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">Single Correct Answer</SelectItem>
+                <SelectItem value="multiple">Multiple Correct Answers</SelectItem>
+                <SelectItem value="true_false">True/False</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Question Text</Label>
+            <Textarea
+              value={question.title}
+              onChange={(e) => handleMcqQuestionUpdate(index, "title", e.target.value)}
+              placeholder="Enter your question here"
+            />
+          </div>
+
+          {question.type === "true_false" ? (
+            <div className="space-y-2">
+              <Label>Correct Answer</Label>
+              <Select
+                value={question.correct_options[0]?.toString()}
+                onValueChange={(value) => handleMcqQuestionUpdate(index, "correct_options", [parseInt(value)])}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select correct answer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">True</SelectItem>
+                  <SelectItem value="1">False</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label>Options</Label>
+                {question.options.map((option: string, optionIndex: number) => (
+                  <div key={optionIndex} className="flex items-center space-x-2">
+                    <Input
+                      value={option}
+                      onChange={(e) => handleMcqQuestionUpdate(index, "options", {
+                        optionIndex,
+                        value: e.target.value
+                      })}
+                      placeholder={`Option ${optionIndex + 1}`}
+                    />
+                    {question.type === "single" ? (
+                      <RadioGroup
+                        value={question.correct_options[0]?.toString()}
+                        onValueChange={(value) => handleMcqQuestionUpdate(index, "correct_options", [parseInt(value)])}
+                      >
+                        <RadioGroupItem value={optionIndex.toString()} />
+                      </RadioGroup>
+                    ) : (
+                      <Checkbox
+                        checked={question.correct_options.includes(optionIndex)}
+                        onCheckedChange={(checked) => {
+                          const currentCorrect = [...question.correct_options];
+                          if (checked) {
+                            currentCorrect.push(optionIndex);
+                          } else {
+                            const index = currentCorrect.indexOf(optionIndex);
+                            if (index > -1) {
+                              currentCorrect.splice(index, 1);
+                            }
+                          }
+                          handleMcqQuestionUpdate(index, "correct_options", currentCorrect);
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              {question.type === "single" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const updatedQuestions = [...(jobData.mcq_questions || [])];
+                    updatedQuestions[index].options.push("");
+                    setJobData({ ...jobData, mcq_questions: updatedQuestions });
+                  }}
+                >
+                  Add Option
+                </Button>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -211,20 +472,10 @@ const NewJob = () => {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="job-details">Job Details</TabsTrigger>
-              <TabsTrigger 
-                value="dsa-questions" 
-                disabled={!jobData.requires_dsa}
-                className={!jobData.requires_dsa ? "opacity-50 cursor-not-allowed" : ""}
-              >
-                DSA Questions
-                {!jobData.requires_dsa && (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    (Enable DSA Assessment first)
-                  </span>
-                )}
-              </TabsTrigger>
+              <TabsTrigger value="dsa-questions">DSA Questions</TabsTrigger>
+              <TabsTrigger value="mcq-questions">MCQ Questions</TabsTrigger>
             </TabsList>
 
             <TabsContent value="job-details">
@@ -536,6 +787,17 @@ const NewJob = () => {
                     />
                     <Label>Requires DSA Assessment</Label>
                   </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="requires_mcq"
+                      checked={jobData.requires_mcq}
+                      onCheckedChange={(checked) =>
+                        setJobData({ ...jobData, requires_mcq: checked })
+                      }
+                    />
+                    <Label>Requires MCQ Assessment</Label>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -666,6 +928,36 @@ const NewJob = () => {
                           </div>
                         </Card>
                       ))}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="mcq-questions">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Multiple Choice Questions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {!jobData.requires_mcq ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        Enable MCQ assessment in the Job Details tab to add questions
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          onClick={handleMcqQuestionAdd}
+                        >
+                          Add MCQ Question
+                        </Button>
+                      </div>
+
+                      {jobData.mcq_questions?.map((question, index) => renderMcqQuestion(question, index))}
                     </>
                   )}
                 </CardContent>

@@ -46,16 +46,16 @@ const navigation: SidebarLink[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Jobs", href: "/dashboard/jobs", icon: Briefcase },
   { name: "Interviews", href: "/dashboard/interviews", icon: Video },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const {
-    logout,
-    recruiter: { name, companyLogo },
-  } = useContext(UserContext);
+  const userContext = useContext(UserContext);
+  if (!userContext) {
+    throw new Error('UserContext is not available');
+  }
+  const { logout, recruiter: { name, companyLogo } } = userContext;
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -119,13 +119,6 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
 
           <div className="p-4 border-t border-border/50">
             <div className="flex items-center justify-between">
-              <Link
-                to="/dashboard/help"
-                className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-muted transition-colors"
-              >
-                <HelpCircle className="w-5 h-5" />
-                <span>Help</span>
-              </Link>
               <ThemeToggle />
             </div>
           </div>
@@ -222,10 +215,6 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard/profile">Profile</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/dashboard/settings">Settings</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-destructive"

@@ -17,6 +17,7 @@ export interface JobData {
   status: string;
   createdAt: string;
   requires_dsa: boolean;
+  requires_mcq: boolean;
   dsa_questions?: Array<{
     title: string;
     description: string;
@@ -25,5 +26,11 @@ export interface JobData {
       input: string;
       expected_output: string;
     }>;
+  }>;
+  mcq_questions?: Array<{
+    title: string;
+    type: "single" | "multiple" | "true_false";
+    options: string[];
+    correct_options: number[];
   }>;
 } 

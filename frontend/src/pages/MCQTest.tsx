@@ -226,6 +226,18 @@ const MCQTest = () => {
     setCountdown(3);
   };
 
+  const handleTestComplete = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const interviewId = urlParams.get('i_id');
+    const companyName = urlParams.get('company');
+    
+    if (interviewId && companyName) {
+      navigate(`/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`);
+    } else {
+      navigate('/interview/dsa-playground');
+    }
+  };
+
   if (!isTestStarted) {
     return (
       <div className="min-h-screen bg-background">
@@ -424,9 +436,9 @@ const MCQTest = () => {
                 </div>
                 <Button
                   className="w-full"
-                  onClick={() => navigate("/")}
+                  onClick={handleTestComplete}
                 >
-                  Back to Home
+                  Continue to DSA Playground
                 </Button>
               </CardContent>
             </Card>

@@ -117,7 +117,8 @@ const InterviewDetail = () => {
           technical_skills_score: interviewData.technical_skills_score,
           communication_skills_score: interviewData.communication_skills_score,
           problem_solving_skills_score: interviewData.problem_solving_skills_score,
-          cultural_fit_score: interviewData.cultural_fit_score
+          cultural_fit_score: interviewData.cultural_fit_score,
+          resumeText: interviewData.resumeText || ''
         });
 
         // Fetch job details
@@ -143,7 +144,8 @@ const InterviewDetail = () => {
             status: jobData.status,
             createdAt: jobData.created_at,
             requires_dsa: jobData.requires_dsa || false,
-            dsa_questions: jobData.dsa_questions || []
+            dsa_questions: jobData.dsa_questions || [],
+            requires_mcq: jobData.requires_mcq || false
           });
         }
 
@@ -202,6 +204,41 @@ const InterviewDetail = () => {
     if (score >= 85) return "text-success";
     if (score >= 70) return "text-brand";
     return "text-destructive";
+  };
+
+  const handleDownloadResume = async () => {
+    if (!interview) {
+      toast.error('Interview data not found');
+      return;
+    }
+
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = `${baseUrl}/api/interview/resume?interview_id=${interview.id}`;
+      
+      const response = await fetch(apiUrl, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch resume');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${interview.firstName}_${interview.lastName}_resume_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading resume:', error);
+      toast.error('Failed to download resume');
+    }
   };
 
   if (loading) {
@@ -290,21 +327,14 @@ const InterviewDetail = () => {
             </div>
             {interview.resumeUrl && (
               <div className="mt-6">
-                <a
-                  href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/uploads/resume/${interview.id}`}
-                  download={`${interview.firstName}_${interview.lastName}_resume_${new Date().toISOString().split('T')[0]}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex"
+                <Button
+                  variant="secondary"
+                  className="flex items-center gap-2"
+                  onClick={handleDownloadResume}
                 >
-                  <Button
-                    variant="secondary"
-                    className="flex items-center gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Download Resume
-                  </Button>
-                </a>
+                  <FileText className="h-4 w-4" />
+                  Download Resume
+                </Button>
               </div>
             )}
           </CardContent>

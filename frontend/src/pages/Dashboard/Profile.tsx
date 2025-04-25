@@ -382,7 +382,7 @@ const Profile = () => {
                 />
               </svg> Company
             </TabsTrigger>
-            <TabsTrigger value="notifications">
+            <TabsTrigger value="notifications" disabled>
               <svg 
                 className="mr-2 h-4 w-4" 
                 xmlns="http://www.w3.org/2000/svg" 
@@ -801,6 +801,7 @@ const Profile = () => {
                         onCheckedChange={(checked) => 
                           setNotificationSettings({...notificationSettings, emailNewCandidate: checked})
                         }
+                        disabled
                       />
                     </div>
                     <Separator />
@@ -819,6 +820,7 @@ const Profile = () => {
                         onCheckedChange={(checked) => 
                           setNotificationSettings({...notificationSettings, emailInterviewComplete: checked})
                         }
+                        disabled
                       />
                     </div>
                     <Separator />
@@ -837,6 +839,7 @@ const Profile = () => {
                         onCheckedChange={(checked) => 
                           setNotificationSettings({...notificationSettings, emailWeeklySummary: checked})
                         }
+                        disabled
                       />
                     </div>
                   </div>
@@ -862,6 +865,7 @@ const Profile = () => {
                         onCheckedChange={(checked) => 
                           setNotificationSettings({...notificationSettings, browserNewCandidate: checked})
                         }
+                        disabled
                       />
                     </div>
                     <Separator />
@@ -880,6 +884,7 @@ const Profile = () => {
                         onCheckedChange={(checked) => 
                           setNotificationSettings({...notificationSettings, browserInterviewComplete: checked})
                         }
+                        disabled
                       />
                     </div>
                   </div>
@@ -905,14 +910,15 @@ const Profile = () => {
                         onCheckedChange={(checked) => 
                           setNotificationSettings({...notificationSettings, smsInterviewComplete: checked})
                         }
+                        disabled
                       />
                     </div>
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-end">
-                <Button onClick={handleNotificationUpdate} disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Save Notification Preferences"}
+              <CardFooter className="flex justify-end border-t p-6">
+                <Button onClick={handleNotificationUpdate} disabled>
+                  Save Notification Preferences
                 </Button>
               </CardFooter>
             </Card>

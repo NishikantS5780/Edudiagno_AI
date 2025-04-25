@@ -12,19 +12,10 @@ export function InterviewFlow() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [jobId, setJobId] = useState<number | null>(null);
+  const [jobId, setJobId] = useState<number>(0);
   const [jobTitle, setJobTitle] = useState<string>("");
   const [companyName, setCompanyName] = useState<string>("");
-  const [candidate, setCandidate] = useState<any>(null);
-  const [matchAnalysis, setMatchAnalysis] = useState<any>(null);
-  const [currentStage, setCurrentStage] = useState<"resume" | "compatibility">(
-    "resume"
-  );
   const [jobDescription, setJobDescription] = useState<string>("");
-  const [resumeText, setResumeText] = useState<string>("");
-  const [interviewId, setInterviewId] = useState<number | null>(null);
-
-  const { generateQuestion } = useInterviewResponseProcessor();
 
   useEffect(() => {
     const verifyInterviewLink = async () => {
@@ -80,7 +71,7 @@ export function InterviewFlow() {
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
-      {currentStage === "resume" && (
+      {jobId > 0 && (
         <ResumeUploadStage
           jobTitle={jobTitle}
           companyName={companyName}
