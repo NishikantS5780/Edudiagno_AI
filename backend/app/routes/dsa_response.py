@@ -58,7 +58,7 @@ async def create_dsa_response(
     )
     upsert_stmt = stmt.on_conflict_do_update(
         index_elements=["interview_id", "question_id"],
-        set={
+        set_={
             "code": response_data.code,
         },
     ).returning(DSAResponse.id)
@@ -134,7 +134,7 @@ async def create_dsa_response(
                 .values(dsa_test_case_responses)
                 .on_conflict_do_update(
                     index_element=["dsa_response_id", "dsa_test_case_id"],
-                    set={"status": "pending", "taskId": stmt.excluded.task_id},
+                    set_={"status": "pending", "taskId": stmt.excluded.task_id},
                 )
             )
             db.execute(stmt)
