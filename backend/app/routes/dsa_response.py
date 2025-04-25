@@ -129,14 +129,10 @@ async def create_dsa_response(
                         "dsa_test_case_id": test_cases[i]["id"],
                     }
                 )
-            stmt = None
-            stmt = (
-                insert(DSATestCaseResponse)
-                .values(dsa_test_case_responses)
-                .on_conflict_do_update(
-                    index_element=["dsa_response_id", "dsa_test_case_id"],
-                    set_={"status": "pending", "taskId": stmt.excluded.task_id},
-                )
+            stmt = insert(DSATestCaseResponse).values(dsa_test_case_responses)
+            stmt = stmt.on_conflict_do_update(
+                index_element=["dsa_response_id", "dsa_test_case_id"],
+                set_={"status": "pending", "taskId": stmt.excluded.task_id},
             )
             db.execute(stmt)
             db.commit()
