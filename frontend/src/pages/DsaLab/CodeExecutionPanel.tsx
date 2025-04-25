@@ -330,7 +330,7 @@ function CodeExecutionPanel({
                 const currentCode = code || codeTemplates[selectedLanguage];
                 setCode(currentCode);
 
-                fetch(import.meta.env.VITE_API_BASE_URL, {
+                fetch(import.meta.env.VITE_API_BASE_URL + "dsa-response", {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
