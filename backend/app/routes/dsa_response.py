@@ -1,10 +1,12 @@
 import base64
 from typing import Dict
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import config, database, schemas
 from app.dependencies.authorization import authorize_candidate
+from app.models import DSATestCase
 
 router = APIRouter()
 
@@ -48,56 +50,55 @@ async def create_dsa_response(
     db: Session = Depends(database.get_db),
     interview_id=Depends(authorize_candidate),
 ):
-
+    stmt = select(DSATestCase.id, DSATestCase.input, DSATestCase.expected_output).where(
+        DSATestCase.dsa_question_id == response_data.question_id
+    )
+    test_cases = [dict(test_case._mapping) for test_case in db.execute(stmt).all()]
     import aiohttp
+
+    entries = []
+    for test_case in test_cases:
+        entries.append(
+            {
+                "language": "C",
+                "runConfig": {
+                    "customMatcherToUseForExpectedOutput": "ExactMatch",
+                    "expectedOutputAsBase64UrlEncoded": base64.urlsafe_b64encode(
+                        test_case["expected_output"].encode()
+                    )
+                    .decode()
+                    .rstrip("="),
+                    "stdinStringAsBase64UrlEncoded": base64.urlsafe_b64encode(
+                        test_case["input"].encode()
+                    )
+                    .decode()
+                    .rstip("="),
+                    "callbackUrlOnExecutionCompletion": "https://codeappmedia.in/api/dsa-response/callback",
+                    "shouldEnablePerProcessAndThreadCpuTimeLimit": False,
+                    "shouldEnablePerProcessAndThreadMemoryLimit": False,
+                    "shouldAllowInternetAccess": False,
+                    # "compilerFlagString": "",
+                    "maxFileSizeInKilobytesFilesCreatedOrModified": 1024,
+                    "stackSizeLimitInKilobytes": 65536,
+                    "cpuTimeLimitInMilliseconds": 2000,
+                    "wallTimeLimitInMilliseconds": 5000,
+                    "memoryLimitInKilobyte": 131072,
+                    "maxProcessesAndOrThreads": 60,
+                },
+                "sourceCodeAsBase64UrlEncoded": base64.urlsafe_b64encode(
+                    response_data.code.encode()
+                )
+                .decode()
+                .rstrip("="),
+            }
+        )
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
             "https://backend.codedamn.com/api/public/request-dsa-code-execution-batch",
             headers={"FERMION-API-KEY": config.settings.FERMION_API_KEY},
-            json={
-                "data": [
-                    {
-                        "data": {
-                            "entries": [
-                                {
-                                    "language": "C",
-                                    "runConfig": {
-                                        "customMatcherToUseForExpectedOutput": "ExactMatch",
-                                        "expectedOutputAsBase64UrlEncoded": base64.urlsafe_b64encode(
-                                            "hi".encode()
-                                        )
-                                        .decode()
-                                        .rstrip("="),
-                                        # "stdinStringAsBase64UrlEncoded": "",
-                                        "callbackUrlOnExecutionCompletion": "https://codeappmedia.in/api/dsa-response/callback",
-                                        "shouldEnablePerProcessAndThreadCpuTimeLimit": False,
-                                        "shouldEnablePerProcessAndThreadMemoryLimit": False,
-                                        "shouldAllowInternetAccess": False,
-                                        # "compilerFlagString": "",
-                                        "maxFileSizeInKilobytesFilesCreatedOrModified": 1024,
-                                        "stackSizeLimitInKilobytes": 65536,
-                                        "cpuTimeLimitInMilliseconds": 2000,
-                                        "wallTimeLimitInMilliseconds": 5000,
-                                        "memoryLimitInKilobyte": 131072,
-                                        "maxProcessesAndOrThreads": 60,
-                                    },
-                                    "sourceCodeAsBase64UrlEncoded": base64.urlsafe_b64encode(
-                                        '#include<stdio.h>\nint main(){printf("hi");}'.encode()
-                                    )
-                                    .decode()
-                                    .rstrip("="),
-                                }
-                            ]
-                        }
-                    }
-                ]
-            },
+            json={"data": [{"data": {"entries": entries}}]},
         ) as response:
-
-            print("Status:", response.status)
-            print("Content-type:", response.headers["content-type"])
-
             result = await response.json()
             print("Body:", result)
     return {"message": "executing"}
@@ -107,6 +108,7 @@ async def create_dsa_response(
 async def execution_callback(request: Request):
     data = await request.json()
 
+    print(data)
     taskUID = data["taskUniqueId"]
     runStatus = data["runResult"]["runStatus"]
 
