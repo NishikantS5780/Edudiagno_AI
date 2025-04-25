@@ -106,9 +106,11 @@ async def create_dsa_response(
 @router.post("/callback")
 async def execution_callback(request: Request):
     data = await request.json()
-    print(data)
-    # taskUID = data["runResult"]["programRundata"]["taskUniqueId"]
-    # runStatus = data["runResult"]["runStatus"]
+
+    taskUID = data["taskUniqueId"]
+    runStatus = data["runResult"]["runStatus"]
+
+    print(taskUID, runStatus)
 
     return
 
