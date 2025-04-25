@@ -1,12 +1,12 @@
 import base64
 from typing import Dict
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
-from sqlalchemy import select
+from sqlalchemy import insert, select
 from sqlalchemy.orm import Session
 
 from app import config, database, schemas
 from app.dependencies.authorization import authorize_candidate
-from app.models import DSATestCase
+from app.models import DSAResponse, DSATestCase, DSATestCaseResponse
 
 router = APIRouter()
 
@@ -50,6 +50,22 @@ async def create_dsa_response(
     db: Session = Depends(database.get_db),
     interview_id=Depends(authorize_candidate),
 ):
+    stmt = insert(DSAResponse).values(
+        code=response_data.code,
+        interview_id=interview_id,
+        question_id=response_data.question_id,
+    )
+    upsert_stmt = stmt.on_conflict_do_update(
+        index_elements=["interview_id", "question_id"],
+        set={
+            "code": response_data.code,
+        },
+    ).returning(DSAResponse.id)
+
+    result = db.execute(upsert_stmt)
+    db.commit()
+    dsa_response_id = result.all()[0]["id"]
+
     stmt = select(DSATestCase.id, DSATestCase.input, DSATestCase.expected_output).where(
         DSATestCase.dsa_question_id == response_data.question_id
     )
@@ -100,7 +116,29 @@ async def create_dsa_response(
             json={"data": [{"data": {"entries": entries}}]},
         ) as response:
             result = await response.json()
-            print("Body:", result)
+            taskIds = result[0]["output"]["data"]["taskIds"]
+
+            dsa_test_case_responses = []
+            for i in range(len(test_cases)):
+                dsa_test_case_responses.append(
+                    {
+                        "status": "pending",
+                        "dsa_response_id": dsa_response_id,
+                        "task_id": taskIds[i],
+                        "dsa_test_case_id": test_cases[i]["id"],
+                    }
+                )
+            stmt = (
+                insert(DSATestCaseResponse)
+                .values(dsa_test_case_responses)
+                .on_conflict_do_update(
+                    index_element=["dsa_response_id", "dsa_test_case_id"],
+                    set={"status": "pending", "taskId": stmt.excluded.task_id},
+                )
+            )
+            db.execute(stmt)
+            db.commit()
+
     return {"message": "executing"}
 
 
