@@ -1,7 +1,7 @@
 import base64
 from typing import Dict
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -141,16 +141,17 @@ async def create_dsa_response(
 
 
 @router.post("/callback")
-async def execution_callback(request: Request):
+async def execution_callback(request: Request, db: Session = Depends(database.get_db)):
     data = await request.json()
 
-    print(data)
     taskUID = data["taskUniqueId"]
     runStatus = data["runResult"]["runStatus"]
-
-    print(taskUID, runStatus)
-
-    return
+    stmt = (
+        update(DSATestCaseResponse)
+        .values({"status": runStatus})
+        .where(DSATestCaseResponse.task_id == taskUID)
+    )
+    db.execute(stmt)
 
 
 @router.get("")
