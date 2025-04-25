@@ -72,7 +72,7 @@ async def create_dsa_response(
                         test_case["input"].encode()
                     )
                     .decode()
-                    .rstip("="),
+                    .rstrip("="),
                     "callbackUrlOnExecutionCompletion": "https://codeappmedia.in/api/dsa-response/callback",
                     "shouldEnablePerProcessAndThreadCpuTimeLimit": False,
                     "shouldEnablePerProcessAndThreadMemoryLimit": False,
