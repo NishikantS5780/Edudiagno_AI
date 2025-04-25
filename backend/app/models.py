@@ -234,8 +234,10 @@ class DSAResponse(Base):
         back_populates="interview_dsa_response",
     )
 
-    _table_args__ = UniqueConstraint(
-        "interview_id", "question_id", name="uq_interview_and_question"
+    __table_args__ = (
+        UniqueConstraint(
+            "interview_id", "question_id", name="uq_interview_and_question"
+        ),
     )
 
 
