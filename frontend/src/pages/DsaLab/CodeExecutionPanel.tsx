@@ -334,6 +334,7 @@ function CodeExecutionPanel({
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("i_token")}`,
                   },
                   body: JSON.stringify({
                     code: currentCode,
