@@ -5,7 +5,7 @@ from sqlalchemy import asc, case, delete, desc, select, and_
 from fastapi import HTTPException, status
 
 from app import schemas, database
-from app.models import Job, Recruiter
+from app.models import DSAQuestion, Job, QuizQuestion, Recruiter
 from app.dependencies.authorization import authorize_recruiter
 from app.configs import openai
 
@@ -102,6 +102,19 @@ async def get_all_job(
 async def get_job_candidate_view(
     request: Request, id: str, db: Session = Depends(database.get_db)
 ):
+    hasDSATest = False
+    hasQuiz = False
+
+    stmt = select(DSAQuestion.id).where(DSAQuestion.job_id == int(id))
+    result = db.execute(stmt).all()
+    if len(result):
+        hasDSATest = True
+
+    stmt = select(QuizQuestion.id).where(QuizQuestion.job_id == int(id))
+    result = db.execute(stmt).all()
+    if len(result):
+        hasQuiz = True
+
     stmt = (
         select(
             Job.id,
@@ -130,7 +143,9 @@ async def get_job_candidate_view(
         .where(Job.id == int(id))
     )
     result = db.execute(stmt)
-    job = result.all()[0]._mapping
+    job = dict(result.all()[0]._mapping)
+    job["hasDSATest"] = hasDSATest
+    job["hasQuiz"] = hasQuiz
     return job
 
 
