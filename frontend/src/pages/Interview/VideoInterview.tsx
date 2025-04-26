@@ -125,8 +125,8 @@ export default function VideoInterview() {
     company_name: "",
     job_title: "",
   });
-  const [companyData, setCompanyData] = useState<RecruiterData>();
-  const [jobData, setJobData] = useState<JobData>();
+  const [companyData, setCompanyData] = useState<RecruiterData | undefined>(undefined);
+  const [jobData, setJobData] = useState<JobData | undefined>(undefined);
   const navigate = useNavigate();
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -838,26 +838,25 @@ export default function VideoInterview() {
     URL.revokeObjectURL(url);
   };
 
-  const handleInterviewComplete = async () => {
-    try {
-      setIsProcessingResponse(true);
-
-      // Get the interview transcript
-      const transcript = conversation
-        .filter((msg: Message) => msg.role === "user")
-        .map((msg: Message) => msg.content)
-        .join("\n\n");
-
-      // Remove the duplicate call to generate-feedback
-      // The analyzeInterview function will handle this instead
-
-      // Set the current stage to thank_you
-      setCurrentStage("thank_you");
-    } catch (error) {
-      console.error("Error generating feedback:", error);
-      toast.error("Failed to generate interview feedback. Please try again.");
-    } finally {
-      setIsProcessingResponse(false);
+  const handleInterviewComplete = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const i_id = urlParams.get('i_id');
+    const company = urlParams.get('company');
+    
+    if (i_id && company) {
+      // Stop recording if active
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stop();
+      }
+      if (audioRecorderRef.current && isRecording) {
+        audioRecorderRef.current.stop();
+      }
+      
+      // Stop camera
+      stopCamera();
+      
+      // Navigate to completion page
+      navigate(`/interview/complete?i_id=${i_id}&company=${company}`);
     }
   };
 
@@ -869,6 +868,14 @@ export default function VideoInterview() {
   const handleScheduleLater = () => {
     toast.success("Interview scheduled for later");
     // You can add additional logic here for scheduling
+  };
+
+  // Update job data with proper type
+  const updateJobData = (data: Partial<JobData>) => {
+    setJobData(prev => ({
+      ...prev,
+      ...data
+    } as JobData));
   };
 
   if (isLoading) {
@@ -965,11 +972,11 @@ export default function VideoInterview() {
       <header className="border-b bg-background/95 backdrop-blur-sm p-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
-            {companyData.name[0]}
+            {companyData?.name[0]}
           </div>
           <div>
-            <h1 className="font-semibold">{jobData.title}</h1>
-            <p className="text-sm text-muted-foreground">{companyData.name}</p>
+            <h1 className="font-semibold">{jobData?.title}</h1>
+            <p className="text-sm text-muted-foreground">{companyData?.name}</p>
           </div>
         </div>
 
@@ -1147,8 +1154,8 @@ export default function VideoInterview() {
                         Hi, I'm Arya!
                       </h3>
                       <p className="text-muted-foreground">
-                        I'll be your interviewer for the {jobData?.title}{" "}
-                        position at {companyData?.name}. Take a deep breath and
+                        I'll be your interviewer for the {jobData?.title || 'this position'}{" "}
+                        position at {companyData?.name || 'the company'}. Take a deep breath and
                         relax - I'll help you showcase your skills and
                         experience. When you're ready, click the button below to
                         begin.

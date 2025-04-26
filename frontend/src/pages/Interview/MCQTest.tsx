@@ -11,6 +11,8 @@ import { Timer, Brain, Code, Award, CheckCircle2, XCircle, Flag, AlertCircle, Cl
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { quizAPI } from "@/lib/api";
+import { jobAPI } from "@/lib/api";
+import { api } from "@/lib/api";
 
 interface QuizQuestion {
   id: number;
@@ -175,8 +177,6 @@ const MCQTest = () => {
     }
 
     try {
-      // Commenting out the quiz response submission temporarily
-      /*
       const allResponses = [
         ...questions.aptitude.map((question, index) => {
           const answer = answers.aptitude[index];
@@ -207,7 +207,6 @@ const MCQTest = () => {
       ].flat();
 
       await quizAPI.submitQuizResponses(allResponses);
-      */
       handleTestComplete();
     } catch (error) {
       toast.error("Failed to submit answers");
@@ -236,7 +235,25 @@ const MCQTest = () => {
     const company = urlParams.get('company');
     
     if (i_id && company) {
-      navigate(`/interview/dsa-playground?i_id=${i_id}&company=${company}`);
+      // First get the job_id from the interview
+      api.get(`/interview?id=${i_id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+      }).then(interviewResponse => {
+        const jobId = interviewResponse.data.job_id;
+        
+        // Then fetch the job data
+        return jobAPI.candidateGetJob(jobId);
+      }).then(response => {
+        const jobData = response.data;
+        if (jobData.hasDSATest) {
+          navigate(`/interview/dsa-playground?i_id=${i_id}&company=${company}`);
+        } else {
+          navigate(`/interview/video?i_id=${i_id}&company=${company}`);
+        }
+      }).catch(error => {
+        console.error('Error fetching job data:', error);
+        navigate(`/interview/video?i_id=${i_id}&company=${company}`);
+      });
     }
   };
 

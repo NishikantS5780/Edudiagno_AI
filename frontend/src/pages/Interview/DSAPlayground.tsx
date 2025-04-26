@@ -1,5 +1,5 @@
 import React from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import DsaQuestion from "../DsaLab/DsaQuestion";
 import CodeExecutionPanel from "../DsaLab/CodeExecutionPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,6 +36,7 @@ const DSAPlayground = () => {
   const [activeTab, setActiveTab] = React.useState("welcome");
   const [compilationStatus, setCompilationStatus] = React.useState<string>("");
   const [successRate, setSuccessRate] = React.useState<string>("");
+  const navigate = useNavigate();
 
   // Fetch interview data to get job_id
   const { data: interviewData, isLoading: isLoadingInterview } = useQuery({
@@ -73,6 +74,16 @@ const DSAPlayground = () => {
     },
     enabled: !!dsaQuestion?.id,
   });
+
+  const handleComplete = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const i_id = urlParams.get('i_id');
+    const company = urlParams.get('company');
+    
+    if (i_id && company) {
+      navigate(`/interview/video?i_id=${i_id}&company=${company}`);
+    }
+  };
 
   if (isLoadingInterview || isLoadingQuestion || isLoadingTestCases) {
     return (
