@@ -5,6 +5,7 @@ import { interviewAPI, jobAPI } from "@/lib/api";
 import { InterviewData } from "@/types/interview";
 import { JobData } from "@/types/job";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import McqResponsesTab from './McqResponsesTab';
 import {
   Card,
   CardContent,
@@ -442,6 +443,7 @@ const InterviewDetail = () => {
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
           <TabsTrigger value="video">Video</TabsTrigger>
           <TabsTrigger value="questions">Questions & Responses</TabsTrigger>
+          <TabsTrigger value="mcq">MCQ Responses</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -570,6 +572,9 @@ const InterviewDetail = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="mcq" className="space-y-6">
+    <McqResponsesTab interviewId={interview.id} />
+  </TabsContent>
       </Tabs>
     </DashboardLayout>
   );
