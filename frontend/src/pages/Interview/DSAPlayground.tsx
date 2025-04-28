@@ -280,7 +280,7 @@ const DSAPlayground = () => {
                     questionNumber={`${dsaQuestion.id}.`}
                     questionTitle={dsaQuestion.title}
                     difficulty={dsaQuestion.difficulty}
-                    description={<>{dsaQuestion.description}</>}
+                    description={dsaQuestion.description}
                     testCases={testCases.map((testCase: TestCase) => ({
                       input: testCase.input,
                       expectedOutput: testCase.expected_output,

@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
+import QuestionEditor from "@/pages/DsaLab/QuestionEditor";
 
 const jobFormSchema = z.object({
   title: z
@@ -185,7 +186,7 @@ const NewJob = () => {
     try {
       // Create job with all data
       const response = await jobAPI.createJob(jobData);
-      
+
       if (response.status >= 200 && response.status < 300) {
         // If MCQ questions are enabled, save them
         if (jobData.requires_mcq && jobData.mcq_questions && jobData.mcq_questions.length > 0) {
@@ -195,9 +196,8 @@ const NewJob = () => {
         addNotification({
           type: 'job',
           title: 'New Job Created',
-          message: `Your job posting "${jobData.title}" is now live.${
-            jobData.requires_dsa ? ' DSA questions have been added.' : ''
-          }${jobData.requires_mcq ? ' MCQ questions have been added.' : ''}`
+          message: `Your job posting "${jobData.title}" is now live.${jobData.requires_dsa ? ' DSA questions have been added.' : ''
+            }${jobData.requires_mcq ? ' MCQ questions have been added.' : ''}`
         });
         toast.success("Job created successfully");
         navigate("/dashboard/jobs");
@@ -207,14 +207,14 @@ const NewJob = () => {
     } catch (error: any) {
       console.error("Error creating job:", error);
       let errorMessage = "Failed to create job";
-      
+
       // Handle specific error messages
       if (error.response?.data?.detail) {
         errorMessage = error.response.data.detail;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -311,7 +311,7 @@ const NewJob = () => {
       const optionValue = value.value;
       updatedQuestions[index] = {
         ...updatedQuestions[index],
-        options: updatedQuestions[index].options.map((opt, idx) => 
+        options: updatedQuestions[index].options.map((opt, idx) =>
           idx === optionIndex ? optionValue : opt
         )
       };
@@ -703,9 +703,9 @@ const NewJob = () => {
                           placeholder="Min salary"
                           value={jobData.salary_min || ""}
                           onChange={(e) =>
-                            setJobData({ 
-                              ...jobData, 
-                              salary_min: e.target.value ? Number(e.target.value) : null 
+                            setJobData({
+                              ...jobData,
+                              salary_min: e.target.value ? Number(e.target.value) : null
                             })
                           }
                         />
@@ -714,9 +714,9 @@ const NewJob = () => {
                           placeholder="Max salary"
                           value={jobData.salary_max || ""}
                           onChange={(e) =>
-                            setJobData({ 
-                              ...jobData, 
-                              salary_max: e.target.value ? Number(e.target.value) : null 
+                            setJobData({
+                              ...jobData,
+                              salary_max: e.target.value ? Number(e.target.value) : null
                             })
                           }
                         />
@@ -888,13 +888,19 @@ const NewJob = () => {
 
                             <div className="space-y-2">
                               <Label>Question Description</Label>
-                              <Textarea
+                              {/* <Textarea
                                 value={question.description}
                                 onChange={(e) =>
                                   handleDsaQuestionUpdate(questionIndex, "description", e.target.value)
                                 }
                                 placeholder="Describe the problem and constraints..."
                                 className="min-h-[150px]"
+                              /> */}
+                              <QuestionEditor
+                                questionDescription={question.description}
+                                setQuestionDescription={(value: string) =>
+                                  handleDsaQuestionUpdate(questionIndex, "description", value)
+                                }
                               />
                             </div>
 
