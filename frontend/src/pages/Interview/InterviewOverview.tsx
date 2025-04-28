@@ -38,7 +38,7 @@ const InterviewOverview = () => {
     
     if (jobData?.hasQuiz) {
       console.log('Flow: Taking user to MCQ test');
-    navigate(`/mcq?i_id=${interviewId}&company=${companyName}`);
+      navigate(`/mcq?i_id=${interviewId}&company=${companyName}`);
     } else if (jobData?.hasDSATest) {
       console.log('Flow: Taking user to DSA playground');
       navigate(`/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`);

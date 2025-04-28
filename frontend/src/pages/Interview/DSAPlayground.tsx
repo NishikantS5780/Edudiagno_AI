@@ -36,55 +36,7 @@ const DSAPlayground = () => {
   const [activeTab, setActiveTab] = React.useState("welcome");
   const [compilationStatus, setCompilationStatus] = React.useState<string>("");
   const [successRate, setSuccessRate] = React.useState<string>("");
-  const [wsConnection, setWsConnection] = React.useState<WebSocket | null>(null);
   const navigate = useNavigate();
-
-  // WebSocket connection management
-  React.useEffect(() => {
-    if (!interviewId) return;
-
-    const token = localStorage.getItem("i_token");
-    if (!token) return;
-
-    // Create WebSocket connection
-    const ws = new WebSocket(`${import.meta.env.VITE_WS_URL}/dsa-response`);
-    
-    ws.onopen = () => {
-      console.log("WebSocket connected");
-      // Send authentication message
-      ws.send(JSON.stringify({ token }));
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("Received WebSocket message:", data);
-      
-      // Handle different types of messages
-      if (data.type === "compilation_status") {
-        setCompilationStatus(data.status);
-      } else if (data.type === "success_rate") {
-        setSuccessRate(data.rate);
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket disconnected");
-      setWsConnection(null);
-    };
-
-    setWsConnection(ws);
-
-    // Cleanup on unmount
-    return () => {
-      if (ws) {
-        ws.close();
-      }
-    };
-  }, [interviewId]);
 
   // Fetch interview data to get job_id
   const { data: interviewData, isLoading: isLoadingInterview } = useQuery({
@@ -280,7 +232,7 @@ const DSAPlayground = () => {
                     questionNumber={`${dsaQuestion.id}.`}
                     questionTitle={dsaQuestion.title}
                     difficulty={dsaQuestion.difficulty}
-                    description={dsaQuestion.description}
+                    description={<>{dsaQuestion.description}</>}
                     testCases={testCases.map((testCase: TestCase) => ({
                       input: testCase.input,
                       expectedOutput: testCase.expected_output,

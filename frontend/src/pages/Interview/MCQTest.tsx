@@ -246,7 +246,7 @@ const MCQTest = () => {
       }).then(response => {
         const jobData = response.data;
         if (jobData.hasDSATest) {
-      navigate(`/interview/dsa-playground?i_id=${i_id}&company=${company}`);
+          navigate(`/interview/dsa-playground?i_id=${i_id}&company=${company}`);
         } else {
           navigate(`/interview/video?i_id=${i_id}&company=${company}`);
         }
