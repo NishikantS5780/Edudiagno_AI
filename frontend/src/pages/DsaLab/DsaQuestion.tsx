@@ -1,4 +1,6 @@
 import React from 'react';
+// at the top of your file
+import MDEditor from '@uiw/react-md-editor';
 
 interface QuestionAreaProps {
   title: string; // e.g., "EduDiagno - Question 1"
@@ -9,7 +11,7 @@ interface QuestionAreaProps {
   topics?: string[]; // Optional array, e.g., ["Array", "Hash Table"]
   companies?: string[]; // Optional array, e.g., ["Google", "Amazon"]
   hint?: string; // Optional hint text
-  description: React.ReactNode; // Allows text or JSX (e.g., with <code>)
+  description: string; // Allows text or JSX (e.g., with <code>)
   testCases: { input: string; expectedOutput: string }[]; // Array of test cases
   constraints?: string; // Optional constraints text
   compilationStatus?: string;
@@ -43,23 +45,21 @@ function DsaQuestion({
   };
 
   return (
-    <div className="bg-[#18181b] text-white p-4 rounded-lg">
+    <div className="bg-[#18181b] text-white p-4 rounded-lg h-screen flex flex-col">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">{title}</h2>
         <div className="flex items-center gap-4">
           {compilationStatus && (
-            <span className={`text-sm ${
-              compilationStatus === "Compiled Successfully" ? "text-green-500" :
-              compilationStatus === "Compilation Failed" ? "text-red-500" :
-              "text-yellow-500"
-            }`}>
+            <span className={`text-sm ${compilationStatus === "Compiled Successfully" ? "text-green-500" :
+                compilationStatus === "Compilation Failed" ? "text-red-500" :
+                  "text-yellow-500"
+              }`}>
               {compilationStatus}
             </span>
           )}
           <span className="text-sm text-gray-400">{successRate}</span>
         </div>
       </div>
-      
       <div className="mb-4">
         <h3 className="text-lg font-semibold">
           {questionNumber} {questionTitle}
@@ -87,11 +87,26 @@ function DsaQuestion({
         )}
       </div>
 
-      <div className="mb-4">
+      {/* <div className="mb-4">
         {description}
         {constraints && (
           <p className="mt-2">{constraints}</p>
         )}
+      </div> */}
+      <div
+        className="mb-4 prose max-w-none dark:prose-invert"
+        data-color-mode="dark"
+      >
+        <MDEditor.Markdown source={String(description)} 
+        style={{
+          backgroundColor: "#18181b",
+          color: "white",
+          // padding: "1rem",
+          borderRadius: "8px",
+        }}
+        />
+
+        {constraints && <p className="mt-2">{constraints}</p>}
       </div>
 
       <div>
