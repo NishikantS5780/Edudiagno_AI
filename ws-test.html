@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        .message { margin: 5px 0; padding: 5px; background: #f0f0f0; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <div>
+        <input type="text" id="interviewId" placeholder="Interview ID" />
+        <input type="text" id="token" placeholder="Interview Token" />
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+    <div id="messages"></div>
+    <div>
+        <input type="text" id="messageInput" placeholder="Type a message" />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        let ws = null;
+        const messagesDiv = document.getElementById('messages');
+
+        function logMessage(message, type = '') {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${type}`;
+            messageElement.textContent = message;
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function connect() {
+            const interviewId = document.getElementById('interviewId').value;
+            const token = document.getElementById('token').value;
+            
+            if (!interviewId || !token) {
+                logMessage('Please enter both Interview ID and Token', 'error');
+                return;
+            }
+
+            // Replace with your actual WebSocket URL
+            ws = new WebSocket(`ws://localhost:8000/dsa-response`);
+
+            ws.onopen = () => {
+                logMessage('Connected to WebSocket server', 'success');
+                // Send authentication message
+                ws.send(JSON.stringify({ token }));
+            };
+
+            ws.onmessage = (event) => {
+                logMessage(`Received: ${event.data}`);
+            };
+
+            ws.onerror = (error) => {
+                logMessage(`Error: ${error.message}`, 'error');
+            };
+
+            ws.onclose = () => {
+                logMessage('Disconnected from WebSocket server');
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendMessage() {
+            if (!ws) {
+                logMessage('Not connected to WebSocket server', 'error');
+                return;
+            }
+
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
+
+            if (!message) {
+                logMessage('Please enter a message', 'error');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(message);
+                ws.send(JSON.stringify(data));
+                logMessage(`Sent: ${message}`);
+                messageInput.value = '';
+            } catch (e) {
+                logMessage('Invalid JSON message', 'error');
+            }
+        }
+    </script>
+</body>
+</html> 

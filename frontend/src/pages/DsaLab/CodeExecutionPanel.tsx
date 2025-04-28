@@ -1,585 +1,313 @@
 import React from "react";
 import { Editor } from "@monaco-editor/react";
-import { Play, Terminal } from "lucide-react";
+import { Play, Terminal, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api, { dsaAPI } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CodeExecutionPanelProps {
   questionId: number;
   expectedOutput: string;
-  onCompilationStatusChange?: (status: string) => void;
-  onSuccessRateChange?: (rate: string) => void;
+  onCompilationStatusChange: (status: string) => void;
+  onSuccessRateChange: (rate: string) => void;
+  code?: string;
+  setCode?: (code: string) => void;
+  selectedLanguage?: string;
+  setSelectedLanguage?: (language: string) => void;
+  setRunStatus?: (status: string) => void;
+  setOutput?: (output: string | ((prev: string) => string)) => void;
+  setCodeError?: (error: string) => void;
+  onSuccess?: () => void;
+  onError?: (error: string) => void;
 }
 
-function CodeExecutionPanel({
+const CodeExecutionPanel: React.FC<CodeExecutionPanelProps> = ({
   questionId,
   expectedOutput,
   onCompilationStatusChange,
   onSuccessRateChange,
-}: CodeExecutionPanelProps) {
-  const [taskId, setTaskId] = React.useState("");
-  const [output, setOutput] = React.useState("");
-  const [codeError, setCodeError] = React.useState("");
+  code = "",
+  setCode = () => {},
+  selectedLanguage = "Python",
+  setSelectedLanguage = () => {},
+  setRunStatus = () => {},
+  setOutput = () => {},
+  setCodeError = () => {},
+  onSuccess,
+  onError,
+}) => {
   const [syntaxError, setSyntaxError] = React.useState("");
-  const [runStatus, setRunStatus] = React.useState("");
-  const [successRate, setSuccessRate] = React.useState("0%");
+  const [isRunning, setIsRunning] = React.useState(false);
+  const [executionId, setExecutionId] = React.useState<string | null>(null);
   const apiKey = import.meta.env.VITE_FERMION_API_KEY;
+  const { toast } = useToast();
 
-  if (!apiKey) {
-    console.error("Fermion API key is not set in environment variables");
-    setCodeError("API configuration error. Please contact support.");
-  }
-
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const handleFinish = () => {
-    navigate(`/interview/precheck?i_id=${searchParams.get("i_id")}`);
-  };
-
-  React.useEffect(() => console.log(taskId), [taskId]);
-
-  const availableLanguages: string[] = [
-    "C",
-    "Python",
-    "Java",
-    "Cpp",
-    "Nodejs",
-    "Sqlite_3_48_0",
-  ];
-
-  // const expectedOutput = "Hello"; // set What result is required here nowww ...
-  const codeTemplates: Record<string, string> = {
-    C: '#include <stdio.h>\nint main(){\n\tprintf("Hello, World!");\n\treturn 0;\n}',
-    Python: 'print("Hello, World!")',
-    Java: 'public class Main {\n\tpublic static void main(String[] args) {\n\t\tSystem.out.println("Hello, World!");\n\t}\n}',
-    Cpp: '#include <iostream>\nint main() {\n\tstd::cout << "Hello, World!" << std::endl;\n\treturn 0;\n}',
-    Sqlite_3_48_0: "SELECT 'Hello, World!' AS message;",
-    Nodejs: 'console.log("Hello, World!");',
-  };
-  const monacoLanguages: Record<string, string> = {
+  const languageMap: { [key: string]: string } = {
     C: "c",
-    Python: "python",
-    Java: "java",
     Cpp: "cpp",
-    Sqlite_3_48_0: "sql",
+    Java: "java",
+    Python: "python",
     Nodejs: "javascript",
   };
-  const [selectedLanguage, setSelectedLanguage] = React.useState<string>("C");
-  const [code, setCode] = React.useState(codeTemplates["C"]);
-  React.useEffect(() => {
-    setCode(codeTemplates[selectedLanguage]);
-  }, [selectedLanguage]);
-  const handleCodeRun = () => {
-    if (!apiKey) {
-      setCodeError("API configuration error. Please contact support.");
-      return;
+
+  const codeTemplates: { [key: string]: string } = {
+    Python: `# Python Hello World Program
+print("Hello, World!")
+
+def solution():
+    # Your solution code here
+    return "Hello, World!"
+
+# Example usage
+if __name__ == "__main__":
+    result = solution()
+    print(result)`,
+    
+    Java: `// Java Hello World Program
+public class Solution {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
+        System.out.println(solution());
     }
+    
+    public static String solution() {
+        // Your solution code here
+        return "Hello, World!";
+    }
+}`,
+    
+    C: `// C Hello World Program
+#include <stdio.h>
 
-    // Reset states before running
-    setOutput("");
-    setCodeError("");
-    setSyntaxError("");
-    setRunStatus("");
+int main() {
+    printf("Hello, World!\\n");
+    
+    // Your solution code here
+    char* result = "Hello, World!";
+    printf("%s\\n", result);
+    
+    return 0;
+}`,
+    
+    Cpp: `// C++ Hello World Program
+#include <iostream>
+#include <string>
+using namespace std;
 
-    // Store the current code in state before sending to API
-    const currentCode = code || codeTemplates[selectedLanguage];
-    setCode(currentCode);
+string solution() {
+    // Your solution code here
+    return "Hello, World!";
+}
 
-    fetch(
-      "https://backend.codedamn.com/api/public/request-dsa-code-execution",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "FERMION-API-KEY": apiKey,
-        },
-        body: JSON.stringify({
-          data: [
-            {
-              data: {
-                language: selectedLanguage,
-                runConfig: {
-                  customMatcherToUseForExpectedOutput:
-                    "IgnoreWhitespaceAtStartAndEndForEveryLine",
-                  expectedOutputAsBase64UrlEncoded: btoa(expectedOutput)
-                    .replace(/\+/g, "-")
-                    .replace(/\//g, "_")
-                    .replace(/=+$/, ""),
-                  stdinStringAsBase64UrlEncoded: "",
-                  shouldEnablePerProcessAndThreadCpuTimeLimit: false,
-                  shouldEnablePerProcessAndThreadMemoryLimit: false,
-                  shouldAllowInternetAccess: false,
-                  compilerFlagString: "",
-                  maxFileSizeInKilobytesFilesCreatedOrModified: 1024,
-                  stackSizeLimitInKilobytes: 65536,
-                  cpuTimeLimitInMilliseconds: 2000,
-                  wallTimeLimitInMilliseconds: 5000,
-                  memoryLimitInKilobyte: 131072,
-                  maxProcessesAndOrThreads: 60,
-                },
-                sourceCodeAsBase64UrlEncoded: btoa(currentCode)
-                  .replace(/\+/g, "-")
-                  .replace(/\//g, "_")
-                  .replace(/=+$/, ""),
-              },
-            },
-          ],
-        }),
-      }
-    )
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
+int main() {
+    cout << "Hello, World!" << endl;
+    
+    string result = solution();
+    cout << result << endl;
+    
+    return 0;
+}`,
+    
+    Nodejs: `// Node.js Hello World Program
+console.log("Hello, World!");
 
-        dsaAPI.runCode({ code: currentCode, question_id: 1 }).then().catch();
-        return res.json();
-      })
-      .then((body) => {
-        console.log("API Response:", body);
-        if (
-          !body ||
-          !Array.isArray(body) ||
-          !body[0] ||
-          !body[0].output ||
-          !body[0].output.data ||
-          !body[0].output.data.taskId
-        ) {
-          throw new Error("Invalid response format from API");
-        }
-        setTaskId(body[0].output.data.taskId);
-        // Start checking status immediately
-        handleViewStatus();
-      })
-      .catch((error) => {
-        console.error("Error running code:", error);
-        setCodeError(`Error: ${error.message}`);
-        setRunStatus("error");
-      });
+function solution() {
+    // Your solution code here
+    return "Hello, World!";
+}
+
+// Example usage
+const result = solution();
+console.log(result);`
   };
 
-  const handleViewStatus = () => {
-    if (!taskId) {
-      setCodeError("No task ID available. Please run the code first.");
-      return;
+  // Set initial code template when language changes or component mounts
+  React.useEffect(() => {
+    if (selectedLanguage && codeTemplates[selectedLanguage]) {
+      setCode(codeTemplates[selectedLanguage]);
     }
+  }, [selectedLanguage, setCode]);
 
-    const checkStatus = () => {
-      if (!apiKey) {
-        setCodeError("API configuration error. Please contact support.");
-        return;
+  const handleLanguageChange = (value: string) => {
+    setSelectedLanguage(value);
+    setCode(codeTemplates[value]);
+  };
+
+  React.useEffect(() => {
+    if (!executionId) return;
+
+    const ws = new WebSocket(`${import.meta.env.VITE_WS_URL}/ws/execution/${executionId}`);
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      switch (data.type) {
+        case 'output':
+          setOutput((prev: string) => prev + data.content);
+          break;
+        case 'error':
+          setCodeError(data.content);
+          onError?.(data.content);
+          break;
+        case 'compilation_status':
+          onCompilationStatusChange(data.status);
+          break;
+        case 'success_rate':
+          onSuccessRateChange(data.rate);
+          break;
+        case 'complete':
+          setIsRunning(false);
+          setRunStatus('completed');
+          onSuccess?.();
+          break;
       }
-
-      fetch(
-        "https://backend.codedamn.com/api/public/get-dsa-code-execution-result",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "FERMION-API-KEY": apiKey,
-          },
-          body: JSON.stringify({
-            data: [
-              {
-                data: {
-                  taskUniqueId: taskId,
-                },
-              },
-            ],
-          }),
-        }
-      )
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
-          }
-          return res.json();
-        })
-        .then((body) => {
-          console.log("Raw Status API Response:", body);
-
-          if (!Array.isArray(body) || body.length === 0) {
-            console.error("Response is not an array or is empty:", body);
-            throw new Error("Invalid response format: expected array");
-          }
-
-          const firstResponse = body[0];
-          console.log("First response element:", firstResponse);
-
-          if (!firstResponse || !firstResponse.output) {
-            console.error(
-              "First response element missing output:",
-              firstResponse
-            );
-            throw new Error("Invalid response format: missing output");
-          }
-
-          const output = firstResponse.output;
-          console.log("Output object:", output);
-
-          if (!output.data) {
-            console.error("Output missing data:", output);
-            throw new Error("Invalid response format: missing data");
-          }
-
-          const data = output.data;
-          console.log("Data object:", data);
-
-          // Update the editor with the submitted code
-          if (data.sourceCodeAsBase64UrlEncoded) {
-            const decodedCode = atob(
-              data.sourceCodeAsBase64UrlEncoded
-                .replace(/-/g, "+")
-                .replace(/_/g, "/")
-            );
-            console.log("Decoded submitted code:", decodedCode);
-            setCode(decodedCode);
-          }
-
-          // Check if the task is still pending
-          if (data.codingTaskStatus === "Pending") {
-            console.log(
-              "Task is still pending, checking again in 2 seconds..."
-            );
-            setTimeout(checkStatus, 2000); // Poll every 2 seconds
-            return;
-          }
-
-          // If task is completed, check for runResult
-          if (!data.runResult) {
-            console.error("Data missing runResult:", data);
-            throw new Error("Invalid response format: missing runResult");
-          }
-
-          let runResult = data.runResult;
-          console.log("Run Result Data:", runResult);
-
-          if (runResult.programRunData != null) {
-            let err = runResult.programRunData.stderrBase64UrlEncoded
-              ?.replace(/-/g, "+")
-              ?.replace(/_/g, "/");
-            if (err) {
-              const decodedError = atob(err);
-              console.log("error = ", decodedError);
-              if (!decodedError.includes("cannot read ~/.sqliterc")) {
-                setCodeError(decodedError);
-              }
-            }
-
-            let output = runResult.programRunData.stdoutBase64UrlEncoded
-              ?.replace(/-/g, "+")
-              ?.replace(/_/g, "/");
-            if (output) {
-              console.log("o/p - ", atob(output));
-              setOutput(atob(output));
-            }
-          }
-
-          let compiler_syntax_error =
-            runResult.compilerOutputAfterCompilationBase64UrlEncoded
-              ?.replace(/-/g, "+")
-              ?.replace(/_/g, "/");
-          if (compiler_syntax_error) {
-            setSyntaxError(atob(compiler_syntax_error));
-          }
-
-          let run_status = runResult.runStatus;
-          setRunStatus(run_status);
-
-          // Calculate success rate based on output matching
-          const isSuccess = output === expectedOutput;
-          const newSuccessRate = isSuccess ? "100%" : "0%";
-          setSuccessRate(newSuccessRate);
-          onSuccessRateChange?.(newSuccessRate);
-
-          // Update compilation status
-          const compilationStatus =
-            run_status === "Success"
-              ? "Compiled Successfully"
-              : run_status === "Error"
-              ? "Compilation Failed"
-              : "Compiling...";
-          onCompilationStatusChange?.(compilationStatus);
-        })
-        .catch((error) => {
-          console.error("Error checking status:", error);
-          setCodeError(`Error: ${error.message}`);
-          setRunStatus("error");
-          onCompilationStatusChange?.("Compilation Failed");
-        });
     };
 
-    checkStatus();
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setCodeError('Connection error occurred');
+      onError?.('Connection error occurred');
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [executionId]);
+
+  const runCode = async () => {
+    try {
+      // Validate required props
+      if (!questionId) {
+        throw new Error('Question ID is required');
+      }
+
+      if (!code.trim()) {
+        throw new Error('Please enter some code before running');
+      }
+
+      if (!selectedLanguage || !languageMap[selectedLanguage]) {
+        throw new Error('Please select a valid programming language');
+      }
+
+      setIsRunning(true);
+      setOutput('');
+      setCodeError('');
+      setRunStatus('running');
+
+      // Construct the API URL using the base URL from environment variable
+      const apiUrl = new URL('/api/execute', import.meta.env.VITE_API_URL).toString();
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          questionId,
+          code,
+          language: languageMap[selectedLanguage]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to execute code');
+      }
+
+      setExecutionId(data.executionId);
+    } catch (error) {
+      setIsRunning(false);
+      setRunStatus('error');
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      setCodeError(errorMessage);
+      onError?.(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    }
   };
+
   return (
-    <div className="bg-[#18181b] min-h-screen">
-      <div className="flex flex-col h-full">
-        {/* Header with controls */}
-        <div className="flex justify-between items-center p-4 bg-[#27272a] border-b border-[#3f3f46]">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setOutput("");
-                setCodeError("");
-                setSyntaxError("");
-                setRunStatus("");
-
-                const currentCode = code || codeTemplates[selectedLanguage];
-                setCode(currentCode);
-
-                fetch(import.meta.env.VITE_API_BASE_URL + "/dsa-response", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("i_token")}`,
-                  },
-                  body: JSON.stringify({
-                    code: currentCode,
-                    question_id: questionId,
-                  }),
-                });
-              }}
-            >
-              Run Via Backend
-            </button>
-            <button
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-green-500/20"
-              onClick={handleCodeRun}
-            >
-              <Play size={16} />
-              <span>Run Code</span>
-            </button>
-            <button
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-blue-500/20"
-              onClick={handleViewStatus}
-            >
-              <Terminal size={16} />
-              <span>View Status</span>
-            </button>
-            <div className="relative">
-              <select
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
-                className="appearance-none bg-[#3f3f46] text-white rounded-lg px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-              >
-                {availableLanguages.map((lang) => (
-                  <option key={lang} value={lang}>
-                    {lang}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-            </div>
+    <Card className="w-full">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-4">
+            <h3 className="text-lg font-semibold">Code Execution</h3>
+            <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select Language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Python">Python</SelectItem>
+                <SelectItem value="Java">Java</SelectItem>
+                <SelectItem value="C">C</SelectItem>
+                <SelectItem value="Cpp">C++</SelectItem>
+                <SelectItem value="Nodejs">Node.js</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={handleFinish}
-              size="sm"
-              className={cn(
-                "px-4 py-2 rounded-lg transition-colors shadow-lg",
-                runStatus === "successful"
-                  ? "bg-green-500 hover:bg-green-600 text-white hover:shadow-green-500/20"
-                  : "hidden"
-              )}
-              disabled={runStatus !== "successful"}
-            >
-              Continue
-            </Button>
-            <Button
-              onClick={handleFinish}
-              size="sm"
-              className={cn(
-                "px-4 py-2 rounded-lg transition-colors shadow-lg",
-                runStatus !== "successful"
-                  ? "bg-red-500 hover:bg-red-600 text-white hover:shadow-red-500/20"
-                  : "hidden"
-              )}
-              disabled={runStatus === "successful"}
-            >
-              Skip & Next
-            </Button>
-          </div>
+          <Button 
+            onClick={runCode} 
+            disabled={isRunning}
+            className="flex items-center gap-2"
+          >
+            {isRunning ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                Run Code
+              </>
+            )}
+          </Button>
         </div>
 
-        {/* Editor and Output Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Code Editor */}
-          <div className="flex-1 min-h-[400px] relative">
-            <div className="absolute top-0 left-0 right-0 h-8 bg-[#1e1e1e] flex items-center px-4 border-b border-[#3f3f46]">
-              <span className="text-sm text-gray-400">{selectedLanguage}</span>
-            </div>
-            <div className="absolute top-8 bottom-0 left-0 right-0">
-              <Editor
-                height="100%"
-                width="100%"
-                language={monacoLanguages[selectedLanguage] || "plaintext"}
-                value={code}
-                onChange={(value) => setCode(value || "")}
-                theme="vs-dark"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  padding: { top: 16, bottom: 16 },
-                  lineNumbers: "on",
-                  renderLineHighlight: "all",
-                  scrollbar: {
-                    vertical: "visible",
-                    horizontal: "visible",
-                    useShadows: false,
-                  },
-                  renderWhitespace: "boundary",
-                  wordWrap: "on",
-                  bracketPairColorization: {
-                    enabled: true,
-                  },
-                  guides: {
-                    bracketPairs: true,
-                  },
-                }}
-              />
-            </div>
+        <Editor
+          height="400px"
+          defaultLanguage={languageMap[selectedLanguage]}
+          value={code}
+          onChange={(value) => setCode(value || '')}
+          theme="vs-dark"
+          options={{
+            minimap: { enabled: false },
+            fontSize: 14,
+            lineNumbers: 'on',
+            automaticLayout: true,
+          }}
+        />
+        
+        {syntaxError && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+            {syntaxError}
           </div>
+        )}
 
-          {/* Output Tabs */}
-          <div className="bg-[#18181b] border-t border-[#3f3f46]">
-            <Tabs defaultValue="result" className="w-full">
-              <TabsList className="bg-[#27272a] w-full justify-start border-b border-[#3f3f46]">
-                <TabsTrigger
-                  value="result"
-                  className="data-[state=active]:bg-[#18181b] data-[state=active]:text-white rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 px-4 py-2"
-                >
-                  Result
-                </TabsTrigger>
-                <TabsTrigger
-                  value="test-case"
-                  className="data-[state=active]:bg-[#18181b] data-[state=active]:text-white rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 px-4 py-2"
-                >
-                  Test Case
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="result" className="p-4 space-y-4">
-                {runStatus === "compilation-error" ? null : (
-                  <div className="flex items-start gap-2 text-green-400 bg-[#27272a] p-3 rounded-lg">
-                    <Terminal className="mt-1 flex-shrink-0" />
-                    <pre className="whitespace-pre-wrap font-mono text-sm">
-                      {output}
-                    </pre>
-                  </div>
-                )}
-                {codeError && (
-                  <div className="text-red-500 bg-[#27272a] p-3 rounded-lg">
-                    <h3 className="font-semibold mb-1 text-red-400">
-                      Runtime Error:
-                    </h3>
-                    <pre className="whitespace-pre-wrap font-mono text-sm">
-                      {codeError}
-                    </pre>
-                  </div>
-                )}
-                {syntaxError && (
-                  <div className="text-red-500 bg-[#27272a] p-3 rounded-lg">
-                    <h3 className="font-semibold mb-1 text-red-400">
-                      Compilation Error:
-                    </h3>
-                    <pre className="whitespace-pre-wrap font-mono text-sm">
-                      {syntaxError}
-                    </pre>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
-                  <span className="font-semibold text-gray-400">
-                    Compilation Status:
-                  </span>
-                  <span
-                    className={`${
-                      !syntaxError ? "text-green-400" : "text-red-500"
-                    } font-mono`}
-                  >
-                    {!syntaxError
-                      ? "Successfully Compiled"
-                      : "Compilation Failed"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
-                  <span className="font-semibold text-gray-400">
-                    Execution Status:
-                  </span>
-                  <span
-                    className={`${
-                      runStatus === "successful"
-                        ? "text-green-400"
-                        : "text-red-500"
-                    } font-mono`}
-                  >
-                    {runStatus === "successful"
-                      ? "Successfully Executed"
-                      : runStatus === "wrong-answer"
-                      ? "Wrong Answer"
-                      : runStatus === "compilation-error"
-                      ? "Compilation Error"
-                      : runStatus === "error"
-                      ? "Runtime Error"
-                      : runStatus || "Not Executed"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
-                  <span className="font-semibold text-gray-400">
-                    Expected Output:
-                  </span>
-                  <span className="text-yellow-400 font-mono">
-                    {expectedOutput}
-                  </span>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="test-case" className="p-4 space-y-4">
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
-                  <span className="font-semibold text-gray-400">Status:</span>
-                  <span
-                    className={`${
-                      runStatus === "successful"
-                        ? "text-green-400"
-                        : "text-red-500"
-                    } font-mono`}
-                  >
-                    {runStatus}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
-                  <span className="font-semibold text-gray-400">
-                    Expected Output:
-                  </span>
-                  <span className="text-yellow-400 font-mono">
-                    {expectedOutput}
-                  </span>
-                </div>
-              </TabsContent>
-            </Tabs>
+        {isRunning && (
+          <div className="mb-4 p-3 bg-blue-100 text-blue-700 rounded">
+            Code is running...
           </div>
-        </div>
-      </div>
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
-}
+};
 
 export default CodeExecutionPanel;
