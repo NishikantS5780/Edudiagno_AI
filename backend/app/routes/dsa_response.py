@@ -183,17 +183,26 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
 
         print(interview_connection_manager.active_connections, data["id"])
 
-        await interview_connection_manager.active_connections[data["id"]].send_json(
-            {"event": "execution_reult", "status": "failed", "failed_test_case": data}
+        await interview_connection_manager.send_data(
+            data["id"],
+            {"event": "execution_reult", "status": "failed", "failed_test_case": data},
         )
 
-    stmt = select(func.count(DSATestCaseResponse.task_id).label("passed_count")).where(
-        and_(
-            DSATestCaseResponse.dsa_response_id == dsa_response_id,
-            DSATestCaseResponse.status == "successful",
+    stmt = (
+        select(
+            func.count(DSATestCaseResponse.task_id).label("passed_count"),
+            DSAResponse.interview_id,
+        )
+        .join(DSAResponse, DSAResponse.id == DSATestCaseResponse.dsa_response_id)
+        .where(
+            and_(
+                DSATestCaseResponse.dsa_response_id == dsa_response_id,
+                DSATestCaseResponse.status == "successful",
+            )
         )
     )
-    passed_count = db.execute(stmt).all()[0]._mapping["passed_count"]
+    data = db.execute(stmt).all()[0]._mapping
+    passed_count = data["passed_count"]
     stmt = (
         select(func.count(DSATestCase.id).label("total_count"))
         .join(DSAResponse, DSAResponse.question_id == DSATestCase.dsa_question_id)
@@ -202,12 +211,13 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     total_count = db.execute(stmt).all()[0]._mapping["total_count"]
 
     if total_count == passed_count:
-        await interview_connection_manager.active_connections[data[0].interview_id].send_json(
+        await interview_connection_manager.send_data(
+            data["interview_id"],
             {
                 "event": "execution_result",
                 "status": "successful",
                 "passed_count": passed_count,
-            }
+            },
         )
 
 
