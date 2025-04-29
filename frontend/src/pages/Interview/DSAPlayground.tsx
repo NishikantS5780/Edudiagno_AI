@@ -52,7 +52,7 @@ const DSAPlayground = () => {
     };
     socket.onmessage = (e) => {
       const data = e.data;
-      console.log(e, e.data, data);
+      console.log(e, typeof e.data, data);
       if (data.event == "execution_result") {
         if (data.status == "successful") {
           console.log("Total Test Cases Passed: ", data.passed_count);
