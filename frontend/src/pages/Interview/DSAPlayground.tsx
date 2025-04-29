@@ -51,8 +51,7 @@ const DSAPlayground = () => {
       console.log("Websocket connection established");
     };
     socket.onmessage = (e) => {
-      const data = e.data;
-      console.log(e, data);
+      const data = JSON.parse(e.data);
       if (data.event == "execution_result") {
         if (data.status == "successful") {
           console.log("Total Test Cases Passed: ", data.passed_count);
