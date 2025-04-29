@@ -183,7 +183,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
 
         print(interview_connection_manager.active_connections, data["id"])
 
-        interview_connection_manager.active_connections[data["id"]].send_json(
+        await interview_connection_manager.active_connections[data["id"]].send_json(
             {"event": "execution_reult", "status": "failed", "failed_test_case": data}
         )
 
@@ -202,7 +202,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     total_count = db.execute(stmt).all()[0]._mapping["total_count"]
 
     if total_count == passed_count:
-        interview_connection_manager.active_connections[data[0].interview_id].send_json(
+        await interview_connection_manager.active_connections[data[0].interview_id].send_json(
             {
                 "event": "execution_result",
                 "status": "successful",
