@@ -178,6 +178,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             .where(DSATestCaseResponse.task_id == taskUID)
         )
         data = db.execute(stmt).all()[0]
+        print(data)
         interview_connection_manager.active_connections[
             data[0]["interview_id"]
         ].send_json(
