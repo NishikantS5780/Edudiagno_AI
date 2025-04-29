@@ -19,7 +19,9 @@ class InterviewConnectionManager:
 
     async def connect(self, interview_id: int, websocket: WebSocket):
         await websocket.accept()
+        print(self.active_connections)
         self.active_connections[interview_id] = websocket
+        print(self.active_connections)
 
     def disconnect(self, interview_id: int):
         self.active_connections.pop(interview_id, None)
