@@ -1,13 +1,14 @@
 import base64
 from typing import Dict
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
-from sqlalchemy import select, update
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app import config, database, schemas
 from app.dependencies.authorization import authorize_candidate
-from app.models import DSAResponse, DSATestCase, DSATestCaseResponse
+from app.models import DSAResponse, DSATestCase, DSATestCaseResponse, Interview
+from app.utils import jwt
 
 router = APIRouter()
 
@@ -35,14 +36,21 @@ interview_connection_manager = InterviewConnectionManager()
 @router.websocket("")
 async def ws(
     websocket: WebSocket,
-    db: Session = Depends(database.get_db),
-    interview_id=Depends(authorize_candidate),
+    i_token=str,
 ):
+    if not i_token:
+        websocket.close(reason="Cannot Authenticate")
+    decoded_data = jwt.decode(i_token)
+
+    interview_id = decoded_data["interview_id"]
+
     await interview_connection_manager.connect(
         interview_id=interview_id, websocket=websocket
     )
+
     async for data in websocket.iter_json():
-        print(data["hi"])
+        print(data)
+        await websocket.send_json({"message": "working..."})
 
 
 @router.post("")
@@ -150,9 +158,52 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
         update(DSATestCaseResponse)
         .values({"status": runStatus})
         .where(DSATestCaseResponse.task_id == taskUID)
+        .returning(DSATestCaseResponse.dsa_response_id)
     )
-    db.execute(stmt)
+    result = db.execute(stmt)
     db.commit()
+    dsa_response_id = result.all()[0]._mapping["ds_response_id"]
+
+    if runStatus != "successful":
+        stmt = (
+            select(
+                Interview.id, DSATestCaseResponse.status, DSATestCase.expected_output
+            )
+            .join(DSAResponse, DSAResponse.interview_id == Interview.id)
+            .join(
+                DSATestCaseResponse,
+                DSATestCaseResponse.dsa_response_id == DSAResponse.id,
+            )
+            .join(DSATestCase, DSATestCase.id == DSATestCaseResponse.dsa_test_case_id)
+            .where(DSATestCaseResponse.task_id == taskUID)
+        )
+        data = db.execute(stmt).all()[0]
+        interview_connection_manager.active_connections[data[0].interview_id].send_json(
+            {"event": "execution_reult", "status": "failed", "failed_test_case": data}
+        )
+
+    stmt = select(func.count(DSATestCaseResponse.id).label("passed_count")).where(
+        and_(
+            DSATestCaseResponse.dsa_response_id == dsa_response_id,
+            DSATestCaseResponse.status == "successful",
+        )
+    )
+    passed_count = db.execute(stmt).all()[0]["passed_count"]
+    stmt = (
+        select(func.count(DSATestCase.id).label("total_count"))
+        .join(DSAResponse, DSAResponse.question_id == DSATestCase.dsa_question_id)
+        .where(DSAResponse.id == dsa_response_id)
+    )
+    total_count = db.execute(stmt).all()[0]["total_count"]
+
+    if total_count == passed_count:
+        interview_connection_manager.active_connections[data[0].interview_id].send_json(
+            {
+                "event": "execution_result",
+                "status": "successful",
+                "passed_count": passed_count,
+            }
+        )
 
 
 @router.get("")

@@ -36,7 +36,32 @@ const DSAPlayground = () => {
   const [activeTab, setActiveTab] = React.useState("welcome");
   const [compilationStatus, setCompilationStatus] = React.useState<string>("");
   const [successRate, setSuccessRate] = React.useState<string>("");
+  const [socket, setSocket] = React.useState<WebSocket>();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const socket = new WebSocket(
+      import.meta.env.VITE_WS_BASE_URL +
+        "?i_token=" +
+        localStorage.getItem("i_token")
+    );
+
+    socket.onopen = () => {
+      socket.send(JSON.stringify({ hi: "hi" }));
+      console.log("Websocket connection established");
+    };
+    socket.onmessage = (e) => {
+      const data = e.data;
+      if (data.event == "execution_result") {
+        if (data.status == "successful") {
+          console.log("Total Test Cases Passed: ", data.passed_count);
+        } else if (data.status == "failed") {
+          console.log("Failed Test Case: ", data.failed_test_case);
+        }
+      }
+    };
+    setSocket(socket);
+  }, []);
 
   // Fetch interview data to get job_id
   const { data: interviewData, isLoading: isLoadingInterview } = useQuery({
@@ -77,9 +102,9 @@ const DSAPlayground = () => {
 
   const handleComplete = () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const i_id = urlParams.get('i_id');
-    const company = urlParams.get('company');
-    
+    const i_id = urlParams.get("i_id");
+    const company = urlParams.get("company");
+
     if (i_id && company) {
       navigate(`/interview/video?i_id=${i_id}&company=${company}`);
     }
