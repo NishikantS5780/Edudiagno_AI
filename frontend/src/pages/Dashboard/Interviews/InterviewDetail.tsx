@@ -366,6 +366,32 @@ const InterviewDetail = () => {
                 {interview.overallScore || 0}%
               </span>
             </div>
+            <div className="flex items-center justify-between">
+              <span>MCQ Score:</span>
+              <span className="text-xl font-bold text-green-600">
+                25/30
+              </span>
+            </div>
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Technical MCQs:</span>
+                <span className="text-sm font-medium">15/18</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Aptitude MCQs:</span>
+                <span className="text-sm font-medium">10/12</span>
+              </div>
+            </div>
+            <div className="pt-4">
+              <Button 
+                variant="outline" 
+                className="w-full flex items-center justify-center gap-2"
+                onClick={() => setInterviewTab("mcq")}
+              >
+                <FileText className="h-4 w-4" />
+                View MCQ Responses
+              </Button>
+            </div>
             <div className="grid grid-cols-2 gap-4 pt-4 border-t">
               <div>
                 <p className="text-sm text-muted-foreground">Technical Skills</p>
@@ -442,6 +468,7 @@ const InterviewDetail = () => {
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
           <TabsTrigger value="video">Video</TabsTrigger>
           <TabsTrigger value="questions">Questions & Responses</TabsTrigger>
+          <TabsTrigger value="mcq">MCQ Responses</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -567,6 +594,96 @@ const InterviewDetail = () => {
                   </p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="mcq" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">MCQ Responses</CardTitle>
+              <CardDescription>
+                Review the candidate's answers to multiple choice questions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-8">
+                {/* Technical MCQs */}
+                <div>
+                  <h3 className="text-md font-medium mb-4">Technical Questions</h3>
+                  <div className="space-y-6">
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <div key={`tech-${num}`} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="font-medium">Question {num}</p>
+                          <Badge variant={num % 2 === 0 ? "success" : "destructive"}>
+                            {num % 2 === 0 ? "Correct" : "Incorrect"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          What is the time complexity of binary search algorithm?
+                        </p>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded-full border ${num % 2 === 0 ? "bg-green-500 border-green-600" : "bg-red-500 border-red-600"}`}></div>
+                            <p className="text-sm">O(log n)</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
+                            <p className="text-sm text-muted-foreground">O(n)</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
+                            <p className="text-sm text-muted-foreground">O(n²)</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
+                            <p className="text-sm text-muted-foreground">O(1)</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Aptitude MCQs */}
+                <div>
+                  <h3 className="text-md font-medium mb-4">Aptitude Questions</h3>
+                  <div className="space-y-6">
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <div key={`apt-${num}`} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="font-medium">Question {num}</p>
+                          <Badge variant={num % 3 === 0 ? "destructive" : "success"}>
+                            {num % 3 === 0 ? "Incorrect" : "Correct"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          If a train travels at 60 km/h for 2 hours, how far does it travel?
+                        </p>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded-full border ${num % 3 !== 0 ? "bg-green-500 border-green-600" : "bg-red-500 border-red-600"}`}></div>
+                            <p className="text-sm">120 km</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
+                            <p className="text-sm text-muted-foreground">90 km</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
+                            <p className="text-sm text-muted-foreground">150 km</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
+                            <p className="text-sm text-muted-foreground">180 km</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
