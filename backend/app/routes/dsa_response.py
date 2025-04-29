@@ -179,7 +179,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             .join(DSATestCase, DSATestCase.id == DSATestCaseResponse.dsa_test_case_id)
             .where(DSATestCaseResponse.task_id == taskUID)
         )
-        data = db.execute(stmt).all()[0]._mapping
+        data = dict(db.execute(stmt).all()[0]._mapping)
 
         print(interview_connection_manager.active_connections, data["id"])
 
