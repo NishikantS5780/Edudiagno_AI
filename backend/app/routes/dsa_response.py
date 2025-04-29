@@ -180,6 +180,9 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             .where(DSATestCaseResponse.task_id == taskUID)
         )
         data = db.execute(stmt).all()[0]._mapping
+
+        print(interview_connection_manager.active_connections, data["id"])
+
         interview_connection_manager.active_connections[data["id"]].send_json(
             {"event": "execution_reult", "status": "failed", "failed_test_case": data}
         )
