@@ -185,7 +185,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
         await interview_connection_manager.send_data(
             data["interview_id"],
             {
-                "event": "execution_reult",
+                "event": "execution_result",
                 "status": "failed",
                 "failed_test_case": {
                     "test_case_id": data["dsa_test_case_id"],
