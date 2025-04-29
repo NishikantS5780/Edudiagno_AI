@@ -162,6 +162,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     )
     result = db.execute(stmt)
     db.commit()
+    print(result.all()[0]._mapping)
     dsa_response_id = result.all()[0]._mapping["ds_response_id"]
 
     if runStatus != "successful":
