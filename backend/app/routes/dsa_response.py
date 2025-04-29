@@ -49,6 +49,7 @@ async def ws(
     await interview_connection_manager.connect(
         interview_id=interview_id, websocket=websocket
     )
+    print(interview_connection_manager.active_connections)
 
     async for data in websocket.iter_json():
         print(data)
