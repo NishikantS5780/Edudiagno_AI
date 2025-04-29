@@ -201,6 +201,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             DSAResponse.interview_id,
         )
         .join(DSAResponse, DSAResponse.id == DSATestCaseResponse.dsa_response_id)
+        .group_by(DSAResponse.interview_id)
         .where(
             and_(
                 DSATestCaseResponse.dsa_response_id == dsa_response_id,
