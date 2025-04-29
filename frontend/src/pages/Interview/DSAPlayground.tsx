@@ -56,8 +56,10 @@ const DSAPlayground = () => {
       if (data.event == "execution_result") {
         if (data.status == "successful") {
           console.log("Total Test Cases Passed: ", data.passed_count);
+          setCompilationStatus("Passed All Test Cases");
         } else if (data.status == "failed") {
           console.log("Failed Test Case: ", data.failed_test_case);
+          setCompilationStatus(data.failed_test_case);
         }
       }
     };

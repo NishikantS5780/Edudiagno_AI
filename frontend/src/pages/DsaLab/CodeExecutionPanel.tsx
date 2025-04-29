@@ -321,6 +321,7 @@ function CodeExecutionPanel({
         <div className="flex justify-between items-center p-4 bg-[#27272a] border-b border-[#3f3f46]">
           <div className="flex items-center gap-3">
             <button
+              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-green-500/20"
               onClick={() => {
                 setOutput("");
                 setCodeError("");
@@ -343,22 +344,23 @@ function CodeExecutionPanel({
                 });
               }}
             >
-              Run Via Backend
+              <Play size={16} />
+              Run Code
             </button>
-            <button
+            {/* <button
               className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-green-500/20"
               onClick={handleCodeRun}
             >
               <Play size={16} />
               <span>Run Code</span>
-            </button>
-            <button
+            </button> */}
+            {/* <button
               className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-blue-500/20"
               onClick={handleViewStatus}
             >
               <Terminal size={16} />
               <span>View Status</span>
-            </button>
+            </button> */}
             <div className="relative">
               <select
                 value={selectedLanguage}
