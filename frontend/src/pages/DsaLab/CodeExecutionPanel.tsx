@@ -12,6 +12,7 @@ interface CodeExecutionPanelProps {
   expectedOutput: string;
   onCompilationStatusChange?: (status: string) => void;
   onSuccessRateChange?: (rate: string) => void;
+  compilationStatus: string;
 }
 
 function CodeExecutionPanel({
@@ -19,11 +20,12 @@ function CodeExecutionPanel({
   expectedOutput,
   onCompilationStatusChange,
   onSuccessRateChange,
+  compilationStatus,
 }: CodeExecutionPanelProps) {
   const [taskId, setTaskId] = React.useState("");
   const [output, setOutput] = React.useState("");
   const [codeError, setCodeError] = React.useState("");
-  const [syntaxError, setSyntaxError] = React.useState("");
+  const [executionError, setSyntaxError] = React.useState("");
   const [runStatus, setRunStatus] = React.useState("");
   const [successRate, setSuccessRate] = React.useState("0%");
   const apiKey = import.meta.env.VITE_FERMION_API_KEY;
@@ -498,13 +500,13 @@ function CodeExecutionPanel({
                     </pre>
                   </div>
                 )}
-                {syntaxError && (
+                {executionError && (
                   <div className="text-red-500 bg-[#27272a] p-3 rounded-lg">
                     <h3 className="font-semibold mb-1 text-red-400">
                       Compilation Error:
                     </h3>
                     <pre className="whitespace-pre-wrap font-mono text-sm">
-                      {syntaxError}
+                      {executionError}
                     </pre>
                   </div>
                 )}
@@ -514,12 +516,10 @@ function CodeExecutionPanel({
                   </span>
                   <span
                     className={`${
-                      !syntaxError ? "text-green-400" : "text-red-500"
+                      !executionError ? "text-green-400" : "text-red-500"
                     } font-mono`}
                   >
-                    {!syntaxError
-                      ? "Successfully Compiled"
-                      : "Compilation Failed"}
+                    {compilationStatus}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">

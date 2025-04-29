@@ -277,6 +277,7 @@ const DSAPlayground = () => {
                     expectedOutput={testCases[0]?.expected_output || ""}
                     onCompilationStatusChange={setCompilationStatus}
                     onSuccessRateChange={setSuccessRate}
+                    compilationStatus={compilationStatus}
                   />
                 </CardContent>
               </Card>
