@@ -19,9 +19,7 @@ class InterviewConnectionManager:
 
     async def connect(self, interview_id: int, websocket: WebSocket):
         await websocket.accept()
-        print(self.active_connections)
         self.active_connections[interview_id] = websocket
-        print(self.active_connections)
 
     def disconnect(self, interview_id: int):
         self.active_connections.pop(interview_id, None)
@@ -169,7 +167,10 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     if runStatus != "successful":
         stmt = (
             select(
-                Interview.id, DSATestCaseResponse.status, DSATestCase.expected_output
+                Interview.id.label("interview_id"),
+                DSATestCaseResponse.dsa_test_case_id,
+                DSATestCaseResponse.status,
+                DSATestCase.expected_output,
             )
             .join(DSAResponse, DSAResponse.interview_id == Interview.id)
             .join(
@@ -181,11 +182,17 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
         )
         data = dict(db.execute(stmt).all()[0]._mapping)
 
-        print(interview_connection_manager.active_connections, data["id"])
-
         await interview_connection_manager.send_data(
-            data["id"],
-            {"event": "execution_reult", "status": "failed", "failed_test_case": data},
+            data["interview_id"],
+            {
+                "event": "execution_reult",
+                "status": "failed",
+                "failed_test_case": {
+                    "test_case_id": data["dsa_test_case_id"],
+                    "status": data["status"],
+                    "expected_output": data["expected_output"],
+                },
+            },
         )
 
     stmt = (
