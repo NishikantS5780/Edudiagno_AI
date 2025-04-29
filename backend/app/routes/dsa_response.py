@@ -193,13 +193,13 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             DSATestCaseResponse.status == "successful",
         )
     )
-    passed_count = db.execute(stmt).all()[0]["passed_count"]
+    passed_count = db.execute(stmt).all()[0]._mapping["passed_count"]
     stmt = (
         select(func.count(DSATestCase.id).label("total_count"))
         .join(DSAResponse, DSAResponse.question_id == DSATestCase.dsa_question_id)
         .where(DSAResponse.id == dsa_response_id)
     )
-    total_count = db.execute(stmt).all()[0]["total_count"]
+    total_count = db.execute(stmt).all()[0]._mapping["total_count"]
 
     if total_count == passed_count:
         interview_connection_manager.active_connections[data[0].interview_id].send_json(
