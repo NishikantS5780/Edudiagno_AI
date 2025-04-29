@@ -19,7 +19,9 @@ class InterviewConnectionManager:
 
     async def connect(self, interview_id: int, websocket: WebSocket):
         await websocket.accept()
+        print(self.active_connections)
         self.active_connections[interview_id] = websocket
+        print(self.active_connections)
 
     def disconnect(self, interview_id: int):
         self.active_connections.pop(interview_id, None)
@@ -47,6 +49,7 @@ async def ws(
     await interview_connection_manager.connect(
         interview_id=interview_id, websocket=websocket
     )
+    print(interview_connection_manager.active_connections)
 
     async for data in websocket.iter_json():
         print(data)
@@ -162,7 +165,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     )
     result = db.execute(stmt)
     db.commit()
-    dsa_response_id = result.all()[0]._mapping["ds_response_id"]
+    dsa_response_id = result.all()[0]._mapping["dsa_response_id"]
 
     if runStatus != "successful":
         stmt = (
@@ -177,8 +180,11 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             .join(DSATestCase, DSATestCase.id == DSATestCaseResponse.dsa_test_case_id)
             .where(DSATestCaseResponse.task_id == taskUID)
         )
-        data = db.execute(stmt).all()[0]
-        interview_connection_manager.active_connections[data[0].interview_id].send_json(
+        data = db.execute(stmt).all()[0]._mapping
+
+        print(interview_connection_manager.active_connections, data["id"])
+
+        interview_connection_manager.active_connections[data["id"]].send_json(
             {"event": "execution_reult", "status": "failed", "failed_test_case": data}
         )
 
