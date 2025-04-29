@@ -49,7 +49,6 @@ async def ws(
     await interview_connection_manager.connect(
         interview_id=interview_id, websocket=websocket
     )
-    print(interview_connection_manager.active_connections)
 
     async for data in websocket.iter_json():
         print(data)
@@ -188,7 +187,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             {"event": "execution_reult", "status": "failed", "failed_test_case": data}
         )
 
-    stmt = select(func.count(DSATestCaseResponse.id).label("passed_count")).where(
+    stmt = select(func.count(DSATestCaseResponse.task_id).label("passed_count")).where(
         and_(
             DSATestCaseResponse.dsa_response_id == dsa_response_id,
             DSATestCaseResponse.status == "successful",
