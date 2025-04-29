@@ -12,6 +12,11 @@ const InterviewPage = () => {
   const [loading, setLoading] = useState(true);
   const [jobDetails, setJobDetails] = useState<CandidateJobData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState({
+    description: false,
+    requirements: false,
+    benefits: false
+  });
 
   useEffect(() => {
     const fetchJobDetails = async () => {
@@ -32,6 +37,7 @@ const InterviewPage = () => {
           id: data.id,
           title: data.title,
           location: data.location,
+          city: data.city,
           type: data.type,
           description: data.description || "",
           createdAt: data.created_at,
@@ -57,6 +63,13 @@ const InterviewPage = () => {
 
     fetchJobDetails();
   }, [urlSearchParams]);
+
+  const toggleSection = (section: 'description' | 'requirements' | 'benefits') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   if (loading) {
     return (
@@ -101,71 +114,179 @@ const InterviewPage = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>{jobDetails.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <div>
+      {/* Top Bar */}
+      <div className="border-b">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img
-              src={jobDetails.companyLogo}
-              alt={jobDetails.companyName}
-              className="w-16 h-16 rounded-lg object-cover"
-            />
-            <div>
-              <h2 className="font-semibold">{jobDetails.companyName}</h2>
-              <p className="text-sm text-muted-foreground">
-                {jobDetails.location}
-              </p>
+            <span className="font-semibold text-xl">{jobDetails.companyName}</span>
+            <span className="h-6 w-px bg-border"></span>
+            <span className="text-muted-foreground text-sm">powered by Edudiagno AI Interviewer</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold mb-4">Hey there, interview champion! Ready to crush it?</h1>
+          <p className="text-muted-foreground">
+            We appreciate your participation and look forward to providing you with a seamless, efficient, and professional interview
+            experience that will assess communication, technical skills and suitability to the interview owner(employer)
+          </p>
+
+          <div className="flex flex-wrap gap-4 mt-6">
+            <div className="bg-primary/5 rounded-lg px-4 py-2">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Job Role</span>
+              </div>
+              <div className="font-medium">{jobDetails?.title}</div>
+            </div>
+            <div className="bg-primary/5 rounded-lg px-4 py-2">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Work Experience</span>
+              </div>
+              <div className="font-medium">Mid Level (1-4 Years)</div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="font-medium">Job Description</h3>
-            <p className="text-muted-foreground whitespace-pre-wrap">
-              {jobDetails.description || "No description available"}
-            </p>
+          <div className="flex flex-wrap items-center gap-4 mt-4">
+            <div className="flex items-center gap-2">
+              <img
+                src={jobDetails?.companyLogo || "https://placehold.co/30"}
+                alt={jobDetails?.companyName}
+                className="w-6 h-6 rounded object-cover"
+              />
+              <span>{jobDetails?.companyName}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-muted-foreground"></span>
+              <span>10min</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-muted-foreground"></span>
+              <span>Video Interview</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-muted-foreground"></span>
+              <span>English</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Job Description</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <p className={`text-muted-foreground whitespace-pre-wrap ${!expandedSections.description && "line-clamp-3"}`}>
+                    {jobDetails?.description || "No description available"}
+                  </p>
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto font-medium underline"
+                    onClick={() => toggleSection('description')}
+                  >
+                    {expandedSections.description ? "Show Less" : "Read More"}
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-medium">Requirements</h3>
+                  <p className={`text-muted-foreground whitespace-pre-wrap ${!expandedSections.requirements && "line-clamp-3"}`}>
+                    {jobDetails?.requirements || "No requirements listed"}
+                  </p>
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto font-medium underline"
+                    onClick={() => toggleSection('requirements')}
+                  >
+                    {expandedSections.requirements ? "Show Less" : "Read More"}
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-medium">Benefits</h3>
+                  <p className={`text-muted-foreground whitespace-pre-wrap ${!expandedSections.benefits && "line-clamp-3"}`}>
+                    {jobDetails?.benefits || "No benefits listed"}
+                  </p>
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto font-medium underline"
+                    onClick={() => toggleSection('benefits')}
+                  >
+                    {expandedSections.benefits ? "Show Less" : "Read More"}
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-medium">Compensation</h3>
+                  <p className="text-muted-foreground">
+                    {jobDetails?.salaryMin && jobDetails?.salaryMax
+                      ? `$${jobDetails.salaryMin.toLocaleString()} - $${jobDetails.salaryMax.toLocaleString()}`
+                      : "Not specified"}
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-medium">Interview Process</h3>
+                  <p className="text-muted-foreground">
+                    This interview will be conducted using our AI-powered platform.
+                    You'll be asked to:
+                  </p>
+                  <ul className="list-disc list-inside space-y-2 text-muted-foreground">
+                    <li>Upload your resume</li>
+                    <li>Complete a compatibility check</li>
+                    <li>Record video responses to interview questions</li>
+                    <li>Receive immediate feedback on your performance</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="font-medium">Requirements</h3>
-            <p className="text-muted-foreground whitespace-pre-wrap">
-              {jobDetails.requirements || "No requirements listed"}
-            </p>
-          </div>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Job Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-sm text-muted-foreground">Workplace Type</h3>
+                  <p className="font-medium">{jobDetails?.type === 'onsite' ? 'On-Site' : jobDetails?.type === 'remote' ? 'Remote' : 'Hybrid'}</p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm text-muted-foreground">Employment Type</h3>
+                  <p className="font-medium">Full-Time</p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm text-muted-foreground">Location</h3>
+                  <p className="font-medium">
+                    {jobDetails?.type === 'remote' 
+                      ? `Remote${jobDetails?.city ? `, ${jobDetails.city}` : ''}`
+                      : jobDetails?.city || 'Not specified'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <div className="space-y-4">
-            <h3 className="font-medium">Benefits</h3>
-            <p className="text-muted-foreground whitespace-pre-wrap">
-              {jobDetails.benefits || "No benefits listed"}
-            </p>
-          </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Major Skills to be assessed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  <span className="bg-secondary px-3 py-1 rounded-full text-sm">Python</span>
+                  <span className="bg-secondary px-3 py-1 rounded-full text-sm">Data Modeling</span>
+                  <span className="bg-secondary px-3 py-1 rounded-full text-sm">SQL</span>
+                  <span className="bg-secondary px-3 py-1 rounded-full text-sm">AWS</span>
+                  <span className="bg-secondary px-3 py-1 rounded-full text-sm">Big Data</span>
+                </div>
+              </CardContent>
+            </Card>
 
-          <div className="space-y-4">
-            <h3 className="font-medium">Compensation</h3>
-            <p className="text-muted-foreground">
-              {jobDetails.salaryMin && jobDetails.salaryMax
-                ? `$${jobDetails.salaryMin.toLocaleString()} - $${jobDetails.salaryMax.toLocaleString()}`
-                : "Not specified"}
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="font-medium">Interview Process</h3>
-            <p className="text-muted-foreground">
-              This interview will be conducted using our AI-powered platform.
-              You'll be asked to:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li>Upload your resume</li>
-              <li>Complete a compatibility check</li>
-              <li>Record video responses to interview questions</li>
-              <li>Receive immediate feedback on your performance</li>
-            </ul>
-          </div>
-
-          <div className="pt-4">
             <Button
               size="lg"
               className="w-full"
@@ -177,11 +298,11 @@ const InterviewPage = () => {
                 )
               }
             >
-              Start Interview
+              Let's Proceed
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

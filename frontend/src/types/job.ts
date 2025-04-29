@@ -34,4 +34,33 @@ export interface JobData {
     options: string[];
     correct_options: number[];
   }>;
+}
+
+export interface CandidateJobData {
+  id?: number;
+  title?: string;
+  department?: string;
+  location?: string;
+  type?: string;
+  description?: string;
+  requirements?: string;
+  benefits?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  createdAt?: string;
+  requires_dsa?: boolean;
+  city?: string;
+  dsa_questions?: Array<{
+    title: string;
+    description: string;
+    difficulty: string;
+    test_cases: Array<{
+      input: string;
+      expected_output: string;
+    }>;
+  }>;
+
+  companyId: number;
+  companyName: string;
+  companyLogo: string | null;
 } 
