@@ -19,9 +19,7 @@ class InterviewConnectionManager:
 
     async def connect(self, interview_id: int, websocket: WebSocket):
         await websocket.accept()
-        print(self.active_connections)
         self.active_connections[interview_id] = websocket
-        print(self.active_connections)
 
     def disconnect(self, interview_id: int):
         self.active_connections.pop(interview_id, None)
@@ -49,7 +47,6 @@ async def ws(
     await interview_connection_manager.connect(
         interview_id=interview_id, websocket=websocket
     )
-    print(interview_connection_manager.active_connections)
 
     async for data in websocket.iter_json():
         print(data)
@@ -170,7 +167,10 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     if runStatus != "successful":
         stmt = (
             select(
-                Interview.id, DSATestCaseResponse.status, DSATestCase.expected_output
+                Interview.id.label("interview_id"),
+                DSATestCaseResponse.dsa_test_case_id,
+                DSATestCaseResponse.status,
+                DSATestCase.expected_output,
             )
             .join(DSAResponse, DSAResponse.interview_id == Interview.id)
             .join(
@@ -180,35 +180,51 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             .join(DSATestCase, DSATestCase.id == DSATestCaseResponse.dsa_test_case_id)
             .where(DSATestCaseResponse.task_id == taskUID)
         )
-        data = db.execute(stmt).all()[0]._mapping
+        data = dict(db.execute(stmt).all()[0]._mapping)
 
-        print(interview_connection_manager.active_connections, data["id"])
-
-        interview_connection_manager.active_connections[data["id"]].send_json(
-            {"event": "execution_reult", "status": "failed", "failed_test_case": data}
+        await interview_connection_manager.send_data(
+            data["interview_id"],
+            {
+                "event": "execution_reult",
+                "status": "failed",
+                "failed_test_case": {
+                    "test_case_id": data["dsa_test_case_id"],
+                    "status": data["status"],
+                    "expected_output": data["expected_output"],
+                },
+            },
         )
 
-    stmt = select(func.count(DSATestCaseResponse.id).label("passed_count")).where(
-        and_(
-            DSATestCaseResponse.dsa_response_id == dsa_response_id,
-            DSATestCaseResponse.status == "successful",
+    stmt = (
+        select(
+            func.count(DSATestCaseResponse.task_id).label("passed_count"),
+            DSAResponse.interview_id,
+        )
+        .join(DSAResponse, DSAResponse.id == DSATestCaseResponse.dsa_response_id)
+        .where(
+            and_(
+                DSATestCaseResponse.dsa_response_id == dsa_response_id,
+                DSATestCaseResponse.status == "successful",
+            )
         )
     )
-    passed_count = db.execute(stmt).all()[0]["passed_count"]
+    data = db.execute(stmt).all()[0]._mapping
+    passed_count = data["passed_count"]
     stmt = (
         select(func.count(DSATestCase.id).label("total_count"))
         .join(DSAResponse, DSAResponse.question_id == DSATestCase.dsa_question_id)
         .where(DSAResponse.id == dsa_response_id)
     )
-    total_count = db.execute(stmt).all()[0]["total_count"]
+    total_count = db.execute(stmt).all()[0]._mapping["total_count"]
 
     if total_count == passed_count:
-        interview_connection_manager.active_connections[data[0].interview_id].send_json(
+        await interview_connection_manager.send_data(
+            data["interview_id"],
             {
                 "event": "execution_result",
                 "status": "successful",
                 "passed_count": passed_count,
-            }
+            },
         )
 
 
