@@ -1,7 +1,7 @@
 import datetime
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app import database, models, schemas
 from app.dependencies.authorization import authorize_recruiter
@@ -91,4 +91,73 @@ async def verify_recruiter_access_token(
     stmt = select(Recruiter).where(Recruiter.id == recruiter_id)
     recruiter = db.execute(stmt).scalars().all()[0]
 
+    return recruiter
+
+
+@router.post("/send-otp")
+async def send_otp(
+    send_otp_data: schemas.RecruiterSendEmailOtp, db: Session = Depends(database.get_db)
+):
+    import random
+    import time
+
+    # otp = int(random.random() * 1000000)
+    otp = 111111
+    stmt = (
+        update(Recruiter)
+        .values(
+            email_otp=otp,
+            email_otp_expiry=datetime.datetime.now()
+            .astimezone()
+            .astimezone(tz=datetime.timezone.utc)
+            .replace(tzinfo=None)
+            + datetime.timedelta(seconds=60),
+        )
+        .where(Recruiter.email == send_otp_data.email)
+    )
+    db.execute(stmt)
+    db.commit()
+    return {"message": "successfully sent otp"}
+
+
+@router.post("/verify-otp")
+async def verify_otp(
+    response: Response,
+    verify_otp_data: schemas.RecruiterVerifyEmailOtp,
+    db: Session = Depends(database.get_db),
+):
+    stmt = select(Recruiter.email_otp, Recruiter.email_otp_expiry).where(
+        Recruiter.email == verify_otp_data.email
+    )
+    recruiter = db.execute(stmt).all()[0]._mapping
+
+    if recruiter["email_otp_expiry"] < datetime.datetime.now().astimezone().astimezone(
+        tz=datetime.timezone.utc
+    ).replace(tzinfo=None):
+        response.status_code = 400
+        return {"message": "otp expired"}
+
+    if recruiter["email_otp"] != verify_otp_data.otp:
+        response.status_code = 400
+        return {"message": "invalid otp"}
+
+    stmt = (
+        update(Recruiter)
+        .values(email_verified=True)
+        .where(Recruiter.email == verify_otp_data.email)
+        .returning(Recruiter)
+    )
+    result = db.execute(stmt)
+    db.commit()
+    recruiter = result.scalars().all()[0]
+
+    encoded_jwt = jwt.encode(
+        {
+            "id": recruiter.id,
+            "exp": datetime.datetime.now(tz=datetime.timezone.utc)
+            + datetime.timedelta(days=1),
+        }
+    )
+
+    response.headers["Authorization"] = f"Bearer {encoded_jwt}"
     return recruiter

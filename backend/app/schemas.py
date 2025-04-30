@@ -40,8 +40,14 @@ class Recruiter(BaseModel):
     zip: Optional[str]
     address: Optional[str]
 
-    class Config:
-        orm_mode = True
+
+class RecruiterSendEmailOtp(BaseModel):
+    email: str
+
+
+class RecruiterVerifyEmailOtp(BaseModel):
+    email: str
+    otp: str
 
 
 class CreateJob(BaseModel):
