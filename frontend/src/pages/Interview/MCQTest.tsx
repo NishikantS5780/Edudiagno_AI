@@ -43,12 +43,25 @@ const MCQTest = () => {
     technical: (number | number[])[];
     aptitude: (number | number[])[];
   }>({ technical: [], aptitude: [] });
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [timeLeft, setTimeLeft] = useState(0);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [isCountingDown, setIsCountingDown] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [warningShown, setWarningShown] = useState(false);
+
+  // Calculate total time based on number of questions
+  const calculateTotalTime = (questions: QuizQuestion[]) => {
+    const totalQuestions = questions.length;
+    if (totalQuestions <= 5) {
+      return 5 * 60; // 5 minutes
+    } else if (totalQuestions <= 10) {
+      return 10 * 60; // 10 minutes
+    } else {
+      return (10 * 60) + ((totalQuestions - 10) * 90); // 10 minutes + 90 seconds per additional question
+    }
+  };
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -106,8 +119,21 @@ const MCQTest = () => {
     
     if (isTestStarted && timeLeft > 0) {
       timer = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        setTimeLeft((prev) => {
+          const newTime = prev - 1;
+          
+          // Show warning when 1 minute is left
+          if (newTime === 60 && !warningShown) {
+            toast.warning("1 minute remaining!");
+            setWarningShown(true);
+          }
+          
+          return newTime;
+        });
       }, 1000);
+    } else if (isTestStarted && timeLeft === 0) {
+      // Time's up, submit the test
+      handleSubmit();
     }
 
     return () => {
@@ -115,7 +141,7 @@ const MCQTest = () => {
         clearInterval(timer);
       }
     };
-  }, [timeLeft, isTestStarted]);
+  }, [timeLeft, isTestStarted, warningShown]);
 
   useEffect(() => {
     let countdownTimer: NodeJS.Timeout;
@@ -127,7 +153,9 @@ const MCQTest = () => {
     } else if (isCountingDown && countdown === 0) {
       setIsCountingDown(false);
       setIsTestStarted(true);
-      setTimeLeft(600);
+      // Set initial time based on current section's questions
+      const currentQuestions = questions[currentSection];
+      setTimeLeft(calculateTotalTime(currentQuestions));
     }
 
     return () => {
@@ -135,7 +163,7 @@ const MCQTest = () => {
         clearInterval(countdownTimer);
       }
     };
-  }, [countdown, isCountingDown]);
+  }, [countdown, isCountingDown, questions, currentSection]);
 
   const handleAnswerSelect = (questionIndex: number, optionId: number) => {
     const currentQuestions = questions[currentSection];
