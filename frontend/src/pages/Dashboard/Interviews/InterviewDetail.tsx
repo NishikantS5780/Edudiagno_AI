@@ -68,6 +68,24 @@ interface RecordedResponse {
   videoUrl: string;
 }
 
+interface QuizOption {
+  id: number;
+  label: string;
+  correct: boolean;
+}
+
+interface QuizQuestion {
+  id: number;
+  description: string;
+  type: string;
+  options: QuizOption[];
+}
+
+interface QuizResponse {
+  question_id: number;
+  option_id: number;
+}
+
 const InterviewDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -79,6 +97,13 @@ const InterviewDetail = () => {
   const [job, setJob] = useState<JobData | null>(null);
   const [loading, setLoading] = useState(true);
   const [questionsAndResponses, setQuestionsAndResponses] = useState<any[]>([]);
+  const [quizResponses, setQuizResponses] = useState<QuizResponse[]>([]);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [mcqScores, setMcqScores] = useState({
+    total: { correct: 0, total: 0 },
+    technical: { correct: 0, total: 0 },
+    aptitude: { correct: 0, total: 0 }
+  });
 
   useEffect(() => {
     const fetchInterview = async () => {
@@ -163,6 +188,146 @@ const InterviewDetail = () => {
 
     fetchInterview();
   }, [id, navigate]);
+
+  useEffect(() => {
+    const fetchQuizData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Authentication required");
+          return;
+        }
+
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        console.log('Base API URL:', baseUrl);
+        console.log('Interview ID:', id);
+        console.log('Token:', token.substring(0, 10) + '...');
+
+        // Get quiz responses
+        const responsesUrl = `${baseUrl}/api/quiz-response/recruiter-view?interview_id=${id}`;
+        console.log('Fetching responses from:', responsesUrl);
+        
+        const responsesRes = await fetch(responsesUrl, {
+          method: 'GET',
+          mode: 'cors',
+          credentials: 'include',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+
+        console.log('Responses status:', responsesRes.status);
+        if (!responsesRes.ok) {
+          const errorText = await responsesRes.text();
+          console.error('Quiz responses error:', errorText);
+          throw new Error(`HTTP error! status: ${responsesRes.status}`);
+        }
+
+        const quizResponses = await responsesRes.json();
+        console.log('Raw Quiz Responses:', JSON.stringify(quizResponses, null, 2));
+        // Extract the nested QuizResponse objects
+        const extractedResponses = quizResponses.map((item: any) => item.QuizResponse);
+        setQuizResponses(extractedResponses);
+
+        // Get quiz questions
+        const questionsUrl = `${baseUrl}/api/quiz-question?interview_id=${id}`;
+        console.log('Fetching questions from:', questionsUrl);
+        
+        const questionsRes = await fetch(questionsUrl, {
+          method: 'GET',
+          mode: 'cors',
+          credentials: 'include',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+
+        console.log('Questions status:', questionsRes.status);
+        if (!questionsRes.ok) {
+          const errorText = await questionsRes.text();
+          console.error('Quiz questions error:', errorText);
+          throw new Error(`HTTP error! status: ${questionsRes.status}`);
+        }
+
+        const quizQuestions = await questionsRes.json();
+        console.log('Raw Quiz Questions:', JSON.stringify(quizQuestions, null, 2));
+        setQuizQuestions(quizQuestions);
+
+        // Log the formatted quiz responses with labels
+        console.log('\nFormatted Quiz Responses:');
+        extractedResponses.forEach((response: QuizResponse) => {
+          const question = quizQuestions.find((q: QuizQuestion) => q.id === response.question_id);
+          if (question) {
+            const chosenOption = question.options.find((opt: QuizOption) => opt.id === response.option_id);
+            console.log({
+              question: question.description,
+              chosenAnswer: chosenOption ? chosenOption.label : 'No answer selected',
+              isCorrect: chosenOption ? chosenOption.correct : false,
+              allOptions: question.options.map((opt: QuizOption) => ({
+                label: opt.label,
+                correct: opt.correct,
+                chosen: opt.id === response.option_id
+              }))
+            });
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching quiz data:', error);
+        if (error instanceof Error) {
+          toast.error(`Failed to load quiz responses: ${error.message}`);
+        } else {
+          toast.error('Failed to load quiz responses');
+        }
+      }
+    };
+
+    if (id) {
+      fetchQuizData();
+    }
+  }, [id]);
+
+  useEffect(() => {
+    const calculateScores = () => {
+      if (quizResponses.length === 0 || quizQuestions.length === 0) return;
+
+      const scores = {
+        total: { correct: 0, total: quizResponses.length },
+        technical: { correct: 0, total: 0 },
+        aptitude: { correct: 0, total: 0 }
+      };
+
+      quizResponses.forEach(response => {
+        const question = quizQuestions.find(q => q.id === response.question_id);
+        if (!question) return;
+
+        const chosenOption = question.options.find(opt => opt.id === response.option_id);
+        if (chosenOption?.correct) {
+          scores.total.correct++;
+          if (question.type === 'technical') {
+            scores.technical.correct++;
+            scores.technical.total++;
+          } else if (question.type === 'aptitude') {
+            scores.aptitude.correct++;
+            scores.aptitude.total++;
+          }
+        } else {
+          if (question.type === 'technical') {
+            scores.technical.total++;
+          } else if (question.type === 'aptitude') {
+            scores.aptitude.total++;
+          }
+        }
+      });
+
+      setMcqScores(scores);
+    };
+
+    calculateScores();
+  }, [quizResponses, quizQuestions]);
 
   const copyInterviewLink = () => {
     const link = `${window.location.origin}/interviews?job_id=${id}`;
@@ -369,17 +534,17 @@ const InterviewDetail = () => {
             <div className="flex items-center justify-between">
               <span>MCQ Score:</span>
               <span className="text-xl font-bold text-green-600">
-                25/30
+                {mcqScores.total.correct}/{mcqScores.total.total}
               </span>
             </div>
             <div className="space-y-2 pt-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Technical MCQs:</span>
-                <span className="text-sm font-medium">15/18</span>
+                <span className="text-sm font-medium">{mcqScores.technical.correct}/{mcqScores.technical.total}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Aptitude MCQs:</span>
-                <span className="text-sm font-medium">10/12</span>
+                <span className="text-sm font-medium">{mcqScores.aptitude.correct}/{mcqScores.aptitude.total}</span>
               </div>
             </div>
             <div className="pt-4">
@@ -607,83 +772,139 @@ const InterviewDetail = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-8">
-                {/* Technical MCQs */}
-                <div>
-                  <h3 className="text-md font-medium mb-4">Technical Questions</h3>
-                  <div className="space-y-6">
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <div key={`tech-${num}`} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="font-medium">Question {num}</p>
-                          <Badge variant={num % 2 === 0 ? "success" : "destructive"}>
-                            {num % 2 === 0 ? "Correct" : "Incorrect"}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          What is the time complexity of binary search algorithm?
-                        </p>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded-full border ${num % 2 === 0 ? "bg-green-500 border-green-600" : "bg-red-500 border-red-600"}`}></div>
-                            <p className="text-sm">O(log n)</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
-                            <p className="text-sm text-muted-foreground">O(n)</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
-                            <p className="text-sm text-muted-foreground">O(n²)</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
-                            <p className="text-sm text-muted-foreground">O(1)</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {quizResponses.length > 0 ? (
+                <div className="space-y-8">
+                  {/* Technical Questions Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">Technical Questions</h3>
+                    <div className="space-y-6">
+                      {quizResponses
+                        .filter(response => {
+                          const question = quizQuestions.find(q => q.id === response.question_id);
+                          return question?.type === 'technical';
+                        })
+                        .map((response, index) => {
+                          const question = quizQuestions.find(q => q.id === response.question_id);
+                          if (!question) return null;
 
-                {/* Aptitude MCQs */}
-                <div>
-                  <h3 className="text-md font-medium mb-4">Aptitude Questions</h3>
-                  <div className="space-y-6">
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <div key={`apt-${num}`} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="font-medium">Question {num}</p>
-                          <Badge variant={num % 3 === 0 ? "destructive" : "success"}>
-                            {num % 3 === 0 ? "Incorrect" : "Correct"}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          If a train travels at 60 km/h for 2 hours, how far does it travel?
-                        </p>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded-full border ${num % 3 !== 0 ? "bg-green-500 border-green-600" : "bg-red-500 border-red-600"}`}></div>
-                            <p className="text-sm">120 km</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
-                            <p className="text-sm text-muted-foreground">90 km</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
-                            <p className="text-sm text-muted-foreground">150 km</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full border border-gray-300"></div>
-                            <p className="text-sm text-muted-foreground">180 km</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                          const chosenOption = question.options.find(opt => opt.id === response.option_id);
+                          
+                          return (
+                            <div key={index} className={`border rounded-lg p-4 ${
+                              chosenOption?.correct 
+                                ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
+                                : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                            }`}>
+                              <div className="flex justify-between items-start mb-2">
+                                <p className="font-medium text-foreground">Question {index + 1}</p>
+                                <Badge variant={chosenOption?.correct ? "success" : "destructive"}>
+                                  {chosenOption?.correct ? "Correct" : "Incorrect"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-4">
+                                {question.description}
+                              </p>
+                              <div className="space-y-2">
+                                {question.options.map((option: any) => (
+                                  <div key={option.id} className="flex items-center gap-2">
+                                    <div className={`w-4 h-4 rounded-full border ${
+                                      option.id === response.option_id 
+                                        ? option.correct 
+                                          ? "bg-green-500 border-green-600" 
+                                          : "bg-red-500 border-red-600"
+                                        : option.correct
+                                          ? "border-green-600"
+                                          : "border-gray-300"
+                                    }`}></div>
+                                    <p className={`text-sm ${
+                                      option.id === response.option_id 
+                                        ? option.correct 
+                                          ? "text-green-600 font-medium dark:text-green-400" 
+                                          : "text-red-600 font-medium dark:text-red-400"
+                                        : option.correct
+                                          ? "text-green-600 dark:text-green-400"
+                                          : "text-muted-foreground"
+                                    }`}>
+                                      {option.label}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+
+                  {/* Aptitude Questions Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">Aptitude Questions</h3>
+                    <div className="space-y-6">
+                      {quizResponses
+                        .filter(response => {
+                          const question = quizQuestions.find(q => q.id === response.question_id);
+                          return question?.type === 'aptitude';
+                        })
+                        .map((response, index) => {
+                          const question = quizQuestions.find(q => q.id === response.question_id);
+                          if (!question) return null;
+
+                          const chosenOption = question.options.find(opt => opt.id === response.option_id);
+                          
+                          return (
+                            <div key={index} className={`border rounded-lg p-4 ${
+                              chosenOption?.correct 
+                                ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
+                                : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                            }`}>
+                              <div className="flex justify-between items-start mb-2">
+                                <p className="font-medium text-foreground">Question {index + 1}</p>
+                                <Badge variant={chosenOption?.correct ? "success" : "destructive"}>
+                                  {chosenOption?.correct ? "Correct" : "Incorrect"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-4">
+                                {question.description}
+                              </p>
+                              <div className="space-y-2">
+                                {question.options.map((option: any) => (
+                                  <div key={option.id} className="flex items-center gap-2">
+                                    <div className={`w-4 h-4 rounded-full border ${
+                                      option.id === response.option_id 
+                                        ? option.correct 
+                                          ? "bg-green-500 border-green-600" 
+                                          : "bg-red-500 border-red-600"
+                                        : option.correct
+                                          ? "border-green-600"
+                                          : "border-gray-300"
+                                    }`}></div>
+                                    <p className={`text-sm ${
+                                      option.id === response.option_id 
+                                        ? option.correct 
+                                          ? "text-green-600 font-medium dark:text-green-400" 
+                                          : "text-red-600 font-medium dark:text-red-400"
+                                        : option.correct
+                                          ? "text-green-600 dark:text-green-400"
+                                          : "text-muted-foreground"
+                                    }`}>
+                                      {option.label}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground">
+                    No quiz responses available
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

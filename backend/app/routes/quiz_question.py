@@ -26,13 +26,15 @@ async def create_quiz_question(
 
 @router.get("")
 async def get_quiz_questions_for_interview(
-    db: Session = Depends(database.get_db), interview_id=Depends(authorize_candidate)
+    db: Session = Depends(database.get_db),
+    interview_id: str = None,
+    _=Depends(authorize_recruiter),  # Allow recruiter access
 ):
     stmt = (
         select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
         .join(Job, QuizQuestion.job_id == Job.id)
         .join(Interview, Interview.job_id == Job.id)
-        .where(Interview.id == interview_id)
+        .where(Interview.id == int(interview_id))
     )
     quiz_questions = [
         dict(quiz_question._mapping) for quiz_question in db.execute(stmt).all()
