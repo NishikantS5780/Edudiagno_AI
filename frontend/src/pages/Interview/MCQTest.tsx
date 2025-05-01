@@ -50,6 +50,10 @@ const MCQTest = () => {
   const [isCountingDown, setIsCountingDown] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [warningShown, setWarningShown] = useState(false);
+  const [markedForLater, setMarkedForLater] = useState<{
+    technical: boolean[];
+    aptitude: boolean[];
+  }>({ technical: [], aptitude: [] });
 
   // Calculate total time based on number of questions
   const calculateTotalTime = (questions: QuizQuestion[]) => {
@@ -101,6 +105,12 @@ const MCQTest = () => {
         setAnswers({
           technical: technicalQuestions.map((q: QuizQuestion) => q.answerType === 'multiple' ? [] : -1),
           aptitude: aptitudeQuestions.map((q: QuizQuestion) => q.answerType === 'multiple' ? [] : -1)
+        });
+
+        // Initialize markedForLater arrays
+        setMarkedForLater({
+          technical: new Array(technicalQuestions.length).fill(false),
+          aptitude: new Array(aptitudeQuestions.length).fill(false)
         });
 
         setIsLoading(false);
@@ -184,6 +194,9 @@ const MCQTest = () => {
     
     newAnswers[currentSection] = sectionAnswers;
     setAnswers(newAnswers);
+    
+    // Force a re-render of the number pad
+    setCurrentQuestionIndex(prev => prev);
   };
 
   const handleSubmit = async () => {
@@ -294,6 +307,22 @@ const MCQTest = () => {
   const handleNext = () => {
     if (currentQuestionIndex < questions[currentSection].length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
+    }
+  };
+
+  const handleMarkForLater = (index: number) => {
+    setMarkedForLater(prev => ({
+      ...prev,
+      [currentSection]: prev[currentSection].map((marked, i) => 
+        i === index ? !marked : marked
+      )
+    }));
+  };
+
+  const scrollToQuestion = (index: number) => {
+    const questionElement = document.getElementById(`question-${index}`);
+    if (questionElement) {
+      questionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -448,111 +477,186 @@ const MCQTest = () => {
       )}
 
       {isTestStarted && (
-        <div className="flex gap-6">
-          {/* Side Panel */}
-          <div className="w-64 shrink-0">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Questions</CardTitle>
-                <CardDescription>
-                  {currentSection === 'aptitude' 
-                    ? `${answers.aptitude.filter(a => a !== -1 && (Array.isArray(a) ? a.length > 0 : true)).length} of ${questions.aptitude.length} answered`
-                    : `${answers.technical.filter(a => a !== -1 && (Array.isArray(a) ? a.length > 0 : true)).length} of ${questions.technical.length} answered`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-medium mb-2">Aptitude Questions</h3>
-                    <div className="grid grid-cols-5 gap-2">
-                      {questions.aptitude.map((_, index) => (
-                        <Button
-                          key={index}
-                          variant={answers.aptitude[index] !== undefined && (Array.isArray(answers.aptitude[index]) ? answers.aptitude[index].length > 0 : true)
-                            ? "default"
-                            : "outline"}
-                          size="sm"
-                          className={`w-full h-10 ${
-                            answers.aptitude[index] !== undefined && (Array.isArray(answers.aptitude[index]) ? answers.aptitude[index].length > 0 : true)
-                              ? "bg-green-100 hover:bg-green-200 dark:bg-green-900/20 text-foreground"
-                              : ""
-                          }`}
-                          onClick={() => setCurrentSection('aptitude')}
-                        >
-                          {index + 1}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                  {questions.technical.length > 0 && (
-                    <div>
-                      <h3 className="font-medium mb-2">Technical Questions</h3>
-                      <div className="grid grid-cols-5 gap-2">
-                        {questions.technical.map((_, index) => (
-                          <Button
-                            key={index}
-                            variant={answers.technical[index] !== undefined && (Array.isArray(answers.technical[index]) ? answers.technical[index].length > 0 : true)
-                              ? "default"
-                              : "outline"}
-                            size="sm"
-                            className={`w-full h-10 ${
-                              answers.technical[index] !== undefined && (Array.isArray(answers.technical[index]) ? answers.technical[index].length > 0 : true)
-                                ? "bg-green-100 hover:bg-green-200 dark:bg-green-900/20 text-foreground"
-                                : ""
-                            }`}
-                            onClick={() => setCurrentSection('technical')}
-                          >
-                            {index + 1}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+        <div className="flex flex-col gap-6">
+          {/* Section Navigation */}
+          <div className="flex justify-between items-center p-4 bg-card rounded-lg border">
+            <div className="flex gap-4">
+              <Button
+                variant={currentSection === 'aptitude' ? 'default' : 'outline'}
+                onClick={() => setCurrentSection('aptitude')}
+              >
+                Aptitude Section
+                <Badge variant="secondary" className="ml-2">
+                  {answers.aptitude.filter(a => a !== -1 && (Array.isArray(a) ? a.length > 0 : true)).length}/{questions.aptitude.length}
+                </Badge>
+              </Button>
+              <Button
+                variant={currentSection === 'technical' ? 'default' : 'outline'}
+                onClick={() => setCurrentSection('technical')}
+              >
+                Technical Section
+                <Badge variant="secondary" className="ml-2">
+                  {answers.technical.filter(a => a !== -1 && (Array.isArray(a) ? a.length > 0 : true)).length}/{questions.technical.length}
+                </Badge>
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Timer className="h-5 w-5 text-destructive" />
+              <span className="font-medium">{formatTime(timeLeft)}</span>
+            </div>
           </div>
 
-          {/* Main Content */}
-          <div className="flex-1">
-            <Card>
-              <CardHeader>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
+          <div className="flex gap-6">
+            {/* Side Panel */}
+            <div className="w-64 shrink-0 sticky top-4 self-start">
+              <Card className="sticky top-4">
+                <CardHeader>
+                  <CardTitle className="text-lg">Questions</CardTitle>
+                  <CardDescription>
+                    {currentSection === 'aptitude' 
+                      ? `${answers.aptitude.filter(a => a !== -1 && (Array.isArray(a) ? a.length > 0 : true)).length} of ${questions.aptitude.length} answered`
+                      : `${answers.technical.filter(a => a !== -1 && (Array.isArray(a) ? a.length > 0 : true)).length} of ${questions.technical.length} answered`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
                     <div>
-                      <CardTitle>MCQ Test - {currentSection === 'aptitude' ? 'Aptitude' : 'Technical'} Section</CardTitle>
-                      <CardDescription>
-                        Time Remaining: {formatTime(timeLeft)}
-                      </CardDescription>
+                      <h3 className="font-medium mb-2">Aptitude Questions</h3>
+                      <div className="grid grid-cols-5 gap-2">
+                        {questions.aptitude.map((_, index) => {
+                          const isAnswered = answers.aptitude[index] !== -1 && 
+                            (Array.isArray(answers.aptitude[index]) ? answers.aptitude[index].length > 0 : true);
+                          const isMarked = markedForLater.aptitude[index];
+                          
+                          return (
+                            <Button
+                              key={index}
+                              variant={isMarked ? "secondary" : isAnswered ? "default" : "outline"}
+                              size="sm"
+                              className={`w-full h-10 ${
+                                isMarked
+                                  ? "bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100 border-2 border-amber-400"
+                                  : isAnswered
+                                    ? "bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 border-2 border-emerald-400"
+                                    : "hover:bg-accent"
+                              }`}
+                              onClick={() => {
+                                setCurrentSection('aptitude');
+                                scrollToQuestion(index);
+                              }}
+                            >
+                              {index + 1}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {questions.technical.length > 0 && (
+                      <div>
+                        <h3 className="font-medium mb-2">Technical Questions</h3>
+                        <div className="grid grid-cols-5 gap-2">
+                          {questions.technical.map((_, index) => {
+                            const isAnswered = answers.technical[index] !== -1 && 
+                              (Array.isArray(answers.technical[index]) ? answers.technical[index].length > 0 : true);
+                            const isMarked = markedForLater.technical[index];
+                            
+                            return (
+                              <Button
+                                key={index}
+                                variant={isMarked ? "secondary" : isAnswered ? "default" : "outline"}
+                                size="sm"
+                                className={`w-full h-10 ${
+                                  isMarked
+                                    ? "bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100 border-2 border-amber-400"
+                                    : isAnswered
+                                      ? "bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 border-2 border-emerald-400"
+                                      : "hover:bg-accent"
+                                }`}
+                                onClick={() => {
+                                  setCurrentSection('technical');
+                                  scrollToQuestion(index);
+                                }}
+                              >
+                                {index + 1}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1">
+              <Card>
+                <CardHeader>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>MCQ Test - {currentSection === 'aptitude' ? 'Aptitude' : 'Technical'} Section</CardTitle>
+                        <CardDescription>
+                          Time Remaining: {formatTime(timeLeft)}
+                        </CardDescription>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {questions[currentSection].map((question, index) => (
-                  <div 
-                    key={question.id} 
-                    className="p-6 rounded-lg border border-border"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Question {index + 1}</h3>
-                      <Badge variant="outline">
-                        {question.answerType === 'true_false' ? 'True/False' : 
-                         question.answerType === 'multiple' ? 'Multiple Choice' : 
-                         'Single Choice'}
-                      </Badge>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {questions[currentSection].map((question, index) => (
+                    <div 
+                      key={question.id} 
+                      id={`question-${index}`}
+                      className="p-6 rounded-lg border border-border"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                          <h3 className="text-lg font-semibold">Question {index + 1}</h3>
+                          <Badge variant="outline">
+                            {question.answerType === 'true_false' ? 'True/False' : 
+                             question.answerType === 'multiple' ? 'Multiple Choice' : 
+                             'Single Choice'}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant={markedForLater[currentSection][index] ? "secondary" : "outline"}
+                          size="sm"
+                          onClick={() => handleMarkForLater(index)}
+                          className={`${
+                            markedForLater[currentSection][index] 
+                              ? "bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/20 text-yellow-900 dark:text-yellow-100" 
+                              : "hover:bg-yellow-50 dark:hover:bg-yellow-900/10"
+                          }`}
+                        >
+                          {markedForLater[currentSection][index] ? "Marked for Later" : "Mark for Later"}
+                        </Button>
+                      </div>
+                      <p className="text-base mb-4">{question.description}</p>
+                      {renderQuestionOptions(question, index)}
                     </div>
-                    <p className="text-base mb-4">{question.description}</p>
-                    {renderQuestionOptions(question, index)}
-                  </div>
-                ))}
-              </CardContent>
-              <CardFooter className="flex justify-end border-t pt-6">
-                <Button onClick={handleSubmit}>
-                  {currentSection === 'aptitude' && questions.technical.length > 0 ? 'Next Section' : 'Submit'}
-                </Button>
-              </CardFooter>
-            </Card>
+                  ))}
+                </CardContent>
+                <CardFooter className="flex justify-end border-t pt-6">
+                  {currentSection === 'aptitude' && questions.technical.length > 0 ? (
+                    <Button onClick={() => setCurrentSection('technical')}>
+                      Next Section
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={handleSubmit}
+                      disabled={
+                        answers.aptitude.some(a => a === -1 || (Array.isArray(a) && a.length === 0)) ||
+                        answers.technical.some(a => a === -1 || (Array.isArray(a) && a.length === 0))
+                      }
+                    >
+                      Submit Test
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
+            </div>
           </div>
         </div>
       )}
