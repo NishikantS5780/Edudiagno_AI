@@ -218,6 +218,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
         )
     )
     data = db.execute(stmt).all()[0]._mapping
+    print(data)
     passed_count = data["passed_count"]
     stmt = (
         select(func.count(DSATestCase.id).label("total_count"))
