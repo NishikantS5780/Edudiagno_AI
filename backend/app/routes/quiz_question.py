@@ -28,7 +28,7 @@ async def create_quiz_question(
 async def get_quiz_questions_for_interview(
     db: Session = Depends(database.get_db),
     interview_id: str = None,
-    _=Depends(authorize_recruiter),  # Allow recruiter access
+    # _=Depends(authorize_recruiter),  # Allow recruiter access
 ):
     stmt = (
         select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)

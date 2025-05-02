@@ -171,6 +171,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 DSATestCaseResponse.dsa_test_case_id,
                 DSATestCaseResponse.status,
                 DSATestCase.expected_output,
+                DSATestCase.input,
             )
             .join(DSAResponse, DSAResponse.interview_id == Interview.id)
             .join(
@@ -190,6 +191,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 "failed_test_case": {
                     "test_case_id": data["dsa_test_case_id"],
                     "status": data["status"],
+                    "input": data["input"],
                     "expected_output": data["expected_output"],
                 },
             },
