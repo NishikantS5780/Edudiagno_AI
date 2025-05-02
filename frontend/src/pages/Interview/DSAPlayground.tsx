@@ -60,7 +60,7 @@ const DSAPlayground = () => {
         } else if (data.status == "failed") {
           console.log("Failed Test Case: ", data.failed_test_case);
           setCompilationStatus(
-            "Failed a test case \nInput: " + data.failed_test_case.input + "Expected output: " +
+            "Failed a test case \nInput: " + data.failed_test_case.input + "\nExpected output: " +
             data.failed_test_case.expected_output
           );
         }

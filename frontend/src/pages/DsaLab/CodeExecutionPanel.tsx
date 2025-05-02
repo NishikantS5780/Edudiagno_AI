@@ -269,7 +269,7 @@ function CodeExecutionPanel({
                     </pre>
                   </div>
                 )}
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
+                <div className="flex gap-2 bg-[#27272a] p-3 rounded-lg">
                   <span className="font-semibold text-gray-400">
                     Compilation Status:
                   </span>
