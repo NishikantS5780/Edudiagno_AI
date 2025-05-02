@@ -28,7 +28,7 @@ async def create_quiz_question(
 async def get_quiz_questions_for_interview(
     interview_id: str = None,
     db: Session = Depends(database.get_db),
-    auth=Depends(authorize_quiz_access),  # Use the new authorization function
+    auth=Depends(authorize_quiz_access),  
 ):
     if interview_id:
         stmt = (
