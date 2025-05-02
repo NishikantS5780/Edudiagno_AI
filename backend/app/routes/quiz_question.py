@@ -6,7 +6,6 @@ from app import database, schemas
 from app.dependencies.authorization import (
     authorize_candidate,
     authorize_recruiter,
-    authorize_quiz_access,
 )
 from app.models import Interview, Job, QuizOption, QuizQuestion
 
