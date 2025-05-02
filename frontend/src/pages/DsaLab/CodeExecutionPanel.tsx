@@ -99,6 +99,7 @@ function CodeExecutionPanel({
                     Authorization: `Bearer ${localStorage.getItem("i_token")}`,
                   },
                   body: JSON.stringify({
+                    language: selectedLanguage,
                     code: currentCode,
                     question_id: questionId,
                   }),
