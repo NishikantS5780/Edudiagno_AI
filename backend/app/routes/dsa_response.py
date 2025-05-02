@@ -154,6 +154,8 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
 
     taskUID = data["taskUniqueId"]
     runStatus = data["runResult"]["runStatus"]
+    output = data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
+
     stmt = (
         update(DSATestCaseResponse)
         .values({"status": runStatus})
@@ -193,6 +195,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                     "status": data["status"],
                     "input": data["input"],
                     "expected_output": data["expected_output"],
+                    "output": output,
                 },
             },
         )
