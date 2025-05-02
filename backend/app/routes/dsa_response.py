@@ -195,7 +195,12 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                     "status": data["status"],
                     "input": data["input"],
                     "expected_output": data["expected_output"],
-                    "output": output,
+                    "output": base64.urlsafe_b64decode(output).decode(),
+                    # base64.urlsafe_b64encode(
+                    #                         test_case["input"].encode()
+                    #                     )
+                    #                     .decode()
+                    #                     .rstrip("=")
                 },
             },
         )
