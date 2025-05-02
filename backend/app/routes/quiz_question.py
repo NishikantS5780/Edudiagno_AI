@@ -30,9 +30,7 @@ async def create_quiz_question(
 @router.get("")
 async def get_quiz_questions_for_interview(
     interview_id: str = None,
-    # _=Depends(authorize_recruiter),  # Allow recruiter access
     db: Session = Depends(database.get_db),
-    auth=Depends(authorize_quiz_access),  
 ):
     if interview_id:
         stmt = (
