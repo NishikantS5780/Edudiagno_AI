@@ -85,7 +85,7 @@ async def create_dsa_response(
     for test_case in test_cases:
         entries.append(
             {
-                "language": "C",
+                "language": response_data.language,
                 "runConfig": {
                     "customMatcherToUseForExpectedOutput": "ExactMatch",
                     "expectedOutputAsBase64UrlEncoded": base64.urlsafe_b64encode(

@@ -165,6 +165,7 @@ class UpdateDSATestCase(BaseModel):
 
 
 class CreateDSAResponse(BaseModel):
+    language: str
     code: str
     question_id: int
 
