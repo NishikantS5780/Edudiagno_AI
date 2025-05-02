@@ -85,9 +85,9 @@ async def create_dsa_response(
     for test_case in test_cases:
         entries.append(
             {
-                "language": "C",
+                "language": response_data.language,
                 "runConfig": {
-                    "customMatcherToUseForExpectedOutput": "ExactMatch",
+                    "customMatcherToUseForExpectedOutput": "IgnoreWhitespaceAtStartAndEndForEveryLine",
                     "expectedOutputAsBase64UrlEncoded": base64.urlsafe_b64encode(
                         test_case["expected_output"].encode()
                     )
@@ -154,6 +154,8 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
 
     taskUID = data["taskUniqueId"]
     runStatus = data["runResult"]["runStatus"]
+    output = data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
+
     stmt = (
         update(DSATestCaseResponse)
         .values({"status": runStatus})
@@ -171,6 +173,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 DSATestCaseResponse.dsa_test_case_id,
                 DSATestCaseResponse.status,
                 DSATestCase.expected_output,
+                DSATestCase.input,
             )
             .join(DSAResponse, DSAResponse.interview_id == Interview.id)
             .join(
@@ -181,6 +184,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             .where(DSATestCaseResponse.task_id == taskUID)
         )
         data = dict(db.execute(stmt).all()[0]._mapping)
+        output: str
 
         await interview_connection_manager.send_data(
             data["interview_id"],
@@ -190,7 +194,11 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 "failed_test_case": {
                     "test_case_id": data["dsa_test_case_id"],
                     "status": data["status"],
+                    "input": data["input"],
                     "expected_output": data["expected_output"],
+                    "output": base64.urlsafe_b64decode(
+                        output + ((4 - (len(output) % 4)) * "=")
+                    ).decode(),
                 },
             },
         )

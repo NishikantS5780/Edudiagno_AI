@@ -6,6 +6,7 @@ psycopg2-binary
 
 python-dotenv
 openai>=1.0.0
+brevo_python
 passlib[bcrypt]
 bcrypt==4.0.1
 PyJWT

@@ -42,8 +42,8 @@ const DSAPlayground = () => {
   React.useEffect(() => {
     const socket = new WebSocket(
       import.meta.env.VITE_WS_BASE_URL +
-        "?i_token=" +
-        localStorage.getItem("i_token")
+      "?i_token=" +
+      localStorage.getItem("i_token")
     );
 
     socket.onopen = () => {
@@ -52,16 +52,16 @@ const DSAPlayground = () => {
     };
     socket.onmessage = (e) => {
       const data = JSON.parse(e.data);
-      console.log(data);
+
       if (data.event == "execution_result") {
         if (data.status == "successful") {
           console.log("Total Test Cases Passed: ", data.passed_count);
-          setCompilationStatus("Passed All Test Cases");
+          setCompilationStatus("Passed All Test Cases " + data.passed_count + "/" + data.passed_count);
         } else if (data.status == "failed") {
           console.log("Failed Test Case: ", data.failed_test_case);
           setCompilationStatus(
-            "Failed a test case Expected output was: " +
-              data.failed_test_case.expected_output
+            "Failed a test case \nInput: " + data.failed_test_case.input + "\nExpected output: " +
+            data.failed_test_case.expected_output + "\nYour Output: " + data.failed_test_case.output
           );
         }
       }

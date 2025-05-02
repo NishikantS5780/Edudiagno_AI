@@ -14,6 +14,9 @@ class Settings:
     # OpenAI Settings
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     FERMION_API_KEY: str = os.getenv("FERMION_API_KEY", "")
+    BREVO_API_KEY: str = os.getenv("BREVO_API_KEY")
+    MAIL_SENDER_NAME: str = os.getenv("MAIL_SENDER_NAME")
+    MAIL_SENDER_EMAIL: str = os.getenv("MAIL_SENDER_EMAIL")
 
 
 settings = Settings()

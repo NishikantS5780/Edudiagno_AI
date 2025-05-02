@@ -6,6 +6,7 @@ from sqlalchemy import select, update
 from app import database, models, schemas
 from app.dependencies.authorization import authorize_recruiter
 from app.models import Recruiter
+from app.services import brevo
 from app.utils import security
 from app.utils import jwt
 
@@ -103,6 +104,7 @@ async def send_otp(
 
     # otp = int(random.random() * 1000000)
     otp = 111111
+    brevo.send_otp_email(send_otp_data.email, otp, "1 min")
     stmt = (
         update(Recruiter)
         .values(

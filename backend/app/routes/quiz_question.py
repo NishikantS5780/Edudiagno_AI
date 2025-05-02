@@ -3,7 +3,10 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app import database, schemas
-from app.dependencies.authorization import authorize_candidate, authorize_recruiter, authorize_quiz_access
+from app.dependencies.authorization import (
+    authorize_candidate,
+    authorize_recruiter,
+)
 from app.models import Interview, Job, QuizOption, QuizQuestion
 
 router = APIRouter()
@@ -27,6 +30,7 @@ async def create_quiz_question(
 @router.get("")
 async def get_quiz_questions_for_interview(
     interview_id: str = None,
+    # _=Depends(authorize_recruiter),  # Allow recruiter access
     db: Session = Depends(database.get_db),
     auth=Depends(authorize_quiz_access),  
 ):
@@ -39,7 +43,7 @@ async def get_quiz_questions_for_interview(
         )
     else:
         stmt = select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
-        
+
     quiz_questions = [
         dict(quiz_question._mapping) for quiz_question in db.execute(stmt).all()
     ]

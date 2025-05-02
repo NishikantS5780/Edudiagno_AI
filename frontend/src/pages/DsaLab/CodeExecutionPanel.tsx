@@ -74,248 +74,7 @@ function CodeExecutionPanel({
   React.useEffect(() => {
     setCode(codeTemplates[selectedLanguage]);
   }, [selectedLanguage]);
-  const handleCodeRun = () => {
-    if (!apiKey) {
-      setCodeError("API configuration error. Please contact support.");
-      return;
-    }
 
-    // Reset states before running
-    setOutput("");
-    setCodeError("");
-    setSyntaxError("");
-    setRunStatus("");
-
-    // Store the current code in state before sending to API
-    const currentCode = code || codeTemplates[selectedLanguage];
-    setCode(currentCode);
-
-    fetch(
-      "https://backend.codedamn.com/api/public/request-dsa-code-execution",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "FERMION-API-KEY": apiKey,
-        },
-        body: JSON.stringify({
-          data: [
-            {
-              data: {
-                language: selectedLanguage,
-                runConfig: {
-                  customMatcherToUseForExpectedOutput:
-                    "IgnoreWhitespaceAtStartAndEndForEveryLine",
-                  expectedOutputAsBase64UrlEncoded: btoa(expectedOutput)
-                    .replace(/\+/g, "-")
-                    .replace(/\//g, "_")
-                    .replace(/=+$/, ""),
-                  stdinStringAsBase64UrlEncoded: "",
-                  shouldEnablePerProcessAndThreadCpuTimeLimit: false,
-                  shouldEnablePerProcessAndThreadMemoryLimit: false,
-                  shouldAllowInternetAccess: false,
-                  compilerFlagString: "",
-                  maxFileSizeInKilobytesFilesCreatedOrModified: 1024,
-                  stackSizeLimitInKilobytes: 65536,
-                  cpuTimeLimitInMilliseconds: 2000,
-                  wallTimeLimitInMilliseconds: 5000,
-                  memoryLimitInKilobyte: 131072,
-                  maxProcessesAndOrThreads: 60,
-                },
-                sourceCodeAsBase64UrlEncoded: btoa(currentCode)
-                  .replace(/\+/g, "-")
-                  .replace(/\//g, "_")
-                  .replace(/=+$/, ""),
-              },
-            },
-          ],
-        }),
-      }
-    )
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-
-        dsaAPI.runCode({ code: currentCode, question_id: 1 }).then().catch();
-        return res.json();
-      })
-      .then((body) => {
-        console.log("API Response:", body);
-        if (
-          !body ||
-          !Array.isArray(body) ||
-          !body[0] ||
-          !body[0].output ||
-          !body[0].output.data ||
-          !body[0].output.data.taskId
-        ) {
-          throw new Error("Invalid response format from API");
-        }
-        setTaskId(body[0].output.data.taskId);
-        // Start checking status immediately
-        handleViewStatus();
-      })
-      .catch((error) => {
-        console.error("Error running code:", error);
-        setCodeError(`Error: ${error.message}`);
-        setRunStatus("error");
-      });
-  };
-
-  const handleViewStatus = () => {
-    if (!taskId) {
-      setCodeError("No task ID available. Please run the code first.");
-      return;
-    }
-
-    const checkStatus = () => {
-      if (!apiKey) {
-        setCodeError("API configuration error. Please contact support.");
-        return;
-      }
-
-      fetch(
-        "https://backend.codedamn.com/api/public/get-dsa-code-execution-result",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "FERMION-API-KEY": apiKey,
-          },
-          body: JSON.stringify({
-            data: [
-              {
-                data: {
-                  taskUniqueId: taskId,
-                },
-              },
-            ],
-          }),
-        }
-      )
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
-          }
-          return res.json();
-        })
-        .then((body) => {
-          console.log("Raw Status API Response:", body);
-
-          if (!Array.isArray(body) || body.length === 0) {
-            console.error("Response is not an array or is empty:", body);
-            throw new Error("Invalid response format: expected array");
-          }
-
-          const firstResponse = body[0];
-          console.log("First response element:", firstResponse);
-
-          if (!firstResponse || !firstResponse.output) {
-            console.error(
-              "First response element missing output:",
-              firstResponse
-            );
-            throw new Error("Invalid response format: missing output");
-          }
-
-          const output = firstResponse.output;
-          console.log("Output object:", output);
-
-          if (!output.data) {
-            console.error("Output missing data:", output);
-            throw new Error("Invalid response format: missing data");
-          }
-
-          const data = output.data;
-          console.log("Data object:", data);
-
-          // Update the editor with the submitted code
-          if (data.sourceCodeAsBase64UrlEncoded) {
-            const decodedCode = atob(
-              data.sourceCodeAsBase64UrlEncoded
-                .replace(/-/g, "+")
-                .replace(/_/g, "/")
-            );
-            console.log("Decoded submitted code:", decodedCode);
-            setCode(decodedCode);
-          }
-
-          // Check if the task is still pending
-          if (data.codingTaskStatus === "Pending") {
-            console.log(
-              "Task is still pending, checking again in 2 seconds..."
-            );
-            setTimeout(checkStatus, 2000); // Poll every 2 seconds
-            return;
-          }
-
-          // If task is completed, check for runResult
-          if (!data.runResult) {
-            console.error("Data missing runResult:", data);
-            throw new Error("Invalid response format: missing runResult");
-          }
-
-          let runResult = data.runResult;
-          console.log("Run Result Data:", runResult);
-
-          if (runResult.programRunData != null) {
-            let err = runResult.programRunData.stderrBase64UrlEncoded
-              ?.replace(/-/g, "+")
-              ?.replace(/_/g, "/");
-            if (err) {
-              const decodedError = atob(err);
-              console.log("error = ", decodedError);
-              if (!decodedError.includes("cannot read ~/.sqliterc")) {
-                setCodeError(decodedError);
-              }
-            }
-
-            let output = runResult.programRunData.stdoutBase64UrlEncoded
-              ?.replace(/-/g, "+")
-              ?.replace(/_/g, "/");
-            if (output) {
-              console.log("o/p - ", atob(output));
-              setOutput(atob(output));
-            }
-          }
-
-          let compiler_syntax_error =
-            runResult.compilerOutputAfterCompilationBase64UrlEncoded
-              ?.replace(/-/g, "+")
-              ?.replace(/_/g, "/");
-          if (compiler_syntax_error) {
-            setSyntaxError(atob(compiler_syntax_error));
-          }
-
-          let run_status = runResult.runStatus;
-          setRunStatus(run_status);
-
-          // Calculate success rate based on output matching
-          const isSuccess = output === expectedOutput;
-          const newSuccessRate = isSuccess ? "100%" : "0%";
-          setSuccessRate(newSuccessRate);
-          onSuccessRateChange?.(newSuccessRate);
-
-          // Update compilation status
-          const compilationStatus =
-            run_status === "Success"
-              ? "Compiled Successfully"
-              : run_status === "Error"
-              ? "Compilation Failed"
-              : "Compiling...";
-          onCompilationStatusChange?.(compilationStatus);
-        })
-        .catch((error) => {
-          console.error("Error checking status:", error);
-          setCodeError(`Error: ${error.message}`);
-          setRunStatus("error");
-          onCompilationStatusChange?.("Compilation Failed");
-        });
-    };
-
-    checkStatus();
-  };
   return (
     <div className="bg-[#18181b] min-h-screen">
       <div className="flex flex-col h-full">
@@ -340,6 +99,7 @@ function CodeExecutionPanel({
                     Authorization: `Bearer ${localStorage.getItem("i_token")}`,
                   },
                   body: JSON.stringify({
+                    language: selectedLanguage,
                     code: currentCode,
                     question_id: questionId,
                   }),
@@ -473,23 +233,23 @@ function CodeExecutionPanel({
                 >
                   Result
                 </TabsTrigger>
-                <TabsTrigger
+                {/* <TabsTrigger
                   value="test-case"
                   className="data-[state=active]:bg-[#18181b] data-[state=active]:text-white rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 px-4 py-2"
                 >
                   Test Case
-                </TabsTrigger>
+                </TabsTrigger> */}
               </TabsList>
 
               <TabsContent value="result" className="p-4 space-y-4">
-                {runStatus === "compilation-error" ? null : (
+                {/* {runStatus === "compilation-error" ? null : (
                   <div className="flex items-start gap-2 text-green-400 bg-[#27272a] p-3 rounded-lg">
                     <Terminal className="mt-1 flex-shrink-0" />
                     <pre className="whitespace-pre-wrap font-mono text-sm">
                       {output}
                     </pre>
                   </div>
-                )}
+                )} */}
                 {codeError && (
                   <div className="text-red-500 bg-[#27272a] p-3 rounded-lg">
                     <h3 className="font-semibold mb-1 text-red-400">
@@ -510,19 +270,18 @@ function CodeExecutionPanel({
                     </pre>
                   </div>
                 )}
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
+                <div className="flex gap-2 bg-[#27272a] p-3 rounded-lg">
                   <span className="font-semibold text-gray-400">
                     Compilation Status:
                   </span>
-                  <span
-                    className={`${
-                      !executionError ? "text-green-400" : "text-red-500"
-                    } font-mono`}
+                  <pre
+                    className={`${!executionError ? "text-green-400" : "text-red-500"
+                      } font-mono`}
                   >
                     {compilationStatus}
-                  </span>
+                  </pre>
                 </div>
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
+                {/* <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
                   <span className="font-semibold text-gray-400">
                     Execution Status:
                   </span>
@@ -543,18 +302,18 @@ function CodeExecutionPanel({
                       ? "Runtime Error"
                       : runStatus || "Not Executed"}
                   </span>
-                </div>
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
+                </div> */}
+                {/* <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
                   <span className="font-semibold text-gray-400">
                     Expected Output:
                   </span>
                   <span className="text-yellow-400 font-mono">
                     {expectedOutput}
                   </span>
-                </div>
+                </div> */}
               </TabsContent>
 
-              <TabsContent value="test-case" className="p-4 space-y-4">
+              {/* <TabsContent value="test-case" className="p-4 space-y-4">
                 <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
                   <span className="font-semibold text-gray-400">Status:</span>
                   <span
@@ -575,7 +334,7 @@ function CodeExecutionPanel({
                     {expectedOutput}
                   </span>
                 </div>
-              </TabsContent>
+              </TabsContent> */}
             </Tabs>
           </div>
         </div>

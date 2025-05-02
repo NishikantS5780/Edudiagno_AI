@@ -48,17 +48,6 @@ function DsaQuestion({
     <div className="bg-[#18181b] text-white p-4 rounded-lg h-screen flex flex-col">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">{title}</h2>
-        <div className="flex items-center gap-4">
-          {compilationStatus && (
-            <span className={`text-sm ${compilationStatus === "Compiled Successfully" ? "text-green-500" :
-                compilationStatus === "Compilation Failed" ? "text-red-500" :
-                  "text-yellow-500"
-              }`}>
-              {compilationStatus}
-            </span>
-          )}
-          <span className="text-sm text-gray-400">{successRate}</span>
-        </div>
       </div>
       <div className="mb-4">
         <h3 className="text-lg font-semibold">
@@ -97,13 +86,13 @@ function DsaQuestion({
         className="mb-4 prose max-w-none dark:prose-invert"
         data-color-mode="dark"
       >
-        <MDEditor.Markdown source={String(description)} 
-        style={{
-          backgroundColor: "#18181b",
-          color: "white",
-          // padding: "1rem",
-          borderRadius: "8px",
-        }}
+        <MDEditor.Markdown source={String(description)}
+          style={{
+            backgroundColor: "#18181b",
+            color: "white",
+            // padding: "1rem",
+            borderRadius: "8px",
+          }}
         />
 
         {constraints && <p className="mt-2">{constraints}</p>}
