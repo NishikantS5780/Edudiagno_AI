@@ -61,7 +61,7 @@ const DSAPlayground = () => {
           console.log("Failed Test Case: ", data.failed_test_case);
           setCompilationStatus(
             "Failed a test case \nInput: " + data.failed_test_case.input + "\nExpected output: " +
-            data.failed_test_case.expected_output + "\nYour Output: " + data.output
+            data.failed_test_case.expected_output + "\nYour Output: " + data.failed_test_case.output
           );
         }
       }
