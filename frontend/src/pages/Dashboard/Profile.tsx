@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams,useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(recruiter?.company_logo || null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const [emailVerified, setEmailVerified] = useState(false);
   const isNewUser = location.state?.isNewUser || recruiter?.is_profile_complete === false;
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("profile");
@@ -47,6 +49,7 @@ const Profile = () => {
     timezone: recruiter?.timezone || "America/New_York",
     language: recruiter?.language || "English",
   });
+  
 
   // Initialize company settings with actual user data
   const [companySettings, setCompanySettings] = useState({
@@ -99,6 +102,7 @@ const Profile = () => {
           zip: userData.zip || '',
           country: userData.country || "United States",
         });
+        setEmailVerified(userData.email_verified || false);
         setProfileImage(userData.company_logo || null);
         setHasCompletedProfile(true); // Assuming profile is complete if we have data
       } catch (error) {
@@ -421,15 +425,37 @@ const Profile = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input 
-                        id="email" 
-                        type="email"
-                        value={profileData.email}
-                        onChange={(e) => setProfileData({...profileData, email: e.target.value})}
-                        disabled={hasCompletedProfile && !isEditMode}
-                      />
-                    </div>
+        <Label htmlFor="email">Email Address</Label>
+        <div className="flex items-center space-x-2">
+          <Input
+            id="email"
+            type="email"
+            value={profileData.email}
+            onChange={(e) =>
+              setProfileData({ ...profileData, email: e.target.value })
+            }
+            disabled={hasCompletedProfile && !isEditMode}
+          />
+          {!emailVerified ? (
+            <Button
+              type="button"
+              onClick={() =>
+                navigate("/recruiter-email-verification", {
+                  state: { email: profileData.email },
+                })
+              }
+              className="text-sm"
+              disabled={!profileData.email}
+            >
+              Verify
+            </Button>
+          ) : (
+            <span className="text-green-600 font-medium text-sm">
+              Verified
+            </span>
+          )}
+        </div>
+      </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">

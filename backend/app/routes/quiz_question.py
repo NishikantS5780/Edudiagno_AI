@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app import database, schemas
-from app.dependencies.authorization import authorize_candidate, authorize_recruiter
+from app.dependencies.authorization import (
+    authorize_candidate,
+    authorize_recruiter,
+    authorize_quiz_access,
+)
 from app.models import Interview, Job, QuizOption, QuizQuestion
 
 router = APIRouter()
@@ -26,16 +30,20 @@ async def create_quiz_question(
 
 @router.get("")
 async def get_quiz_questions_for_interview(
-    db: Session = Depends(database.get_db),
     interview_id: str = None,
     # _=Depends(authorize_recruiter),  # Allow recruiter access
+    db: Session = Depends(database.get_db),
 ):
-    stmt = (
-        select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
-        .join(Job, QuizQuestion.job_id == Job.id)
-        .join(Interview, Interview.job_id == Job.id)
-        .where(Interview.id == int(interview_id))
-    )
+    if interview_id:
+        stmt = (
+            select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
+            .join(Job, QuizQuestion.job_id == Job.id)
+            .join(Interview, Interview.job_id == Job.id)
+            .where(Interview.id == int(interview_id))
+        )
+    else:
+        stmt = select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
+
     quiz_questions = [
         dict(quiz_question._mapping) for quiz_question in db.execute(stmt).all()
     ]

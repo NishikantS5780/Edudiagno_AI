@@ -980,7 +980,9 @@ const NewJob = () => {
                     </div>
                   ) : (
                     <>
-                      <div className="flex justify-end">
+                      {jobData.mcq_questions?.map((question, index) => renderMcqQuestion(question, index))}
+                      
+                      <div className="flex justify-end mt-6">
                         <Button
                           type="button"
                           onClick={handleMcqQuestionAdd}
@@ -988,8 +990,6 @@ const NewJob = () => {
                           Add MCQ Question
                         </Button>
                       </div>
-
-                      {jobData.mcq_questions?.map((question, index) => renderMcqQuestion(question, index))}
                     </>
                   )}
                 </CardContent>

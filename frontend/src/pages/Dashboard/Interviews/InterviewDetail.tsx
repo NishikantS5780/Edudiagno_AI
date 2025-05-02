@@ -475,7 +475,7 @@ const InterviewDetail = () => {
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Experience</p>
                 <p className="font-medium">
-                  {interview.workExperience ? `${interview.workExperience} years` : 'Not specified'}
+                  {interview.workExperience ? `${interview.workExperience} ${interview.workExperience === 1 ? 'year' : 'years'}` : 'Not specified'}
                 </p>
               </div>
             </div>

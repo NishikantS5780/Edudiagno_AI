@@ -44,6 +44,7 @@ import JobEdit from "@/pages/Dashboard/Jobs/JobEdit";
 import InterviewsPage from "@/pages/Dashboard/Interviews/InterviewsPage";
 import InterviewDetail from "@/pages/Dashboard/Interviews/InterviewDetail";
 import Profile from "@/pages/Dashboard/Profile";
+import RecruiterEmailVerification from "@/pages/Dashboard/RecruiterEmailVerification";
 import Settings from "@/pages/Dashboard/Settings";
 import Help from "@/pages/Dashboard/Help";
 
@@ -104,6 +105,8 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/recruiter-email-verification" element={<RecruiterEmailVerification />} />
+
 
                 <Route path="/interview" element={<InterviewPage />} />
                 <Route
