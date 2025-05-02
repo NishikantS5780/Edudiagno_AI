@@ -184,6 +184,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             .where(DSATestCaseResponse.task_id == taskUID)
         )
         data = dict(db.execute(stmt).all()[0]._mapping)
+        output: str
 
         await interview_connection_manager.send_data(
             data["interview_id"],
@@ -195,12 +196,9 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                     "status": data["status"],
                     "input": data["input"],
                     "expected_output": data["expected_output"],
-                    "output": base64.urlsafe_b64decode(output).decode(),
-                    # base64.urlsafe_b64encode(
-                    #                         test_case["input"].encode()
-                    #                     )
-                    #                     .decode()
-                    #                     .rstrip("=")
+                    "output": base64.urlsafe_b64decode(
+                        output + ((4 - (len(output) % 4)) * "=")
+                    ).decode(),
                 },
             },
         )
