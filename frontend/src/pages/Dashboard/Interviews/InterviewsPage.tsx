@@ -80,19 +80,23 @@ const InterviewsPage = () => {
 
   const getInterviewData = async () => {
     try {
-      console.log('Fetching interviews with params:', {
-        start: (currentPage - 1) * itemsPerPage,
-        limit: itemsPerPage
-      });
+      console.log('Fetching interviews...');
       const res = await interviewAPI.getInterviews({
         start: (currentPage - 1) * itemsPerPage,
         limit: itemsPerPage
       });
-      console.log('API Response:', res);
+      console.log('Raw API response:', res);
+      console.log('Interviews data:', res.data);
       
+      if (!res.data || res.data.length === 0) {
+        console.log('No interviews data received from API');
+        return;
+      }
+
       // Fetch job titles for all interviews
       const jobIds = res.data.map((interview: any) => interview.job_id) as number[];
-      console.log('Job IDs:', jobIds);
+      console.log('Job IDs from interviews:', jobIds);
+      
       const uniqueJobIds = Array.from(new Set(jobIds));
       console.log('Unique Job IDs:', uniqueJobIds);
       
@@ -117,7 +121,7 @@ const InterviewsPage = () => {
       setJobTitles(jobTitlesMap);
 
       const formattedInterviews = res.data.map((interview: any) => {
-        return {
+        const formatted = {
           id: interview.id,
           status: interview.status,
           firstName: interview.first_name,
@@ -138,8 +142,11 @@ const InterviewsPage = () => {
           createdAt: interview.created_at,
           jobId: interview.job_id,
         };
+        console.log('Formatted interview:', formatted);
+        return formatted;
       });
-      console.log('Formatted Interviews:', formattedInterviews);
+      
+      console.log('All formatted interviews:', formattedInterviews);
       setInterviewsData(formattedInterviews);
       
       // Calculate total pages based on total count from API
