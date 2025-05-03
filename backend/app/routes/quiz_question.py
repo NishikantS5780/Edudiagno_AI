@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
@@ -29,6 +29,7 @@ async def create_quiz_question(
 
 @router.get("")
 async def get_quiz_questions_for_interview(
+    response: Response,
     interview_id: str = None,
     # _=Depends(authorize_recruiter),  # Allow recruiter access
     db: Session = Depends(database.get_db),
@@ -41,7 +42,9 @@ async def get_quiz_questions_for_interview(
             .where(Interview.id == int(interview_id))
         )
     else:
-        stmt = select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
+        # stmt = select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
+        response.status_code = 400
+        return {"msg": "interview id is required"}
 
     quiz_questions = [
         dict(quiz_question._mapping) for quiz_question in db.execute(stmt).all()
