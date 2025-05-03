@@ -33,11 +33,12 @@ import QuestionEditor from "@/pages/DsaLab/QuestionEditor";
 const jobFormSchema = z.object({
   title: z
     .string()
-    .min(3, { message: "Job title must be at least 3 characters" }),
-  department: z.string().min(1, { message: "Please select a department" }),
-  city: z.string().min(1, { message: "Please enter a city" }),
-  location: z.string().min(1, { message: "Please select a location" }),
-  type: z.string().min(1, { message: "Please select a job type" }),
+    .min(3, { message: "Job title must be at least 3 characters" })
+    .nonempty({ message: "Job title is required" }),
+  department: z.string().nonempty({ message: "Please select a department" }),
+  city: z.string().nonempty({ message: "Please select a city" }),
+  location: z.string().nonempty({ message: "Please select a location type" }),
+  type: z.string().nonempty({ message: "Please select a job type" }),
   min_experience: z.number().min(0, { message: "Minimum experience must be 0 or greater" }),
   max_experience: z.number().min(0, { message: "Maximum experience must be 0 or greater" }),
   salary_min: z.number().min(0, { message: "Minimum salary must be 0 or greater" }),
@@ -45,29 +46,31 @@ const jobFormSchema = z.object({
   show_salary: z.boolean().default(true),
   description: z
     .string()
-    .min(10, { message: "Description must be at least 10 characters" }),
+    .min(10, { message: "Description must be at least 10 characters" })
+    .nonempty({ message: "Job description is required" }),
   requirements: z
     .string()
-    .min(10, { message: "Requirements must be at least 10 characters" }),
-  benefits: z.string(),
+    .min(10, { message: "Requirements must be at least 10 characters" })
+    .nonempty({ message: "Job requirements are required" }),
+  benefits: z.string().nonempty({ message: "Benefits are required" }),
   status: z.string().default("active"),
-  currency: z.string().optional(),
+  currency: z.string().nonempty({ message: "Please select a currency" }),
   requires_dsa: z.boolean().default(false),
   requires_mcq: z.boolean().default(false),
   dsa_questions: z.array(z.object({
-    title: z.string(),
-    description: z.string(),
-    difficulty: z.string(),
+    title: z.string().nonempty({ message: "DSA question title is required" }),
+    description: z.string().nonempty({ message: "DSA question description is required" }),
+    difficulty: z.string().nonempty({ message: "Please select difficulty level" }),
     test_cases: z.array(z.object({
-      input: z.string(),
-      expected_output: z.string()
-    }))
+      input: z.string().nonempty({ message: "Test case input is required" }),
+      expected_output: z.string().nonempty({ message: "Test case expected output is required" })
+    })).min(1, { message: "At least one test case is required" })
   })).optional(),
   mcq_questions: z.array(z.object({
-    title: z.string(),
+    title: z.string().nonempty({ message: "MCQ question title is required" }),
     type: z.enum(["single", "multiple", "true_false"]),
     question_type: z.enum(["technical", "aptitude"]),
-    options: z.array(z.string()),
+    options: z.array(z.string().nonempty({ message: "Option text is required" })),
     correct_options: z.array(z.number())
   })).optional()
 });
@@ -243,6 +246,14 @@ const NewJob = () => {
           newErrors[error.path[0]] = error.message;
         });
         setErrors(newErrors);
+        
+        // Scroll to the first error
+        const firstErrorField = Object.keys(newErrors)[0];
+        const element = document.getElementById(firstErrorField);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
         setIsSubmitting(false);
         return;
       }
@@ -796,9 +807,9 @@ const NewJob = () => {
                         />
                       </div>
                     </div>
-                    {(errors.salary_min || errors.salary_max) && (
+                    {(errors.salary_min || errors.salary_max || errors.currency) && (
                       <p className="text-sm text-destructive">
-                        {errors.salary_min || errors.salary_max}
+                        {errors.salary_min || errors.salary_max || errors.currency}
                       </p>
                     )}
                   </div>
