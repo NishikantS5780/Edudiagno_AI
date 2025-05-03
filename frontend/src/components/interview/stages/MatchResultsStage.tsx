@@ -243,7 +243,7 @@ export function MatchResultsStage({
                   <Zap className="mr-2 h-5 w-5" />
                   Take Interview Now
                 </Button>
-                <Button onClick={handleScheduleLater} variant="outline" size="lg" className="w-full">
+                <Button onClick={handleScheduleLater} variant="outline" size="lg" className="w-full hidden">
                   <Calendar className="mr-2 h-5 w-5" />
                   Schedule for Later
                 </Button>
