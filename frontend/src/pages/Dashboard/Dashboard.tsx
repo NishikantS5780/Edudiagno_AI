@@ -300,17 +300,6 @@ const Dashboard = () => {
               New Job
             </Button>
           </Link>
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7days">Last 7 days</SelectItem>
-              <SelectItem value="30days">Last 30 days</SelectItem>
-              <SelectItem value="90days">Last 90 days</SelectItem>
-              <SelectItem value="12months">Last 12 months</SelectItem>
-            </SelectContent>
-          </Select>
           <Button size="sm" className="h-9" onClick={exportReport}>
             <Download className="h-4 w-4 mr-2" />
             Export Report
