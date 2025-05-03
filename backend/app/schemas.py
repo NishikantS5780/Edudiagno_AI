@@ -127,7 +127,7 @@ class CreateInterview(BaseModel):
     skills: str
     location: str
     linkedin_url: str
-    portfolio_url: str
+    portfolio_url: Optional[str] = ""
     resume_text: str
     job_id: int
 
