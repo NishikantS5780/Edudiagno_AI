@@ -31,7 +31,6 @@ async def create_quiz_question(
 async def get_quiz_questions_for_interview(
     response: Response,
     interview_id: str = None,
-    # _=Depends(authorize_recruiter),  # Allow recruiter access
     db: Session = Depends(database.get_db),
 ):
     if interview_id:

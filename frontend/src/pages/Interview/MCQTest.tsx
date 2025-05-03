@@ -71,7 +71,7 @@ const MCQTest = () => {
     const fetchQuestions = async () => {
       try {
         console.log('Fetching quiz questions...');
-        const response = await quizAPI.getQuizQuestions();
+        const response = await quizAPI.getQuizQuestions(interviewId || '');
         console.log('Raw quiz questions response:', response);
         console.log('Quiz questions data:', response.data);
         

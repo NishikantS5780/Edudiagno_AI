@@ -331,8 +331,8 @@ export const dsaAPI = {
 };
 
 export const quizAPI = {
-  getQuizQuestions: async () => {
-    const res = await api.get("/quiz-question", {
+  getQuizQuestions: async (interviewId: string) => {
+    const res = await api.get(`/quiz-question?interview_id=${interviewId}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
     });
     return res;

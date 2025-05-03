@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, CheckCircle, Clock, Briefcase, Users, BarChart } from "lucide-react";
+import { ExternalLink, CheckCircle, Clock, Briefcase, Users, BarChart, Search, Brain } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, BriefcaseBusiness, UserRound, Bot, BarChart3 } from "lucide-react";
@@ -24,13 +24,13 @@ const HowItWorks = () => {
         </Link>
       </div>
 
-      <Tabs defaultValue="employers" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
-          <TabsTrigger value="employers" className="text-base py-3">
+      <Tabs defaultValue="employers" className="w-full mt-0">
+        <TabsList className="flex w-full mb-8 border-b border-border bg-transparent rounded-none p-0">
+          <TabsTrigger value="employers" className="flex-1 text-base py-3 px-4 font-semibold border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary transition-colors">
             <BriefcaseBusiness className="mr-2 h-4 w-4" />
             For Employers
           </TabsTrigger>
-          <TabsTrigger value="candidates" className="text-base py-3">
+          <TabsTrigger value="candidates" className="flex-1 text-base py-3 px-4 font-semibold border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary transition-colors">
             <UserRound className="mr-2 h-4 w-4" />
             For Candidates
           </TabsTrigger>
@@ -38,12 +38,12 @@ const HowItWorks = () => {
 
         <TabsContent value="employers" className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card>
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary mr-2">1</span>
-                  Post Job
-                </CardTitle>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
+                  <span className="text-xl font-bold">1</span>
+                </div>
+                <CardTitle>Post Job</CardTitle>
                 <CardDescription>
                   Create and publish job listings with AI assistance
                 </CardDescription>
@@ -55,12 +55,12 @@ const HowItWorks = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary mr-2">2</span>
-                  AI Interviews
-                </CardTitle>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
+                  <span className="text-xl font-bold">2</span>
+                </div>
+                <CardTitle>AI Interviews</CardTitle>
                 <CardDescription>
                   Let our AI conduct preliminary interviews
                 </CardDescription>
@@ -72,12 +72,12 @@ const HowItWorks = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary mr-2">3</span>
-                  Review Results
-                </CardTitle>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
+                  <span className="text-xl font-bold">3</span>
+                </div>
+                <CardTitle>Review Results</CardTitle>
                 <CardDescription>
                   Analyze detailed reports and candidate rankings
                 </CardDescription>
@@ -90,67 +90,31 @@ const HowItWorks = () => {
             </Card>
           </div>
 
-          <div className="bg-muted p-8 rounded-lg">
-            <h2 className="text-2xl font-bold mb-4">Key Benefits for Employers</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Save Time & Resources</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Reduce screening time by 85% with automated interview processes
-                  </p>
-                </div>
+          <div className="bg-muted/50 p-8 rounded-lg">
+            <h2 className="text-2xl font-bold mb-6 text-center">Key Benefits for Employers</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="flex flex-col items-center text-center p-4">
+                <Clock className="h-8 w-8 text-primary mb-3" />
+                <h3 className="font-semibold mb-2">Save Time</h3>
+                <p className="text-sm text-muted-foreground">
+                  Reduce screening time by 85% with automated interview processes
+                </p>
               </div>
               
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Improve Hiring Quality</h3>
-                  <p className="text-sm text-muted-foreground">
-                    AI-powered analytics identify the best candidates objectively
-                  </p>
-                </div>
+              <div className="flex flex-col items-center text-center p-4">
+                <Users className="h-8 w-8 text-primary mb-3" />
+                <h3 className="font-semibold mb-2">Better Hires</h3>
+                <p className="text-sm text-muted-foreground">
+                  AI-powered analytics identify the best candidates objectively
+                </p>
               </div>
               
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Enhance Candidate Experience</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Provide a modern, flexible interview process candidates appreciate
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Reduce Bias</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Standardized assessments evaluate all candidates equally
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Data-Driven Decisions</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Comprehensive analytics provide insights for better hiring decisions
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Scale Effortlessly</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Handle high-volume recruiting without additional resources
-                  </p>
-                </div>
+              <div className="flex flex-col items-center text-center p-4">
+                <BarChart3 className="h-8 w-8 text-primary mb-3" />
+                <h3 className="font-semibold mb-2">Data-Driven</h3>
+                <p className="text-sm text-muted-foreground">
+                  Make decisions based on comprehensive candidate insights
+                </p>
               </div>
             </div>
           </div>
@@ -158,7 +122,7 @@ const HowItWorks = () => {
           <div className="text-center p-8 bg-primary/5 rounded-lg">
             <h2 className="text-2xl font-bold mb-2">Ready to Transform Your Hiring Process?</h2>
             <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Join thousands of companies using our AI-powered platform to find the best talent faster and more efficiently.
+              Streamline your recruitment with our AI-powered interview platform designed to help you find the best talent efficiently.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/signup">
@@ -177,133 +141,104 @@ const HowItWorks = () => {
 
         <TabsContent value="candidates" className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card>
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary mr-2">1</span>
-                  Apply
-                </CardTitle>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
+                  <span className="text-xl font-bold">1</span>
+                </div>
+                <CardTitle>Application Review</CardTitle>
                 <CardDescription>
-                  Apply to positions with a simple application process
+                  Review applications and screen candidates efficiently
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Submit your resume and complete a quick profile. Our AI matches your skills and experience to relevant positions.
+                  Our AI analyzes applications and matches candidates to your job requirements, saving you time in the screening process.
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary mr-2">2</span>
-                  Interview
-                </CardTitle>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
+                  <span className="text-xl font-bold">2</span>
+                </div>
+                <CardTitle>AI Interview Process</CardTitle>
                 <CardDescription>
-                  Complete an AI-led video interview at your convenience
+                  Streamline your interview process with AI
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Participate in a video interview with our AI interviewer anytime, anywhere. Answer job-specific questions that showcase your skills and experience.
+                  Our AI conducts initial interviews, providing you with detailed insights and analysis of candidate responses.
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary mr-2">3</span>
-                  Get Hired
-                </CardTitle>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
+                  <span className="text-xl font-bold">3</span>
+                </div>
+                <CardTitle>Candidate Assessment</CardTitle>
                 <CardDescription>
-                  Stand out based on your qualifications, not just your resume
+                  Make data-driven hiring decisions
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Your interview performance and qualifications are objectively evaluated, giving you a fair chance to demonstrate your abilities to potential employers.
+                  Receive comprehensive candidate evaluations and insights to help you make informed hiring decisions.
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          <div className="bg-muted p-8 rounded-lg">
-            <h2 className="text-2xl font-bold mb-4">Candidate Benefits</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Convenience</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Complete interviews anytime, anywhere on your schedule
-                  </p>
-                </div>
+          <div className="bg-muted/50 p-8 rounded-lg">
+            <h2 className="text-2xl font-bold mb-6 text-center">Streamlined Hiring Process</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="flex flex-col items-center text-center p-4">
+                <Search className="h-8 w-8 text-primary mb-3" />
+                <h3 className="font-semibold mb-2">Efficient Screening</h3>
+                <p className="text-sm text-muted-foreground">
+                  Save time with automated application review and candidate matching
+                </p>
               </div>
               
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Fair Evaluation</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Be judged on skills and qualifications, not unconscious bias
-                  </p>
-                </div>
+              <div className="flex flex-col items-center text-center p-4">
+                <Brain className="h-8 w-8 text-primary mb-3" />
+                <h3 className="font-semibold mb-2">Objective Evaluation</h3>
+                <p className="text-sm text-muted-foreground">
+                  Get unbiased candidate assessments based on skills and qualifications
+                </p>
               </div>
               
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Practice Makes Perfect</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Gain valuable interview experience in a low-pressure environment
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Feedback & Insights</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Receive personalized feedback to improve your interview skills
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Faster Process</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Get through the hiring pipeline more quickly with fewer delays
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium">Better Job Matches</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Be matched with positions where you're likely to succeed
-                  </p>
-                </div>
+              <div className="flex flex-col items-center text-center p-4">
+                <BarChart3 className="h-8 w-8 text-primary mb-3" />
+                <h3 className="font-semibold mb-2">Comprehensive Insights</h3>
+                <p className="text-sm text-muted-foreground">
+                  Access detailed candidate analysis and performance metrics
+                </p>
               </div>
             </div>
           </div>
 
           <div className="text-center p-8 bg-primary/5 rounded-lg">
-            <h2 className="text-2xl font-bold mb-2">Ready to Showcase Your Talent?</h2>
+            <h2 className="text-2xl font-bold mb-2">Ready to Streamline Your Hiring?</h2>
             <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Stand out from other applicants with our AI-powered interview platform that fairly evaluates your skills and experience.
+              Transform your recruitment process with our AI-powered platform designed to help you find and evaluate the best candidates efficiently.
             </p>
-            <Link to="/signup">
-              <Button size="lg">
-                Create Candidate Profile
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/signup">
+                <Button size="lg">
+                  Start Free Trial
+                </Button>
+              </Link>
+              <Link to="/contact">
+                <Button variant="outline" size="lg">
+                  Request Demo
+                </Button>
+              </Link>
+            </div>
           </div>
         </TabsContent>
       </Tabs>
