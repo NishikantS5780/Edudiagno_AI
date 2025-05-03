@@ -17,6 +17,20 @@ class RecruiterRegistration(BaseModel):
     address: str
 
 
+class UpdateRecruiter(BaseModel):
+    name: Optional[str] = None
+    password: Optional[str] = None
+    phone: Optional[str] = None
+    designation: Optional[str] = None
+    company_name: Optional[str] = None
+    industry: Optional[str] = None
+    country: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+    zip: Optional[str] = None
+    address: Optional[str] = None
+
+
 class RecruiterLogin(BaseModel):
     email: str
     password: str

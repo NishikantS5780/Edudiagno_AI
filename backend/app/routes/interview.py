@@ -111,12 +111,21 @@ async def get_interview(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    stmt = select(Interview).join(Job).where(
-        and_(
-            Job.company_id == recruiter_id,
-            Interview.job_id == int(job_id) if job_id else True
+    stmt = select(Interview)
+
+    if job_id:
+        stmt = stmt.join(Job).where(
+            and_(
+                Job.company_id == recruiter_id,
+                Interview.job_id == int(job_id) if job_id else True,
+            )
         )
-    )
+    else:
+        stmt = (
+            stmt.join(Job, Job.id == Interview.job_id)
+            .join(Recruiter, Recruiter.id == Job.id)
+            .where(Recruiter.id == recruiter_id)
+        )
     result = db.execute(stmt)
     interviews = result.scalars().all()
     return interviews
