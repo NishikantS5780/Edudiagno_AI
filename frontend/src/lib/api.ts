@@ -21,6 +21,15 @@ export const api = axios.create({
   },
 });
 
+// Add request interceptor to add auth token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const recruiterAPI = {
   signup: async (data: RecruiterRegistrationData) => {
     await api.post("/recruiter", data);
@@ -194,6 +203,15 @@ export const jobAPI = {
     });
     return res;
   },
+  updateJob: async (jobId: string, data: Partial<JobData>) => {
+    const res = await api.put(`/job`, {
+      id: parseInt(jobId),
+      ...data
+    }, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    return res;
+  },
   createJob: async (data: JobData) => {
     // First create the job without DSA questions
     const jobData = {
@@ -257,9 +275,7 @@ export const jobAPI = {
     return res;
   },
   deleteJob: async (jobId: string) => {
-    const res = await api.delete(`/job?id=${jobId}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
+    const res = await api.delete(`/job?id=${jobId}`);
     return res;
   },
   generateDescription: async (
@@ -287,6 +303,35 @@ export const jobAPI = {
       keywords: keywords,
     });
     return res;
+  },
+  getMcqQuestions: async (jobId: string) => {
+    const res = await api.get(`/quiz-question?job_id=${jobId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    return res;
+  },
+  updateMcqQuestions: async (jobId: string, questions: any[]) => {
+    // First update each question
+    for (const question of questions) {
+      await api.put(`/quiz-question`, {
+        id: question.id,
+        description: question.description,
+        type: question.type
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+
+      // Then update each option
+      for (const option of question.options) {
+        await api.put(`/quiz-option`, {
+          id: option.id,
+          label: option.label,
+          correct: option.correct
+        }, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+      }
+    }
   },
 };
 

@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import * as z from "zod";
-import { Save, ArrowLeft, Trash2 } from "lucide-react";
+import { Save, ArrowLeft, Trash2, Plus } from "lucide-react";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { jobAPI } from "@/lib/api";
 import { api } from "@/lib/api";
@@ -33,11 +33,12 @@ import QuestionEditor from "@/pages/DsaLab/QuestionEditor";
 const jobFormSchema = z.object({
   title: z
     .string()
-    .min(3, { message: "Job title must be at least 3 characters" }),
-  department: z.string().min(1, { message: "Please select a department" }),
-  city: z.string().min(1, { message: "Please enter a city" }),
-  location: z.string().min(1, { message: "Please select a location" }),
-  type: z.string().min(1, { message: "Please select a job type" }),
+    .min(3, { message: "Job title must be at least 3 characters" })
+    .nonempty({ message: "Job title is required" }),
+  department: z.string().nonempty({ message: "Please select a department" }),
+  city: z.string().nonempty({ message: "Please select a city" }),
+  location: z.string().nonempty({ message: "Please select a location type" }),
+  type: z.string().nonempty({ message: "Please select a job type" }),
   min_experience: z.number().min(0, { message: "Minimum experience must be 0 or greater" }),
   max_experience: z.number().min(0, { message: "Maximum experience must be 0 or greater" }),
   salary_min: z.number().min(0, { message: "Minimum salary must be 0 or greater" }),
@@ -45,29 +46,31 @@ const jobFormSchema = z.object({
   show_salary: z.boolean().default(true),
   description: z
     .string()
-    .min(10, { message: "Description must be at least 10 characters" }),
+    .min(10, { message: "Description must be at least 10 characters" })
+    .nonempty({ message: "Job description is required" }),
   requirements: z
     .string()
-    .min(10, { message: "Requirements must be at least 10 characters" }),
-  benefits: z.string(),
+    .min(10, { message: "Requirements must be at least 10 characters" })
+    .nonempty({ message: "Job requirements are required" }),
+  benefits: z.string().nonempty({ message: "Benefits are required" }),
   status: z.string().default("active"),
-  currency: z.string().optional(),
+  currency: z.string().nonempty({ message: "Please select a currency" }),
   requires_dsa: z.boolean().default(false),
   requires_mcq: z.boolean().default(false),
   dsa_questions: z.array(z.object({
-    title: z.string(),
-    description: z.string(),
-    difficulty: z.string(),
+    title: z.string().nonempty({ message: "DSA question title is required" }),
+    description: z.string().nonempty({ message: "DSA question description is required" }),
+    difficulty: z.string().nonempty({ message: "Please select difficulty level" }),
     test_cases: z.array(z.object({
-      input: z.string(),
-      expected_output: z.string()
-    }))
+      input: z.string().nonempty({ message: "Test case input is required" }),
+      expected_output: z.string().nonempty({ message: "Test case expected output is required" })
+    })).min(1, { message: "At least one test case is required" })
   })).optional(),
   mcq_questions: z.array(z.object({
-    title: z.string(),
+    title: z.string().nonempty({ message: "MCQ question title is required" }),
     type: z.enum(["single", "multiple", "true_false"]),
     question_type: z.enum(["technical", "aptitude"]),
-    options: z.array(z.string()),
+    options: z.array(z.string().nonempty({ message: "Option text is required" })),
     correct_options: z.array(z.number())
   })).optional()
 });
@@ -147,6 +150,7 @@ const NewJob = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("job-details");
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [jobData, setJobData] = useState<JobData>({
     id: 0,
     title: "",
@@ -180,10 +184,80 @@ const NewJob = () => {
     correct_options: number[];
   }
 
+  interface TestCase {
+    input: string;
+    expected_output: string;
+  }
+
+  interface DSAQuestion {
+    title: string;
+    description: string;
+    difficulty: string;
+    test_cases: TestCase[];
+  }
+
+  interface JobData {
+    id: number;
+    title: string;
+    description: string;
+    department: string;
+    city: string;
+    location: string;
+    type: string;
+    min_experience: number;
+    max_experience: number;
+    salary_min: number | null;
+    salary_max: number | null;
+    currency: string;
+    show_salary: boolean;
+    requirements: string;
+    benefits: string;
+    status: string;
+    createdAt: string;
+    requires_dsa: boolean;
+    requires_mcq: boolean;
+    dsa_questions: DSAQuestion[];
+    mcq_questions: MCQQuestion[];
+  }
+
+  const validateField = (field: keyof JobFormValues, value: any) => {
+    try {
+      jobFormSchema.shape[field].parse(value);
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    } catch (error: any) {
+      setErrors(prev => ({ ...prev, [field]: error.errors[0].message }));
+    }
+  };
+
+  const handleChange = (field: keyof JobFormValues, value: any) => {
+    setJobData(prev => ({ ...prev, [field]: value }));
+    validateField(field, value);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // Validate all fields
+      const validationResult = jobFormSchema.safeParse(jobData);
+      if (!validationResult.success) {
+        const newErrors: Record<string, string> = {};
+        validationResult.error.errors.forEach(error => {
+          newErrors[error.path[0]] = error.message;
+        });
+        setErrors(newErrors);
+        
+        // Scroll to the first error
+        const firstErrorField = Object.keys(newErrors)[0];
+        const element = document.getElementById(firstErrorField);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        setIsSubmitting(false);
+        return;
+      }
+
       // Create job with all data
       const response = await jobAPI.createJob(jobData);
 
@@ -257,7 +331,7 @@ const NewJob = () => {
     });
   };
 
-  const handleTestCaseUpdate = (questionIndex: number, testCaseIndex: number, field: string, value: string) => {
+  const handleTestCaseUpdate = (questionIndex: number, testCaseIndex: number, field: keyof TestCase, value: string) => {
     const updatedQuestions = [...(jobData.dsa_questions || [])];
     updatedQuestions[questionIndex].test_cases[testCaseIndex] = {
       ...updatedQuestions[questionIndex].test_cases[testCaseIndex],
@@ -512,23 +586,26 @@ const NewJob = () => {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="job-title">Job Title *</Label>
+                    <Label htmlFor="job-title">
+                      Job Title <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="job-title"
                       placeholder="e.g. Senior Software Engineer"
                       value={jobData.title}
-                      onChange={(e) =>
-                        setJobData({ ...jobData, title: e.target.value })
-                      }
+                      onChange={(e) => handleChange("title", e.target.value)}
                     />
+                    {errors.title && (
+                      <p className="text-sm text-destructive">{errors.title}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Department *</Label>
+                    <Label>
+                      Department <span className="text-destructive">*</span>
+                    </Label>
                     <Select
-                      onValueChange={(val: string) =>
-                        setJobData({ ...jobData, department: val })
-                      }
+                      onValueChange={(val) => handleChange("department", val)}
                       defaultValue={jobData.department}
                     >
                       <SelectTrigger>
@@ -548,14 +625,17 @@ const NewJob = () => {
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.department && (
+                      <p className="text-sm text-destructive">{errors.department}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Job Type *</Label>
+                    <Label>
+                      Job Type <span className="text-destructive">*</span>
+                    </Label>
                     <Select
-                      onValueChange={(val: string) =>
-                        setJobData({ ...jobData, type: val })
-                      }
+                      onValueChange={(val) => handleChange("type", val)}
                       defaultValue={jobData.type}
                     >
                       <SelectTrigger>
@@ -569,14 +649,17 @@ const NewJob = () => {
                         <SelectItem value="temporary">Temporary</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.type && (
+                      <p className="text-sm text-destructive">{errors.type}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Location Type *</Label>
+                    <Label>
+                      Location Type <span className="text-destructive">*</span>
+                    </Label>
                     <Select
-                      onValueChange={(val: string) =>
-                        setJobData({ ...jobData, location: val })
-                      }
+                      onValueChange={(val) => handleChange("location", val)}
                       defaultValue={jobData.location}
                     >
                       <SelectTrigger>
@@ -588,14 +671,17 @@ const NewJob = () => {
                         <SelectItem value="onsite">On-site</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.location && (
+                      <p className="text-sm text-destructive">{errors.location}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label>City *</Label>
+                    <Label>
+                      City <span className="text-destructive">*</span>
+                    </Label>
                     <Select
-                      onValueChange={(val: string) =>
-                        setJobData({ ...jobData, city: val })
-                      }
+                      onValueChange={(val) => handleChange("city", val)}
                       defaultValue={jobData.city}
                     >
                       <SelectTrigger>
@@ -625,6 +711,9 @@ const NewJob = () => {
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.city && (
+                      <p className="text-sm text-destructive">{errors.city}</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -636,11 +725,11 @@ const NewJob = () => {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>Minimum Experience (Years) *</Label>
+                    <Label>
+                      Minimum Experience (Years) <span className="text-destructive">*</span>
+                    </Label>
                     <Select
-                      onValueChange={(val: string) =>
-                        setJobData({ ...jobData, min_experience: Number(val) })
-                      }
+                      onValueChange={(val) => handleChange("min_experience", Number(val))}
                       defaultValue={jobData.min_experience?.toString()}
                     >
                       <SelectTrigger>
@@ -655,14 +744,17 @@ const NewJob = () => {
                         <SelectItem value="5">5+ years</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.min_experience && (
+                      <p className="text-sm text-destructive">{errors.min_experience}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Maximum Experience (Years) *</Label>
+                    <Label>
+                      Maximum Experience (Years) <span className="text-destructive">*</span>
+                    </Label>
                     <Select
-                      onValueChange={(val: string) =>
-                        setJobData({ ...jobData, max_experience: Number(val) })
-                      }
+                      onValueChange={(val) => handleChange("max_experience", Number(val))}
                       defaultValue={jobData.max_experience?.toString()}
                     >
                       <SelectTrigger>
@@ -676,15 +768,18 @@ const NewJob = () => {
                         <SelectItem value="5">5+ years</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.max_experience && (
+                      <p className="text-sm text-destructive">{errors.max_experience}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Salary Range *</Label>
+                    <Label>
+                      Salary Range <span className="text-destructive">*</span>
+                    </Label>
                     <div className="flex gap-2">
                       <Select
-                        onValueChange={(val: string) =>
-                          setJobData({ ...jobData, currency: val })
-                        }
+                        onValueChange={(val) => handleChange("currency", val)}
                         defaultValue={jobData.currency || "INR"}
                       >
                         <SelectTrigger className="w-[100px]">
@@ -702,33 +797,28 @@ const NewJob = () => {
                           type="number"
                           placeholder="Min salary"
                           value={jobData.salary_min || ""}
-                          onChange={(e) =>
-                            setJobData({
-                              ...jobData,
-                              salary_min: e.target.value ? Number(e.target.value) : null
-                            })
-                          }
+                          onChange={(e) => handleChange("salary_min", e.target.value ? Number(e.target.value) : null)}
                         />
                         <Input
                           type="number"
                           placeholder="Max salary"
                           value={jobData.salary_max || ""}
-                          onChange={(e) =>
-                            setJobData({
-                              ...jobData,
-                              salary_max: e.target.value ? Number(e.target.value) : null
-                            })
-                          }
+                          onChange={(e) => handleChange("salary_max", e.target.value ? Number(e.target.value) : null)}
                         />
                       </div>
                     </div>
+                    {(errors.salary_min || errors.salary_max || errors.currency) && (
+                      <p className="text-sm text-destructive">
+                        {errors.salary_min || errors.salary_max || errors.currency}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center space-x-2">
                     <Switch
                       checked={jobData.show_salary}
                       onCheckedChange={(checked) =>
-                        setJobData({ ...jobData, show_salary: checked })
+                        handleChange("show_salary", checked)
                       }
                     />
                     <Label>Show Salary in Job Posting</Label>
@@ -744,7 +834,9 @@ const NewJob = () => {
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <Label>Job Description *</Label>
+                      <Label>
+                        Job Description <span className="text-destructive">*</span>
+                      </Label>
                       <AIGeneratePopup
                         title="Generate Description"
                         fieldLabel="Description"
@@ -752,24 +844,25 @@ const NewJob = () => {
                         department={jobData.department}
                         location={jobData.location}
                         jobType={jobData.type}
-                        onGenerated={(content) =>
-                          setJobData({ ...jobData, description: content })
-                        }
+                        onGenerated={(content) => handleChange("description", content)}
                       />
                     </div>
                     <Textarea
                       className="min-h-[200px]"
                       placeholder="Describe the role, responsibilities, and expectations..."
                       value={jobData.description}
-                      onChange={(e) =>
-                        setJobData({ ...jobData, description: e.target.value })
-                      }
+                      onChange={(e) => handleChange("description", e.target.value)}
                     />
+                    {errors.description && (
+                      <p className="text-sm text-destructive">{errors.description}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <Label>Requirements *</Label>
+                      <Label>
+                        Requirements <span className="text-destructive">*</span>
+                      </Label>
                       <AIGeneratePopup
                         title="Generate Requirements"
                         fieldLabel="Requirements"
@@ -777,19 +870,18 @@ const NewJob = () => {
                         department={jobData.department}
                         location={jobData.location}
                         jobType={jobData.type}
-                        onGenerated={(content) =>
-                          setJobData({ ...jobData, requirements: content })
-                        }
+                        onGenerated={(content) => handleChange("requirements", content)}
                       />
                     </div>
                     <Textarea
                       className="min-h-[200px]"
                       placeholder="List the required skills, qualifications, and experience..."
                       value={jobData.requirements}
-                      onChange={(e) =>
-                        setJobData({ ...jobData, requirements: e.target.value })
-                      }
+                      onChange={(e) => handleChange("requirements", e.target.value)}
                     />
+                    {errors.requirements && (
+                      <p className="text-sm text-destructive">{errors.requirements}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -798,17 +890,18 @@ const NewJob = () => {
                       className="min-h-[150px]"
                       placeholder="List the benefits and perks offered..."
                       value={jobData.benefits}
-                      onChange={(e) =>
-                        setJobData({ ...jobData, benefits: e.target.value })
-                      }
+                      onChange={(e) => handleChange("benefits", e.target.value)}
                     />
+                    {errors.benefits && (
+                      <p className="text-sm text-destructive">{errors.benefits}</p>
+                    )}
                   </div>
 
                   <div className="flex items-center space-x-2">
                     <Switch
                       checked={jobData.requires_dsa}
                       onCheckedChange={(checked) =>
-                        setJobData({ ...jobData, requires_dsa: checked })
+                        handleChange("requires_dsa", checked)
                       }
                     />
                     <Label>Requires DSA Assessment</Label>
@@ -819,7 +912,7 @@ const NewJob = () => {
                       id="requires_mcq"
                       checked={jobData.requires_mcq}
                       onCheckedChange={(checked) =>
-                        setJobData({ ...jobData, requires_mcq: checked })
+                        handleChange("requires_mcq", checked)
                       }
                     />
                     <Label>Requires MCQ Assessment</Label>
@@ -842,16 +935,7 @@ const NewJob = () => {
                     </div>
                   ) : (
                     <>
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          onClick={handleDsaQuestionAdd}
-                        >
-                          Add Question
-                        </Button>
-                      </div>
-
-                      {jobData.dsa_questions?.map((question, questionIndex) => (
+                      {jobData.dsa_questions?.map((question: DSAQuestion, questionIndex: number) => (
                         <Card key={questionIndex} className="p-4">
                           <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -888,14 +972,6 @@ const NewJob = () => {
 
                             <div className="space-y-2">
                               <Label>Question Description</Label>
-                              {/* <Textarea
-                                value={question.description}
-                                onChange={(e) =>
-                                  handleDsaQuestionUpdate(questionIndex, "description", e.target.value)
-                                }
-                                placeholder="Describe the problem and constraints..."
-                                className="min-h-[150px]"
-                              /> */}
                               <QuestionEditor
                                 questionDescription={question.description}
                                 setQuestionDescription={(value: string) =>
@@ -908,58 +984,77 @@ const NewJob = () => {
                               <div className="flex justify-between items-center">
                                 <Label>Test Cases</Label>
                                 <Button
-                                  type="button"
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleTestCaseAdd(questionIndex)}
                                 >
+                                  <Plus className="h-4 w-4 mr-2" />
                                   Add Test Case
                                 </Button>
                               </div>
 
-                              <div className="space-y-4">
-                                {question.test_cases.map((testCase, testCaseIndex) => (
-                                  <div key={testCaseIndex} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                      <Label>Input</Label>
-                                      <Input
-                                        value={testCase.input}
-                                        onChange={(e) =>
-                                          handleTestCaseUpdate(questionIndex, testCaseIndex, "input", e.target.value)
-                                        }
-                                        placeholder="e.g. nums = [2,7,11,15], target = 9"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <div className="flex justify-between items-center mb-2">
-                                        <Label>Expected Output</Label>
-                                        {question.test_cases.length > 1 && (
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleTestCaseDelete(questionIndex, testCaseIndex)}
-                                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        )}
-                                      </div>
-                                      <Input
-                                        value={testCase.expected_output}
-                                        onChange={(e) =>
-                                          handleTestCaseUpdate(questionIndex, testCaseIndex, "expected_output", e.target.value)
-                                        }
-                                        placeholder="e.g. [0,1]"
-                                      />
-                                    </div>
+                              {question.test_cases.map((testCase: TestCase, testCaseIndex: number) => (
+                                <div key={testCaseIndex} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>Input</Label>
+                                    <Input
+                                      value={testCase.input}
+                                      onChange={(e) =>
+                                        handleTestCaseUpdate(questionIndex, testCaseIndex, "input", e.target.value)
+                                      }
+                                      placeholder="Input"
+                                    />
                                   </div>
-                                ))}
-                              </div>
+                                  <div className="space-y-2">
+                                    <Label>Expected Output</Label>
+                                    <Input
+                                      value={testCase.expected_output}
+                                      onChange={(e) =>
+                                        handleTestCaseUpdate(questionIndex, testCaseIndex, "expected_output", e.target.value)
+                                      }
+                                      placeholder="Expected Output"
+                                    />
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleTestCaseDelete(questionIndex, testCaseIndex)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const updatedQuestions = [...(jobData.dsa_questions || [])];
+                                  updatedQuestions.splice(questionIndex, 1);
+                                  setJobData({ ...jobData, dsa_questions: updatedQuestions });
+                                }}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Question
+                              </Button>
                             </div>
                           </div>
                         </Card>
                       ))}
+                      
+                      <div className="flex justify-end mt-6">
+                        <Button
+                          type="button"
+                          onClick={handleDsaQuestionAdd}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add DSA Question
+                        </Button>
+                      </div>
                     </>
                   )}
                 </CardContent>

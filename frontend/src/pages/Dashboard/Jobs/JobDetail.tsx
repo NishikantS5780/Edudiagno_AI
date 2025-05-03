@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft,
   Edit,
@@ -22,6 +26,8 @@ import {
   GraduationCap,
   Briefcase,
   Link as LinkIcon,
+  BookOpen,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -29,6 +35,7 @@ import { jobAPI, interviewAPI } from "@/lib/api";
 import { JobData } from "@/types/job";
 import { InterviewData } from "@/types/interview";
 import DsaManagement from "@/components/jobs/DsaManagement";
+import McqManagement from "@/components/jobs/McqManagement";
 
 const JobDetail = () => {
   const { id } = useParams();
@@ -37,6 +44,8 @@ const JobDetail = () => {
   const [interviews, setInterviews] = useState<InterviewData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedJob, setEditedJob] = useState<Partial<JobData>>({});
 
   useEffect(() => {
     fetchJobDetails();
@@ -45,7 +54,11 @@ const JobDetail = () => {
 
   const fetchJobDetails = async () => {
     try {
-      const response = await jobAPI.recruiterGetJob(id);
+      if (!id) {
+        toast.error("Job ID is required");
+        return;
+      }
+      const response = await jobAPI.recruiterGetJob(id as string);
       const data = response.data;
       setJob({
         id: data.id,
@@ -66,8 +79,10 @@ const JobDetail = () => {
         status: data.status,
         createdAt: data.created_at,
         requires_dsa: data.requires_dsa || false,
-        dsa_questions: data.dsa_questions || []
+        dsa_questions: data.dsa_questions || [],
+        requires_mcq: data.requires_mcq || false
       });
+      setEditedJob({});
     } catch (error) {
       console.error("Error fetching job details:", error);
       toast.error("Failed to load job details");
@@ -148,6 +163,37 @@ const JobDetail = () => {
     }
   };
 
+  const handleEditModeToggle = () => {
+    setIsEditMode(!isEditMode);
+    if (!isEditMode) {
+      setEditedJob({});
+    }
+  };
+
+  const handleJobChange = (field: keyof JobData, value: string | number | boolean) => {
+    setEditedJob(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveChanges = async () => {
+    if (!job) return;
+
+    try {
+      setLoading(true);
+      await jobAPI.updateJob(job.id.toString(), editedJob);
+      toast.success("Job details updated successfully");
+      fetchJobDetails();
+      setIsEditMode(false);
+    } catch (error) {
+      console.error("Error updating job:", error);
+      toast.error("Failed to update job details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -191,7 +237,7 @@ const JobDetail = () => {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
-              <Link to={`/dashboard/jobs/${job.id}/edit`}>
+              <Link to={`/dashboard/jobs/${job?.id}/edit`}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Link>
@@ -200,7 +246,7 @@ const JobDetail = () => {
             <Button
               variant="outline"
               onClick={() => {
-                const link = `${window.location.origin}/interview?job_id=${job.id}`;
+                const link = `${window.location.origin}/interview?job_id=${job?.id}`;
                 navigator.clipboard.writeText(link);
                 toast.success("Interview link copied to clipboard", {
                   description: link,
@@ -241,6 +287,7 @@ const JobDetail = () => {
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="candidates">Candidates</TabsTrigger>
                   <TabsTrigger value="dsa">DSA Questions</TabsTrigger>
+                  <TabsTrigger value="mcq">MCQ Questions</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" className="space-y-6">
                   <div className="space-y-4">
@@ -395,6 +442,9 @@ const JobDetail = () => {
                 </TabsContent>
                 <TabsContent value="dsa">
                   {job && <DsaManagement jobId={job.id} />}
+                </TabsContent>
+                <TabsContent value="mcq">
+                  {job && <McqManagement jobId={job.id} />}
                 </TabsContent>
               </Tabs>
             </CardContent>
