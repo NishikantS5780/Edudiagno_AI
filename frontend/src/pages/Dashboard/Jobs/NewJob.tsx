@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import * as z from "zod";
-import { Save, ArrowLeft, Trash2 } from "lucide-react";
+import { Save, ArrowLeft, Trash2, Plus } from "lucide-react";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { jobAPI } from "@/lib/api";
 import { api } from "@/lib/api";
@@ -180,6 +180,42 @@ const NewJob = () => {
     correct_options: number[];
   }
 
+  interface TestCase {
+    input: string;
+    expected_output: string;
+  }
+
+  interface DSAQuestion {
+    title: string;
+    description: string;
+    difficulty: string;
+    test_cases: TestCase[];
+  }
+
+  interface JobData {
+    id: number;
+    title: string;
+    description: string;
+    department: string;
+    city: string;
+    location: string;
+    type: string;
+    min_experience: number;
+    max_experience: number;
+    salary_min: number | null;
+    salary_max: number | null;
+    currency: string;
+    show_salary: boolean;
+    requirements: string;
+    benefits: string;
+    status: string;
+    createdAt: string;
+    requires_dsa: boolean;
+    requires_mcq: boolean;
+    dsa_questions: DSAQuestion[];
+    mcq_questions: MCQQuestion[];
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -257,7 +293,7 @@ const NewJob = () => {
     });
   };
 
-  const handleTestCaseUpdate = (questionIndex: number, testCaseIndex: number, field: string, value: string) => {
+  const handleTestCaseUpdate = (questionIndex: number, testCaseIndex: number, field: keyof TestCase, value: string) => {
     const updatedQuestions = [...(jobData.dsa_questions || [])];
     updatedQuestions[questionIndex].test_cases[testCaseIndex] = {
       ...updatedQuestions[questionIndex].test_cases[testCaseIndex],
@@ -842,16 +878,7 @@ const NewJob = () => {
                     </div>
                   ) : (
                     <>
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          onClick={handleDsaQuestionAdd}
-                        >
-                          Add Question
-                        </Button>
-                      </div>
-
-                      {jobData.dsa_questions?.map((question, questionIndex) => (
+                      {jobData.dsa_questions?.map((question: DSAQuestion, questionIndex: number) => (
                         <Card key={questionIndex} className="p-4">
                           <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -888,14 +915,6 @@ const NewJob = () => {
 
                             <div className="space-y-2">
                               <Label>Question Description</Label>
-                              {/* <Textarea
-                                value={question.description}
-                                onChange={(e) =>
-                                  handleDsaQuestionUpdate(questionIndex, "description", e.target.value)
-                                }
-                                placeholder="Describe the problem and constraints..."
-                                className="min-h-[150px]"
-                              /> */}
                               <QuestionEditor
                                 questionDescription={question.description}
                                 setQuestionDescription={(value: string) =>
@@ -908,58 +927,77 @@ const NewJob = () => {
                               <div className="flex justify-between items-center">
                                 <Label>Test Cases</Label>
                                 <Button
-                                  type="button"
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleTestCaseAdd(questionIndex)}
                                 >
+                                  <Plus className="h-4 w-4 mr-2" />
                                   Add Test Case
                                 </Button>
                               </div>
 
-                              <div className="space-y-4">
-                                {question.test_cases.map((testCase, testCaseIndex) => (
-                                  <div key={testCaseIndex} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                      <Label>Input</Label>
-                                      <Input
-                                        value={testCase.input}
-                                        onChange={(e) =>
-                                          handleTestCaseUpdate(questionIndex, testCaseIndex, "input", e.target.value)
-                                        }
-                                        placeholder="e.g. nums = [2,7,11,15], target = 9"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <div className="flex justify-between items-center mb-2">
-                                        <Label>Expected Output</Label>
-                                        {question.test_cases.length > 1 && (
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleTestCaseDelete(questionIndex, testCaseIndex)}
-                                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        )}
-                                      </div>
-                                      <Input
-                                        value={testCase.expected_output}
-                                        onChange={(e) =>
-                                          handleTestCaseUpdate(questionIndex, testCaseIndex, "expected_output", e.target.value)
-                                        }
-                                        placeholder="e.g. [0,1]"
-                                      />
-                                    </div>
+                              {question.test_cases.map((testCase: TestCase, testCaseIndex: number) => (
+                                <div key={testCaseIndex} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>Input</Label>
+                                    <Input
+                                      value={testCase.input}
+                                      onChange={(e) =>
+                                        handleTestCaseUpdate(questionIndex, testCaseIndex, "input", e.target.value)
+                                      }
+                                      placeholder="Input"
+                                    />
                                   </div>
-                                ))}
-                              </div>
+                                  <div className="space-y-2">
+                                    <Label>Expected Output</Label>
+                                    <Input
+                                      value={testCase.expected_output}
+                                      onChange={(e) =>
+                                        handleTestCaseUpdate(questionIndex, testCaseIndex, "expected_output", e.target.value)
+                                      }
+                                      placeholder="Expected Output"
+                                    />
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleTestCaseDelete(questionIndex, testCaseIndex)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const updatedQuestions = [...(jobData.dsa_questions || [])];
+                                  updatedQuestions.splice(questionIndex, 1);
+                                  setJobData({ ...jobData, dsa_questions: updatedQuestions });
+                                }}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Question
+                              </Button>
                             </div>
                           </div>
                         </Card>
                       ))}
+                      
+                      <div className="flex justify-end mt-6">
+                        <Button
+                          type="button"
+                          onClick={handleDsaQuestionAdd}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add DSA Question
+                        </Button>
+                      </div>
                     </>
                   )}
                 </CardContent>

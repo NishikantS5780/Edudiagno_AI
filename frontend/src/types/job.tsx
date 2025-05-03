@@ -17,6 +17,7 @@ export interface JobData {
   status: string;
   createdAt?: string;
   requires_dsa: boolean;
+  requires_mcq: boolean;
   dsa_questions?: Array<{
     title: string;
     description: string;

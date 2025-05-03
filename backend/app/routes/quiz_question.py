@@ -30,6 +30,7 @@ async def create_quiz_question(
 @router.get("")
 async def get_quiz_questions_for_interview(
     interview_id: str = None,
+    job_id: str = None,
     db: Session = Depends(database.get_db),
 ):
     if interview_id:
@@ -38,6 +39,11 @@ async def get_quiz_questions_for_interview(
             .join(Job, QuizQuestion.job_id == Job.id)
             .join(Interview, Interview.job_id == Job.id)
             .where(Interview.id == int(interview_id))
+        )
+    elif job_id:
+        stmt = (
+            select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
+            .where(QuizQuestion.job_id == int(job_id))
         )
     else:
         stmt = select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
@@ -52,6 +58,7 @@ async def get_quiz_questions_for_interview(
         )
         options = [option._mapping for option in db.execute(stmt).all()]
         quiz_question["options"] = options
+
     return quiz_questions
 
 

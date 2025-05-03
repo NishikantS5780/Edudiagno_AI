@@ -22,6 +22,7 @@ import {
   GraduationCap,
   Briefcase,
   Link as LinkIcon,
+  BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -29,6 +30,7 @@ import { jobAPI, interviewAPI } from "@/lib/api";
 import { JobData } from "@/types/job";
 import { InterviewData } from "@/types/interview";
 import DsaManagement from "@/components/jobs/DsaManagement";
+import McqManagement from "@/components/jobs/McqManagement";
 
 const JobDetail = () => {
   const { id } = useParams();
@@ -45,7 +47,11 @@ const JobDetail = () => {
 
   const fetchJobDetails = async () => {
     try {
-      const response = await jobAPI.recruiterGetJob(id);
+      if (!id) {
+        toast.error("Job ID is required");
+        return;
+      }
+      const response = await jobAPI.recruiterGetJob(id as string);
       const data = response.data;
       setJob({
         id: data.id,
@@ -66,7 +72,8 @@ const JobDetail = () => {
         status: data.status,
         createdAt: data.created_at,
         requires_dsa: data.requires_dsa || false,
-        dsa_questions: data.dsa_questions || []
+        dsa_questions: data.dsa_questions || [],
+        requires_mcq: data.requires_mcq || false
       });
     } catch (error) {
       console.error("Error fetching job details:", error);
@@ -241,6 +248,7 @@ const JobDetail = () => {
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="candidates">Candidates</TabsTrigger>
                   <TabsTrigger value="dsa">DSA Questions</TabsTrigger>
+                  <TabsTrigger value="mcq">MCQ Questions</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" className="space-y-6">
                   <div className="space-y-4">
@@ -395,6 +403,9 @@ const JobDetail = () => {
                 </TabsContent>
                 <TabsContent value="dsa">
                   {job && <DsaManagement jobId={job.id} />}
+                </TabsContent>
+                <TabsContent value="mcq">
+                  {job && <McqManagement jobId={job.id} />}
                 </TabsContent>
               </Tabs>
             </CardContent>
