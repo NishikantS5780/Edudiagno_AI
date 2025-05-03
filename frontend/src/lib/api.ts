@@ -38,10 +38,11 @@ export const recruiterAPI = {
 };
 
 export const interviewAPI = {
-  getInterviews: async (params?: { limit?: number; start?: number }) => {
+  getInterviews: async (params?: { limit?: number; start?: number; job_id?: string }) => {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.append("limit", params.limit.toString());
     if (params?.start) queryParams.append("start", params.start.toString());
+    if (params?.job_id) queryParams.append("job_id", params.job_id);
 
     const res = await api.get(
       `/interview/recruiter-view/all?${queryParams.toString()}`,

@@ -64,13 +64,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { jobAPI } from "@/lib/api";
 
 const InterviewsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
+  const [scoreFilter, setScoreFilter] = useState("all");
   const [interviewsData, setInterviewsData] = useState<InterviewData[]>();
+  const [jobTitles, setJobTitles] = useState<Record<number, string>>({});
   const [interviewToDelete, setInterviewToDelete] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -82,8 +84,31 @@ const InterviewsPage = () => {
         start: (currentPage - 1) * itemsPerPage,
         limit: itemsPerPage
       });
+      
+      // Fetch job titles for all interviews
+      const jobIds = res.data.map((interview: any) => interview.job_id) as number[];
+      const uniqueJobIds = Array.from(new Set(jobIds));
+      
+      const jobTitlePromises = uniqueJobIds.map(async (jobId) => {
+        try {
+          const jobRes = await jobAPI.recruiterGetJob(jobId.toString());
+          return { jobId, title: jobRes.data.title };
+        } catch (error) {
+          console.error(`Error fetching job ${jobId}:`, error);
+          return { jobId, title: "Unknown Job" };
+        }
+      });
+
+      const jobTitleResults = await Promise.all(jobTitlePromises);
+      const jobTitlesMap = jobTitleResults.reduce((acc, { jobId, title }) => {
+        acc[jobId] = title;
+        return acc;
+      }, {} as Record<number, string>);
+
+      setJobTitles(jobTitlesMap);
+
       setInterviewsData(() =>
-        res.data.map((interview) => {
+        res.data.map((interview: any) => {
           return {
             id: interview.id,
             status: interview.status,
@@ -193,17 +218,18 @@ const InterviewsPage = () => {
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={scoreFilter} onValueChange={setScoreFilter}>
             <SelectTrigger className="w-[140px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Status" />
+              <BarChart3 className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Score" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="all">All Scores</SelectItem>
+              <SelectItem value="90-100">90-100%</SelectItem>
+              <SelectItem value="80-89">80-89%</SelectItem>
+              <SelectItem value="70-79">70-79%</SelectItem>
+              <SelectItem value="60-69">60-69%</SelectItem>
+              <SelectItem value="0-59">0-59%</SelectItem>
             </SelectContent>
           </Select>
 
@@ -245,7 +271,7 @@ const InterviewsPage = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Candidate</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Job Role</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Score</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -253,83 +279,117 @@ const InterviewsPage = () => {
           </TableHeader>
           <TableBody>
             {interviewsData && interviewsData.length > 0 ? (
-              interviewsData.map((interview) => (
-                <TableRow key={interview.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={null} alt={interview.firstName} />
-                        <AvatarFallback>
-                          {interview.firstName[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <Link
-                          to={`/dashboard/interviews/${interview.id}`}
-                          className="font-medium hover:underline"
-                        >
-                          {interview.firstName} {interview.lastName}
-                        </Link>
-                        <div className="text-xs text-muted-foreground">
-                          {interview.email}
+              interviewsData
+                .filter((interview: InterviewData) => {
+                  // Filter by score
+                  if (scoreFilter !== "all") {
+                    const score = interview.overallScore || 0;
+                    const [min, max] = scoreFilter.split("-").map(Number);
+                    if (score < min || score > max) {
+                      return false;
+                    }
+                  }
+
+                  // Filter by search query
+                  if (searchQuery) {
+                    const searchLower = searchQuery.toLowerCase();
+                    return (
+                      interview.firstName?.toLowerCase().includes(searchLower) ||
+                      interview.lastName?.toLowerCase().includes(searchLower) ||
+                      interview.email?.toLowerCase().includes(searchLower)
+                    );
+                  }
+
+                  return true;
+                })
+                .map((interview) => (
+                  <TableRow key={interview.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={undefined} alt={interview.firstName} />
+                          <AvatarFallback>
+                            {interview.firstName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <Link
+                            to={`/dashboard/interviews/${interview.id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {interview.firstName} {interview.lastName}
+                          </Link>
+                          <div className="text-xs text-muted-foreground">
+                            {interview.email}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(interview.status)}</TableCell>
-                  <TableCell>
-                    {new Date(interview.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    {interview.status === "completed" ? (
-                      <span className={getScoreColor(interview.overallScore)}>
-                        {interview.overallScore}%
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>
-                            <Link
-                              to={`/dashboard/interviews/${interview.id}`}
-                              className="flex items-center"
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </Link>
-                        </DropdownMenuItem>
-                          <DropdownMenuItem>
+                    </TableCell>
+                    <TableCell>
+                      {interview.jobId ? (
+                        <Link
+                          to={`/dashboard/jobs/${interview.jobId}`}
+                          className="text-sm hover:underline"
+                        >
+                          {jobTitles[interview.jobId] || "Loading..."}
+                        </Link>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(interview.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {interview.status === "completed" ? (
+                        <span className={getScoreColor(interview.overallScore)}>
+                          {interview.overallScore}%
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem>
                               <Link
-                                to={`/dashboard/interviews/${interview.id}/report`}
-                              className="flex items-center"
+                                to={`/dashboard/interviews/${interview.id}`}
+                                className="flex items-center"
                               >
-                              <FileText className="mr-2 h-4 w-4" />
-                                View Report
-                              </Link>
-                            </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => setInterviewToDelete(interview.id!)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Interview
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
+                                <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </Link>
+                          </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <Link
+                                  to={`/dashboard/interviews/${interview.id}/report`}
+                                className="flex items-center"
+                                >
+                                <FileText className="mr-2 h-4 w-4" />
+                                  View Report
+                                </Link>
+                              </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => setInterviewToDelete(interview.id!)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Interview
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
             ) : (
               <TableRow>
                 <TableCell
