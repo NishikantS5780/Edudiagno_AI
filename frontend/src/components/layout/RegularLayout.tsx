@@ -9,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Menu } from "lucide-react";
-import ChatbotButton from "@/components/common/ChatbotButton";
 
 interface NavLink {
   label: string;
@@ -326,8 +325,6 @@ const RegularLayout: React.FC<{ children: React.ReactNode }> = ({
           </div>
         </div>
       </footer>
-
-      <ChatbotButton />
     </div>
   );
 };

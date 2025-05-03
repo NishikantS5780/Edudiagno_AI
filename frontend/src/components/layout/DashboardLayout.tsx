@@ -31,7 +31,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import ChatbotButton from "@/components/common/ChatbotButton";
 import { UserContext } from "@/context/UserContext";
 import { useNotifications } from "@/context/NotificationContext";
 import { formatDistanceToNow } from 'date-fns';
@@ -229,8 +228,6 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
 
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">{children}</main>
       </div>
-
-      <ChatbotButton />
     </div>
   );
 };
