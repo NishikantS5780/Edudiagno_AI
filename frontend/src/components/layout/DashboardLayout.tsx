@@ -145,7 +145,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
           <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="relative">
+                <Button variant="outline" size="icon" className="relative hidden">
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-brand text-xs flex items-center justify-center text-white">
