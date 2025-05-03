@@ -19,7 +19,7 @@ async def get_recruiter(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    stmt = select(Recruiter).where(Recruiter.id == int(id))
+    stmt = select(Recruiter).where(Recruiter.id == int(recruiter_id))
     result = db.execute(stmt)
     recruiter = result.scalars().all()[0]
 
@@ -52,6 +52,55 @@ async def register_recruiter(
     db.commit()
     db.refresh(db_user)
     return db_user
+
+
+@router.put("")
+async def upate_recruiter(
+    request: Request,
+    recruiter_data: schemas.UpdateRecruiter,
+    recruiter_id=Depends(authorize_recruiter),
+    db: Session = Depends(database.get_db),
+):
+    password_hash = None
+    if recruiter_data.password:
+        password_hash = security.hash_password(recruiter_data.password)
+
+    data = recruiter_data.model_dump(exclude_none=True)
+    if "password" in data:
+        data.pop("password")
+    if password_hash:
+        recruiter_data["password_hash"] = password_hash
+
+    stmt = (
+        update(Recruiter)
+        .values(data)
+        .where(Recruiter.id == recruiter_id)
+        .returning(
+            Recruiter.id,
+            Recruiter.name,
+            Recruiter.email,
+            Recruiter.email_verified,
+            Recruiter.phone,
+            Recruiter.designation,
+            Recruiter.company_name,
+            Recruiter.company_logo,
+            Recruiter.website,
+            Recruiter.industry,
+            Recruiter.min_company_size,
+            Recruiter.max_company_size,
+            Recruiter.country,
+            Recruiter.state,
+            Recruiter.city,
+            Recruiter.zip,
+            Recruiter.address,
+            Recruiter.verified,
+        )
+    )
+
+    result = db.execute(stmt)
+    db.commit()
+    recruiter = result.all()[0]._mapping
+    return recruiter
 
 
 @router.post("/login")
