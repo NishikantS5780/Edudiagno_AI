@@ -48,7 +48,7 @@ const SignUp = () => {
   // Form state
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useContext(UserContext);
+  const { signup } = useContext(UserContext)!;
   const navigate = useNavigate();
 
   // Password strength indicators

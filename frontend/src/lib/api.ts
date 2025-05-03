@@ -3,6 +3,7 @@ import { JobData } from "@/types/job";
 import {
   RecruiterLoginData,
   RecruiterRegistrationData,
+  RecruiterData,
 } from "@/types/recruiter";
 import axios from "axios";
 
@@ -40,6 +41,12 @@ export const recruiterAPI = {
   },
   verifyLogin: async () => {
     const res = await api.get("/recruiter/verify-token", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    return res;
+  },
+  updateRecruiter: async (data: Partial<RecruiterData>) => {
+    const res = await api.put("/recruiter", data, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     return res;

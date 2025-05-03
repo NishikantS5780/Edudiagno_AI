@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useSearchParams,useNavigate } from "react-router-dom";
+import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,63 +11,54 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/context/UserContext";
-import { Pencil, Shield, UserCircle, AlertCircle } from "lucide-react";
+import { Pencil, Shield, UserCircle, AlertCircle, Save, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { recruiterAPI } from "@/lib/api";
+import { RecruiterData } from "@/types/recruiter";
+
+interface ProfileData {
+  name: string;
+  email: string;
+  phone: string;
+  designation: string;
+  company_name: string;
+  website: string;
+  industry: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+}
 
 const Profile = () => {
   const { toast } = useToast();
-  const { recruiter } = useUser();
+  const { recruiter, setRecruiter } = useUser();
   const [isLoading, setIsLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(recruiter?.company_logo || null);
+  const [profileImage, setProfileImage] = useState<string | null>(recruiter?.companyLogo || null);
   const location = useLocation();
   const navigate = useNavigate();
   const [emailVerified, setEmailVerified] = useState(false);
   const isNewUser = location.state?.isNewUser || recruiter?.is_profile_complete === false;
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("profile");
- 
-  // Determine if user is coming directly after signup
-  const [isFirstLogin, setIsFirstLogin] = useState(false);
-
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNewCandidate: true,
-    emailInterviewComplete: true,
-    emailWeeklySummary: true,
-    browserNewCandidate: true,
-    browserInterviewComplete: true,
-    smsInterviewComplete: false,
-  });
-
-  // Initialize profile data with actual user data
-  const [profileData, setProfileData] = useState({
-    name: recruiter ? `${recruiter.first_name} ${recruiter.last_name}` : "",
-    email: recruiter?.email || "",
-    company: recruiter?.company_name || "",
-    title: recruiter?.title || "",
-    phone: recruiter?.phone || "",
-    timezone: recruiter?.timezone || "America/New_York",
-    language: recruiter?.language || "English",
-  });
-  
-
-  // Initialize company settings with actual user data
-  const [companySettings, setCompanySettings] = useState({
-    companyName: recruiter?.company_name || "",
-    website: recruiter?.website || "",
-    industry: recruiter?.industry || "Technology",
-    size: recruiter?.company_size || "51-200 employees",
-    logo: profileImage,
-    address: recruiter?.address || "",
-    city: recruiter?.city || "",
-    state: recruiter?.state || "",
-    zip: recruiter?.zip || "",
-    country: recruiter?.country || "United States",
-  });
-
-  // Add this near the top of the component with other state declarations
-  const [hasCompletedProfile, setHasCompletedProfile] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+
+  // Profile data state
+  const [profileData, setProfileData] = useState<ProfileData>({
+    name: "",
+    email: "",
+    phone: "",
+    designation: "",
+    company_name: "",
+    website: "",
+    industry: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    country: "",
+  });
 
   // Fetch user details when component mounts
   useEffect(() => {
@@ -76,35 +67,22 @@ const Profile = () => {
         const recruiterData = await recruiterAPI.verifyLogin();
         const userData = recruiterData.data;
         
-        // Log the data to verify structure
-        console.log('Recruiter Data:', userData);
-
         setProfileData({
           name: userData.name || '',
           email: userData.email || '',
-          company: userData.company_name || '',
-          title: userData.designation || '',
           phone: userData.phone || '',
-          timezone: "America/New_York", // Default value since not in API
-          language: "English", // Default value since not in API
-        });
-        setCompanySettings({
-          companyName: userData.company_name || '',
+          designation: userData.designation || '',
+          company_name: userData.company_name || '',
           website: userData.website || '',
-          industry: userData.industry || "Technology",
-          size: userData.min_company_size && userData.max_company_size 
-            ? `${userData.min_company_size}-${userData.max_company_size} employees`
-            : "51-200 employees",
-          logo: userData.company_logo || null,
+          industry: userData.industry || '',
           address: userData.address || '',
           city: userData.city || '',
           state: userData.state || '',
           zip: userData.zip || '',
-          country: userData.country || "United States",
+          country: userData.country || '',
         });
         setEmailVerified(userData.email_verified || false);
-        setProfileImage(userData.company_logo || null);
-        setHasCompletedProfile(true); // Assuming profile is complete if we have data
+        setProfileImage(userData.companyLogo || null);
       } catch (error) {
         console.error("Failed to fetch recruiter details:", error);
         toast({
@@ -118,144 +96,31 @@ const Profile = () => {
     fetchUserDetails();
   }, []);
 
-  // Separate useEffect for checking profile completion status
-  useEffect(() => {
-    const hasCompleted = localStorage.getItem('hasCompletedProfile');
-    const progress = calculateProfileProgress();
-    
-    // Only update hasCompletedProfile if progress is 100%
-    if (progress === 100 && hasCompleted === 'true') {
-      setHasCompletedProfile(true);
-    } else {
-      setHasCompletedProfile(false);
-    }
-  }, [profileData, companySettings]);
-
-  // Add this useEffect to handle initial edit mode state
-  useEffect(() => {
-    const hasCompleted = localStorage.getItem('hasCompletedProfile');
-    // Start in view mode if profile is completed
-    if (hasCompleted === 'true') {
-      setIsEditMode(false);
-    } else {
-      setIsEditMode(true);
-    }
-  }, []); // Only run once on component mount
-
-  // Calculate profile completion percentage
-  const calculateProfileProgress = () => {
-    let progress = 0;
-    let totalFields = 0;
-    let completedFields = 0;
-
-    // Basic info (required)
-    totalFields += 4;
-    if (profileData.name && profileData.name.trim()) completedFields++;
-    if (profileData.email && profileData.email.trim()) completedFields++;
-    if (profileData.title && profileData.title.trim()) completedFields++;
-    if (profileData.phone && profileData.phone.trim()) completedFields++;
-
-    // Company info (required)
-    totalFields += 5;
-    if (companySettings.companyName && companySettings.companyName.trim()) completedFields++;
-    if (companySettings.website && companySettings.website.trim()) completedFields++;
-    if (companySettings.industry && companySettings.industry.trim()) completedFields++;
-    if (companySettings.address && companySettings.address.trim()) completedFields++;
-    if (companySettings.city && companySettings.city.trim() && 
-        companySettings.state && companySettings.state.trim() && 
-        companySettings.zip && companySettings.zip.trim()) completedFields++;
-
-    // Additional fields (optional but contribute to progress)
-    totalFields += 2;
-    if (profileData.timezone && profileData.timezone !== "America/New_York") completedFields++;
-    if (profileData.language && profileData.language !== "English") completedFields++;
-
-    // Calculate percentage
-    progress = Math.round((completedFields / totalFields) * 100);
-    
-    // Ensure profile is marked as complete if all required fields are filled
-    const requiredFieldsComplete = 
-      profileData.name && profileData.name.trim() &&
-      profileData.email && profileData.email.trim() &&
-      profileData.title && profileData.title.trim() &&
-      profileData.phone && profileData.phone.trim() &&
-      companySettings.companyName && companySettings.companyName.trim() &&
-      companySettings.website && companySettings.website.trim() &&
-      companySettings.industry && companySettings.industry.trim() &&
-      companySettings.address && companySettings.address.trim() &&
-      companySettings.city && companySettings.city.trim() &&
-      companySettings.state && companySettings.state.trim() &&
-      companySettings.zip && companySettings.zip.trim();
-
-    if (requiredFieldsComplete) {
-      progress = 100;
-    }
-
-    return progress;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setProfileData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  // Calculate and update profile progress when component mounts or data changes
-  useEffect(() => {
-    const updateProgress = async () => {
-      if (recruiter) {
-        const progress = calculateProfileProgress();
-        if (progress !== recruiter.profileProgress) {
-          await recruiter.updateProfileProgress(progress);
-        }
-      }
-    };
-
-    updateProgress();
-  }, [recruiter, profileData, companySettings]);
-
-  useEffect(() => {
-   // Check for query param indicating first login
-    const isNew = searchParams.get("new") === "true";
-   if (isNew) {
-      setIsFirstLogin(true);
-       // Remove the query param to avoid showing the message on refresh
-       const newParams = new URLSearchParams(searchParams);
-       newParams.delete("new");
-       setSearchParams(newParams);
-     }
- 
-     // Set active tab based on URL parameter
-     const tabParam = searchParams.get("tab");
-     if (tabParam && ["profile", "company", "notifications"].includes(tabParam)) {
-       setActiveTab(tabParam);
-     }
-   }, [searchParams, setSearchParams]);
-
-  const handleProfileUpdate = async () => {
-    setIsLoading(true);
-    
+  const handleSave = async () => {
     try {
-      // Split name into first_name and last_name
-      const nameParts = profileData.name.split(" ");
-      const first_name = nameParts[0];
-      const last_name = nameParts.slice(1).join(" ");
-      
-      await recruiter.updateUserProfile({
-        first_name,
-        last_name,
-        email: profileData.email,
-        title: profileData.title,
-        phone: profileData.phone,
-        timezone: profileData.timezone,
-        language: profileData.language,
-        is_profile_complete: true,
-      });
-      
-      toast({
-        title: "Profile updated",
-        description: "Your profile information has been updated successfully.",
-      });
-
-      // If profile is complete, exit edit mode
-      if (calculateProfileProgress() === 100) {
-        setIsEditMode(false);
+      setIsLoading(true);
+      const response = await recruiterAPI.updateRecruiter(profileData);
+      if (setRecruiter && recruiter) {
+        setRecruiter({
+          ...recruiter,
+          ...response.data
+        });
       }
+      setIsEditMode(false);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
     } catch (error) {
+      console.error("Failed to update profile:", error);
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
@@ -266,54 +131,32 @@ const Profile = () => {
     }
   };
 
-  const handleCompanyUpdate = async () => {
-    setIsLoading(true);
-    
-    try {
-      await recruiter.updateUserProfile({
-        company_name: companySettings.companyName,
-        website: companySettings.website,
-        industry: companySettings.industry,
-        company_size: companySettings.size,
-        address: companySettings.address,
-        city: companySettings.city,
-        state: companySettings.state,
-        zip: companySettings.zip,
-        country: companySettings.country,
-        is_profile_complete: true,
-      });
-      
-      toast({
-        title: "Company settings updated",
-        description: "Your company information has been updated successfully.",
-      });
-
-      // If profile is complete, exit edit mode
-      if (calculateProfileProgress() === 100) {
-        setIsEditMode(false);
+  const handleCancel = () => {
+    setIsEditMode(false);
+    // Reset form data to current user data
+    const fetchUserDetails = async () => {
+      try {
+        const recruiterData = await recruiterAPI.verifyLogin();
+        const userData = recruiterData.data;
+        setProfileData({
+          name: userData.name || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          designation: userData.designation || '',
+          company_name: userData.company_name || '',
+          website: userData.website || '',
+          industry: userData.industry || '',
+          address: userData.address || '',
+          city: userData.city || '',
+          state: userData.state || '',
+          zip: userData.zip || '',
+          country: userData.country || '',
+        });
+      } catch (error) {
+        console.error("Failed to fetch recruiter details:", error);
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update company settings. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleNotificationUpdate = () => {
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Notification preferences updated",
-        description: "Your notification settings have been saved.",
-      });
-    }, 1000);
+    };
+    fetchUserDetails();
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -323,10 +166,6 @@ const Profile = () => {
       reader.onload = (event) => {
         if (event.target?.result) {
           setProfileImage(event.target.result as string);
-          setCompanySettings({
-            ...companySettings,
-            logo: event.target.result as string,
-          });
         }
       };
       reader.readAsDataURL(file);
@@ -345,27 +184,27 @@ const Profile = () => {
       <div className="container max-w-5xl py-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Account Settings</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-4xl font-bold tracking-tight">Account Settings</h1>
+            <p className="text-muted-foreground mt-3 text-base">
               Manage your profile, company information, and notification preferences
             </p>
           </div>
         </div>
 
-        {isFirstLogin && (
-           <div className="mb-6">
-             <Card className="border-brand bg-brand/5">
-               <CardContent className="pt-6">
-                 <h3 className="text-lg font-semibold mb-2">Welcome to EduDiagno!</h3>
-                 <p className="text-muted-foreground">
-                   Please complete your profile to get the most out of our platform. This will help us provide you with a better experience.
-                 </p>
-               </CardContent>
-             </Card>
-           </div>
-         )}
- 
-         <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
+        {isNewUser && (
+          <div className="mb-6">
+            <Card className="border-brand bg-brand/5">
+              <CardContent className="pt-6">
+                <h3 className="text-lg font-semibold mb-2">Welcome to EduDiagno!</h3>
+                <p className="text-muted-foreground">
+                  Please complete your profile to get the most out of our platform. This will help us provide you with a better experience.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="profile">
               <UserCircle className="mr-2 h-4 w-4" /> Profile
@@ -408,126 +247,106 @@ const Profile = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <Card className="md:col-span-2">
                 <CardHeader>
-                  <CardTitle>Personal Information</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-2xl font-bold">Personal Information</CardTitle>
+                  <CardDescription className="text-base text-muted-foreground">
                     Update your personal details and contact information
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input 
-                        id="name" 
-                        value={profileData.name}
-                        onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                        disabled={hasCompletedProfile && !isEditMode}
-                      />
+                      <span className="block text-sm text-muted-foreground mb-1">Full Name</span>
+                      {isEditMode ? (
+                        <Input
+                          id="name"
+                          name="name"
+                          value={profileData.name}
+                          onChange={handleInputChange}
+                          className="text-base"
+                        />
+                      ) : (
+                        <span className="block text-lg font-semibold">{profileData.name}</span>
+                      )}
                     </div>
                     <div className="space-y-2">
-        <Label htmlFor="email">Email Address</Label>
-        <div className="flex items-center space-x-2">
-          <Input
-            id="email"
-            type="email"
-            value={profileData.email}
-            onChange={(e) =>
-              setProfileData({ ...profileData, email: e.target.value })
-            }
-            disabled={hasCompletedProfile && !isEditMode}
-          />
-          {!emailVerified ? (
-            <Button
-              type="button"
-              onClick={() =>
-                navigate("/recruiter-email-verification", {
-                  state: { email: profileData.email },
-                })
-              }
-              className="text-sm"
-              disabled={!profileData.email}
-            >
-              Verify
-            </Button>
-          ) : (
-            <span className="text-green-600 font-medium text-sm">
-              Verified
-            </span>
-          )}
-        </div>
-      </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Job Title</Label>
-                      <Input 
-                        id="title" 
-                        value={profileData.title}
-                        onChange={(e) => setProfileData({...profileData, title: e.target.value})}
-                        disabled={hasCompletedProfile && !isEditMode}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input 
-                        id="phone" 
-                        value={profileData.phone}
-                        onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
-                        disabled={hasCompletedProfile && !isEditMode}
-                      />
+                      <span className="block text-sm text-muted-foreground mb-1">Email Address</span>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          id="email"
+                          type="email"
+                          value={profileData.email}
+                          disabled
+                          className="text-base"
+                        />
+                        {!emailVerified ? (
+                          <Button
+                            type="button"
+                            onClick={() =>
+                              navigate("/recruiter-email-verification", {
+                                state: { email: profileData.email },
+                              })
+                            }
+                            className="text-sm"
+                            disabled={!profileData.email}
+                          >
+                            Verify
+                          </Button>
+                        ) : (
+                          <span className="text-green-600 font-medium text-sm">
+                            Verified
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                     <div className="space-y-2">
-                      <Label htmlFor="timezone">Timezone</Label>
-                      <select 
-                        id="timezone" 
-                        className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={profileData.timezone}
-                        onChange={(e) => setProfileData({...profileData, timezone: e.target.value})}
-                        disabled={hasCompletedProfile && !isEditMode}
-                      >
-                        <option value="America/New_York">Eastern Time (ET)</option>
-                        <option value="America/Chicago">Central Time (CT)</option>
-                        <option value="America/Denver">Mountain Time (MT)</option>
-                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                        <option value="Europe/London">London (GMT)</option>
-                      </select>
+                      <span className="block text-sm text-muted-foreground mb-1">Job Title</span>
+                      {isEditMode ? (
+                        <Input
+                          id="designation"
+                          name="designation"
+                          value={profileData.designation}
+                          onChange={handleInputChange}
+                          className="text-base"
+                        />
+                      ) : (
+                        <span className="block text-lg font-semibold">{profileData.designation}</span>
+                      )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="language">Preferred Language</Label>
-                      <select 
-                        id="language" 
-                        className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={profileData.language}
-                        onChange={(e) => setProfileData({...profileData, language: e.target.value})}
-                        disabled={hasCompletedProfile && !isEditMode}
-                      >
-                        <option value="English">English</option>
-                        <option value="Spanish">Spanish</option>
-                        <option value="French">French</option>
-                        <option value="German">German</option>
-                        <option value="Chinese">Chinese</option>
-                      </select>
+                      <span className="block text-sm text-muted-foreground mb-1">Phone Number</span>
+                      {isEditMode ? (
+                        <Input
+                          id="phone"
+                          name="phone"
+                          value={profileData.phone}
+                          onChange={handleInputChange}
+                          className="text-base"
+                        />
+                      ) : (
+                        <span className="block text-lg font-semibold">{profileData.phone}</span>
+                      )}
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2">
-                  {hasCompletedProfile ? (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setIsEditMode(!isEditMode)}
-                    >
-                      {isEditMode ? "Cancel" : "Edit Profile"}
+                  {!isEditMode ? (
+                    <Button onClick={() => setIsEditMode(true)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Profile
                     </Button>
-                  ) : null}
-                  {(!hasCompletedProfile || isEditMode) && (
-                    <Button 
-                      onClick={handleProfileUpdate} 
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "Saving..." : "Save Changes"}
-                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={handleCancel}>
+                        <X className="mr-2 h-4 w-4" />
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSave} disabled={isLoading}>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Changes
+                      </Button>
+                    </div>
                   )}
                 </CardFooter>
               </Card>
@@ -535,8 +354,10 @@ const Profile = () => {
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Your Profile</CardTitle>
-                    <CardDescription>Manage your profile picture</CardDescription>
+                    <CardTitle className="text-2xl font-bold">Your Profile</CardTitle>
+                    <CardDescription className="text-base text-muted-foreground">
+                      Manage your profile picture
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="flex flex-col items-center">
                     <div className="relative mb-4">
@@ -571,8 +392,10 @@ const Profile = () => {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Security</CardTitle>
-                    <CardDescription>Manage your account security</CardDescription>
+                    <CardTitle className="text-2xl font-bold">Security</CardTitle>
+                    <CardDescription className="text-base text-muted-foreground">
+                      Manage your account security
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <Button className="w-full" variant="outline">
@@ -592,77 +415,64 @@ const Profile = () => {
           <TabsContent value="company">
             <Card>
               <CardHeader>
-                <CardTitle>Company Information</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-2xl font-bold">Company Information</CardTitle>
+                <CardDescription className="text-base text-muted-foreground">
                   Update your company details and branding
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="company-name">Company Name</Label>
-                      <Input 
-                        id="company-name" 
-                        value={companySettings.companyName}
-                        onChange={(e) => setCompanySettings({...companySettings, companyName: e.target.value})}
-                        disabled={hasCompletedProfile && !isEditMode}
-                      />
+                      <span className="block text-sm text-muted-foreground mb-1">Company Name</span>
+                      {isEditMode ? (
+                        <Input
+                          id="company_name"
+                          name="company_name"
+                          value={profileData.company_name}
+                          onChange={handleInputChange}
+                          className="text-base"
+                        />
+                      ) : (
+                        <span className="block text-lg font-semibold">{profileData.company_name}</span>
+                      )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="website">Website</Label>
-                      <Input 
-                        id="website" 
-                        value={companySettings.website}
-                        onChange={(e) => setCompanySettings({...companySettings, website: e.target.value})}
-                        disabled={hasCompletedProfile && !isEditMode}
-                      />
+                      <span className="block text-sm text-muted-foreground mb-1">Website</span>
+                      {isEditMode ? (
+                        <Input
+                          id="website"
+                          name="website"
+                          value={profileData.website}
+                          onChange={handleInputChange}
+                          className="text-base"
+                        />
+                      ) : (
+                        <span className="block text-lg font-semibold">{profileData.website}</span>
+                      )}
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="industry">Industry</Label>
-                        <select 
-                          id="industry" 
-                          className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          value={companySettings.industry}
-                          onChange={(e) => setCompanySettings({...companySettings, industry: e.target.value})}
-                          disabled={hasCompletedProfile && !isEditMode}
-                        >
-                          <option value="Technology">Technology</option>
-                          <option value="Healthcare">Healthcare</option>
-                          <option value="Finance">Finance</option>
-                          <option value="Education">Education</option>
-                          <option value="Retail">Retail</option>
-                          <option value="Manufacturing">Manufacturing</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="size">Company Size</Label>
-                        <select 
-                          id="size" 
-                          className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          value={companySettings.size}
-                          onChange={(e) => setCompanySettings({...companySettings, size: e.target.value})}
-                          disabled={hasCompletedProfile && !isEditMode}
-                        >
-                          <option value="1-10 employees">1-10 employees</option>
-                          <option value="11-50 employees">11-50 employees</option>
-                          <option value="51-200 employees">51-200 employees</option>
-                          <option value="201-500 employees">201-500 employees</option>
-                          <option value="501-1000 employees">501-1000 employees</option>
-                          <option value="1000+ employees">1000+ employees</option>
-                        </select>
-                      </div>
+                    <div className="space-y-2">
+                      <span className="block text-sm text-muted-foreground mb-1">Industry</span>
+                      {isEditMode ? (
+                        <Input
+                          id="industry"
+                          name="industry"
+                          value={profileData.industry}
+                          onChange={handleInputChange}
+                          className="text-base"
+                        />
+                      ) : (
+                        <span className="block text-lg font-semibold">{profileData.industry}</span>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col">
-                    <Label className="mb-2">Company Logo</Label>
+                    <Label className="mb-2 text-base font-medium">Company Logo</Label>
                     <div className="border border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-6 h-[200px] relative">
-                      {companySettings.logo ? (
+                      {profileImage ? (
                         <div className="relative w-full h-full flex items-center justify-center">
                           <img 
-                            src={companySettings.logo} 
+                            src={profileImage} 
                             alt="Company logo" 
                             className="max-h-full max-w-full object-contain"
                           />
@@ -719,82 +529,100 @@ const Profile = () => {
                 <Separator />
 
                 <div>
-                  <h3 className="text-lg font-medium mb-4">Company Address</h3>
+                  <h3 className="text-xl font-bold mb-4">Company Address</h3>
                   <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="address">Street Address</Label>
-                      <Input 
-                        id="address" 
-                        value={companySettings.address}
-                        onChange={(e) => setCompanySettings({...companySettings, address: e.target.value})}
-                        disabled={hasCompletedProfile && !isEditMode}
-                      />
+                      <span className="block text-sm text-muted-foreground mb-1">Street Address</span>
+                      {isEditMode ? (
+                        <Input
+                          id="address"
+                          name="address"
+                          value={profileData.address}
+                          onChange={handleInputChange}
+                          className="text-base"
+                        />
+                      ) : (
+                        <span className="block text-lg font-semibold">{profileData.address}</span>
+                      )}
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                       <div className="space-y-2">
-                        <Label htmlFor="city">City</Label>
-                        <Input 
-                          id="city" 
-                          value={companySettings.city}
-                          onChange={(e) => setCompanySettings({...companySettings, city: e.target.value})}
-                          disabled={hasCompletedProfile && !isEditMode}
-                        />
+                        <span className="block text-sm text-muted-foreground mb-1">City</span>
+                        {isEditMode ? (
+                          <Input
+                            id="city"
+                            name="city"
+                            value={profileData.city}
+                            onChange={handleInputChange}
+                            className="text-base"
+                          />
+                        ) : (
+                          <span className="block text-lg font-semibold">{profileData.city}</span>
+                        )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="state">State/Province</Label>
-                        <Input 
-                          id="state" 
-                          value={companySettings.state}
-                          onChange={(e) => setCompanySettings({...companySettings, state: e.target.value})}
-                          disabled={hasCompletedProfile && !isEditMode}
-                        />
+                        <span className="block text-sm text-muted-foreground mb-1">State/Province</span>
+                        {isEditMode ? (
+                          <Input
+                            id="state"
+                            name="state"
+                            value={profileData.state}
+                            onChange={handleInputChange}
+                            className="text-base"
+                          />
+                        ) : (
+                          <span className="block text-lg font-semibold">{profileData.state}</span>
+                        )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="zip">Zip/Postal Code</Label>
-                        <Input 
-                          id="zip" 
-                          value={companySettings.zip}
-                          onChange={(e) => setCompanySettings({...companySettings, zip: e.target.value})}
-                          disabled={hasCompletedProfile && !isEditMode}
-                        />
+                        <span className="block text-sm text-muted-foreground mb-1">Zip/Postal Code</span>
+                        {isEditMode ? (
+                          <Input
+                            id="zip"
+                            name="zip"
+                            value={profileData.zip}
+                            onChange={handleInputChange}
+                            className="text-base"
+                          />
+                        ) : (
+                          <span className="block text-lg font-semibold">{profileData.zip}</span>
+                        )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="country">Country</Label>
-                        <select 
-                          id="country" 
-                          className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          value={companySettings.country}
-                          onChange={(e) => setCompanySettings({...companySettings, country: e.target.value})}
-                          disabled={hasCompletedProfile && !isEditMode}
-                        >
-                          <option value="United States">United States</option>
-                          <option value="Canada">Canada</option>
-                          <option value="United Kingdom">United Kingdom</option>
-                          <option value="Australia">Australia</option>
-                          <option value="Germany">Germany</option>
-                          <option value="France">France</option>
-                        </select>
+                        <span className="block text-sm text-muted-foreground mb-1">Country</span>
+                        {isEditMode ? (
+                          <Input
+                            id="country"
+                            name="country"
+                            value={profileData.country}
+                            onChange={handleInputChange}
+                            className="text-base"
+                          />
+                        ) : (
+                          <span className="block text-lg font-semibold">{profileData.country}</span>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end gap-2">
-                {hasCompletedProfile ? (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsEditMode(!isEditMode)}
-                  >
-                    {isEditMode ? "Cancel" : "Edit Company Info"}
+                {!isEditMode ? (
+                  <Button onClick={() => setIsEditMode(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit Company Info
                   </Button>
-                ) : null}
-                {(!hasCompletedProfile || isEditMode) && (
-                  <Button 
-                    onClick={handleCompanyUpdate} 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Saving..." : "Save Company Information"}
-                  </Button>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleCancel}>
+                      <X className="mr-2 h-4 w-4" />
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSave} disabled={isLoading}>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Changes
+                    </Button>
+                  </div>
                 )}
               </CardFooter>
             </Card>
@@ -803,18 +631,18 @@ const Profile = () => {
           <TabsContent value="notifications">
             <Card>
               <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-2xl font-bold">Notification Preferences</CardTitle>
+                <CardDescription className="text-base text-muted-foreground">
                   Manage how and when you receive notifications
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium mb-4">Email Notifications</h3>
+                  <h3 className="text-xl font-bold mb-4">Email Notifications</h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label htmlFor="email-new-candidate" className="text-base">
+                        <Label htmlFor="email-new-candidate" className="text-base font-medium">
                           New Candidate Applications
                         </Label>
                         <p className="text-sm text-muted-foreground">
@@ -823,17 +651,13 @@ const Profile = () => {
                       </div>
                       <Switch 
                         id="email-new-candidate" 
-                        checked={notificationSettings.emailNewCandidate}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, emailNewCandidate: checked})
-                        }
                         disabled
                       />
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label htmlFor="email-interview-complete" className="text-base">
+                        <Label htmlFor="email-interview-complete" className="text-base font-medium">
                           Interview Completion
                         </Label>
                         <p className="text-sm text-muted-foreground">
@@ -842,17 +666,13 @@ const Profile = () => {
                       </div>
                       <Switch 
                         id="email-interview-complete" 
-                        checked={notificationSettings.emailInterviewComplete}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, emailInterviewComplete: checked})
-                        }
                         disabled
                       />
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label htmlFor="email-weekly-summary" className="text-base">
+                        <Label htmlFor="email-weekly-summary" className="text-base font-medium">
                           Weekly Summary
                         </Label>
                         <p className="text-sm text-muted-foreground">
@@ -861,10 +681,6 @@ const Profile = () => {
                       </div>
                       <Switch 
                         id="email-weekly-summary" 
-                        checked={notificationSettings.emailWeeklySummary}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, emailWeeklySummary: checked})
-                        }
                         disabled
                       />
                     </div>
@@ -874,11 +690,11 @@ const Profile = () => {
                 <Separator />
 
                 <div>
-                  <h3 className="text-lg font-medium mb-4">Browser Notifications</h3>
+                  <h3 className="text-xl font-bold mb-4">Browser Notifications</h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label htmlFor="browser-new-candidate" className="text-base">
+                        <Label htmlFor="browser-new-candidate" className="text-base font-medium">
                           New Candidate Applications
                         </Label>
                         <p className="text-sm text-muted-foreground">
@@ -887,17 +703,13 @@ const Profile = () => {
                       </div>
                       <Switch 
                         id="browser-new-candidate" 
-                        checked={notificationSettings.browserNewCandidate}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, browserNewCandidate: checked})
-                        }
                         disabled
                       />
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label htmlFor="browser-interview-complete" className="text-base">
+                        <Label htmlFor="browser-interview-complete" className="text-base font-medium">
                           Interview Completion
                         </Label>
                         <p className="text-sm text-muted-foreground">
@@ -906,10 +718,6 @@ const Profile = () => {
                       </div>
                       <Switch 
                         id="browser-interview-complete" 
-                        checked={notificationSettings.browserInterviewComplete}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, browserInterviewComplete: checked})
-                        }
                         disabled
                       />
                     </div>
@@ -919,11 +727,11 @@ const Profile = () => {
                 <Separator />
 
                 <div>
-                  <h3 className="text-lg font-medium mb-4">SMS Notifications</h3>
+                  <h3 className="text-xl font-bold mb-4">SMS Notifications</h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label htmlFor="sms-interview-complete" className="text-base">
+                        <Label htmlFor="sms-interview-complete" className="text-base font-medium">
                           Interview Completion
                         </Label>
                         <p className="text-sm text-muted-foreground">
@@ -932,10 +740,6 @@ const Profile = () => {
                       </div>
                       <Switch 
                         id="sms-interview-complete" 
-                        checked={notificationSettings.smsInterviewComplete}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({...notificationSettings, smsInterviewComplete: checked})
-                        }
                         disabled
                       />
                     </div>
@@ -943,7 +747,7 @@ const Profile = () => {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end border-t p-6">
-                <Button onClick={handleNotificationUpdate} disabled>
+                <Button disabled>
                   Save Notification Preferences
                 </Button>
               </CardFooter>
