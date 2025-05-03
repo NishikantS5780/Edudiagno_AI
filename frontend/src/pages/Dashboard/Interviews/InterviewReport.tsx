@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { interviewAPI } from "@/lib/api";
+import { interviewAPI, quizAPI } from "@/lib/api";
 import { InterviewData } from "@/types/interview";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import {
@@ -22,14 +22,23 @@ import {
   MessageSquare,
   CheckCircle,
   XCircle,
+  Calendar,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { QuizResponse, QuizQuestion } from "@/types/quiz";
 
 const InterviewReport = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [interview, setInterview] = useState<InterviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [quizResponses, setQuizResponses] = useState<QuizResponse[]>([]);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [mcqScores, setMcqScores] = useState({
+    total: { correct: 0, total: 0 },
+    technical: { correct: 0, total: 0 },
+    aptitude: { correct: 0, total: 0 }
+  });
 
   useEffect(() => {
     const fetchInterview = async () => {
@@ -42,6 +51,13 @@ const InterviewReport = () => {
           navigate("/dashboard/interviews");
           return;
         }
+
+        // Fetch MCQ data
+        const quizResponse = await quizAPI.getQuizQuestions(id as string);
+        const quizQuestionsResponse = await quizAPI.getQuizQuestions(id as string);
+
+        setQuizResponses(quizResponse.data);
+        setQuizQuestions(quizQuestionsResponse.data);
 
         setInterview({
           id: interviewData.id,
@@ -57,6 +73,7 @@ const InterviewReport = () => {
           linkedinUrl: interviewData.linkedin_url,
           portfolioUrl: interviewData.portfolio_url,
           resumeUrl: interviewData.resume_url,
+          resumeText: interviewData.resume_text,
           resumeMatchScore: interviewData.resume_match_score,
           resumeMatchFeedback: interviewData.resume_match_feedback,
           overallScore: interviewData.overall_score,
@@ -78,6 +95,45 @@ const InterviewReport = () => {
 
     fetchInterview();
   }, [id, navigate]);
+
+  useEffect(() => {
+    const calculateScores = () => {
+      if (quizResponses.length === 0 || quizQuestions.length === 0) return;
+
+      const scores = {
+        total: { correct: 0, total: quizResponses.length },
+        technical: { correct: 0, total: 0 },
+        aptitude: { correct: 0, total: 0 }
+      };
+
+      quizResponses.forEach(response => {
+        const question = quizQuestions.find(q => q.id === response.question_id);
+        if (!question) return;
+
+        const chosenOption = question.options.find((opt: { id: number; label: string; correct: boolean }) => opt.id === response.option_id);
+        if (chosenOption?.correct) {
+          scores.total.correct++;
+          if (question.question_type === 'technical') {
+            scores.technical.correct++;
+            scores.technical.total++;
+          } else if (question.question_type === 'aptitude') {
+            scores.aptitude.correct++;
+            scores.aptitude.total++;
+          }
+        } else {
+          if (question.question_type === 'technical') {
+            scores.technical.total++;
+          } else if (question.question_type === 'aptitude') {
+            scores.aptitude.total++;
+          }
+        }
+      });
+
+      setMcqScores(scores);
+    };
+
+    calculateScores();
+  }, [quizResponses, quizQuestions]);
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return "text-success";
@@ -109,7 +165,12 @@ const InterviewReport = () => {
           culturalFit: interview.cultural_fit_score,
           feedback: interview.feedback,
           resumeMatchScore: interview.resumeMatchScore,
-          resumeMatchFeedback: interview.resumeMatchFeedback
+          resumeMatchFeedback: interview.resumeMatchFeedback,
+          mcqScores: {
+            total: `${mcqScores.total.correct}/${mcqScores.total.total}`,
+            technical: `${mcqScores.technical.correct}/${mcqScores.technical.total}`,
+            aptitude: `${mcqScores.aptitude.correct}/${mcqScores.aptitude.total}`
+          }
         }
       };
 
@@ -133,6 +194,11 @@ const InterviewReport = () => {
         ['Communication: ' + reportData.interview.communication + '%'],
         ['Problem Solving: ' + reportData.interview.problemSolving + '%'],
         ['Cultural Fit: ' + reportData.interview.culturalFit + '%'],
+        [''],
+        ['MCQ Assessment'],
+        ['Total Score: ' + reportData.interview.mcqScores.total],
+        ['Technical Questions: ' + reportData.interview.mcqScores.technical],
+        ['Aptitude Questions: ' + reportData.interview.mcqScores.aptitude],
         [''],
         ['Resume Match'],
         ['Score: ' + reportData.interview.resumeMatchScore + '%'],
@@ -330,6 +396,30 @@ const InterviewReport = () => {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">MCQ Assessment</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span>Total Score:</span>
+              <span className="text-xl font-bold text-green-600">
+                {mcqScores.total.correct}/{mcqScores.total.total}
+              </span>
+            </div>
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Technical MCQs:</span>
+                <span className="text-sm font-medium">{mcqScores.technical.correct}/{mcqScores.technical.total}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Aptitude MCQs:</span>
+                <span className="text-sm font-medium">{mcqScores.aptitude.correct}/{mcqScores.aptitude.total}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
