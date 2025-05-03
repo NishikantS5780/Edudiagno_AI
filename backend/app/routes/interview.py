@@ -123,7 +123,7 @@ async def get_interview(
     else:
         stmt = (
             stmt.join(Job, Job.id == Interview.job_id)
-            .join(Recruiter, Recruiter.id == Job.id)
+            .join(Recruiter, Recruiter.id == Job.company_id)
             .where(Recruiter.id == recruiter_id)
         )
     result = db.execute(stmt)
