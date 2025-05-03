@@ -67,6 +67,24 @@ class CreateJob(BaseModel):
     status: str
 
 
+class UpdateJob(BaseModel):
+    id: int
+    title: Optional[str] = None
+    description: Optional[str] = None
+    department: Optional[str] = None
+    city: Optional[str] = None
+    location: Optional[str] = None
+    type: Optional[str] = None
+    min_experience: Optional[int] = None
+    max_experience: Optional[int] = None
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    show_salary: Optional[bool] = None
+    requirements: Optional[str] = None
+    benefits: Optional[str] = None
+    status: Optional[str] = None
+
+
 class Job(BaseModel):
     id: int
     title: str

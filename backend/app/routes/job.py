@@ -1,7 +1,7 @@
 from typing import Literal
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import asc, case, delete, desc, select, and_
+from sqlalchemy import asc, case, delete, desc, select, and_, update
 from fastapi import HTTPException, status
 
 from app import schemas, database
@@ -243,6 +243,55 @@ async def generate_requirements(generate_jr_data: schemas.GenerateJobRequirement
     )
     requirements = response.choices[0].message.content
     return {"requirements": requirements}
+
+
+@router.put("")
+async def update_job(
+    job_data: schemas.UpdateJob,
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
+):
+    stmt = (
+        update(Job)
+        .values(
+            title=job_data.title,
+            description=job_data.description,
+            department=job_data.department,
+            city=job_data.city,
+            location=job_data.location,
+            type=job_data.type,
+            min_experience=job_data.min_experience,
+            max_experience=job_data.max_experience,
+            salary_min=job_data.salary_min,
+            salary_max=job_data.salary_max,
+            show_salary=job_data.show_salary,
+            requirements=job_data.requirements,
+            benefits=job_data.benefits,
+            status=job_data.status,
+        )
+        .where(and_(Job.company_id == recruiter_id, Job.id == job_data.id))
+        .returning(
+            Job.id,
+            Job.title,
+            Job.description,
+            Job.department,
+            Job.location,
+            Job.type,
+            Job.min_experience,
+            Job.max_experience,
+            Job.salary_min,
+            Job.salary_max,
+            Job.show_salary,
+            Job.requirements,
+            Job.benefits,
+            Job.status,
+            Job.company_id,
+        )
+    )
+    result = db.execute(stmt)
+    db.commit()
+    job = result.all()[0]._mapping
+    return job
 
 
 @router.delete("", status_code=204)
