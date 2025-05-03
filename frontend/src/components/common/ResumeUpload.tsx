@@ -3,7 +3,12 @@ import { useDropzone } from "react-dropzone";
 import { Upload, FileText, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
-export function ResumeUpload({ onUpload, disabled = false }) {
+interface ResumeUploadProps {
+  onUpload: (file: File) => void;
+  disabled?: boolean;
+}
+
+export function ResumeUpload({ onUpload, disabled = false }: ResumeUploadProps) {
   const onDrop = useCallback(
     (acceptedFiles: File[], rejectedFiles: any[]) => {
       if (rejectedFiles.length > 0) {

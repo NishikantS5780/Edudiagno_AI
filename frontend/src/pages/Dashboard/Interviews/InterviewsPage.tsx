@@ -80,18 +80,26 @@ const InterviewsPage = () => {
 
   const getInterviewData = async () => {
     try {
+      console.log('Fetching interviews with params:', {
+        start: (currentPage - 1) * itemsPerPage,
+        limit: itemsPerPage
+      });
       const res = await interviewAPI.getInterviews({
         start: (currentPage - 1) * itemsPerPage,
         limit: itemsPerPage
       });
+      console.log('API Response:', res);
       
       // Fetch job titles for all interviews
       const jobIds = res.data.map((interview: any) => interview.job_id) as number[];
+      console.log('Job IDs:', jobIds);
       const uniqueJobIds = Array.from(new Set(jobIds));
+      console.log('Unique Job IDs:', uniqueJobIds);
       
       const jobTitlePromises = uniqueJobIds.map(async (jobId) => {
         try {
           const jobRes = await jobAPI.recruiterGetJob(jobId.toString());
+          console.log(`Job ${jobId} title:`, jobRes.data.title);
           return { jobId, title: jobRes.data.title };
         } catch (error) {
           console.error(`Error fetching job ${jobId}:`, error);
@@ -100,6 +108,7 @@ const InterviewsPage = () => {
       });
 
       const jobTitleResults = await Promise.all(jobTitlePromises);
+      console.log('Job Title Results:', jobTitleResults);
       const jobTitlesMap = jobTitleResults.reduce((acc, { jobId, title }) => {
         acc[jobId] = title;
         return acc;
@@ -107,33 +116,35 @@ const InterviewsPage = () => {
 
       setJobTitles(jobTitlesMap);
 
-      setInterviewsData(() =>
-        res.data.map((interview: any) => {
-          return {
-            id: interview.id,
-            status: interview.status,
-            firstName: interview.first_name,
-            lastName: interview.last_name,
-            email: interview.email,
-            phone: interview.phone,
-            workExperience: interview.work_experience,
-            education: interview.education,
-            skills: interview.skills,
-            location: interview.location,
-            linkedinUrl: interview.linkedin_url,
-            portfolioUrl: interview.portfolio_url,
-            resumeUrl: interview.resume_url,
-            resumeMatchScore: interview.resume_match_score,
-            resumeMatchFeedback: interview.resume_match_feedback,
-            overallScore: interview.overall_score,
-            feedback: interview.feedback,
-            createdAt: interview.created_at,
-            jobId: interview.job_id,
-          };
-        })
-      );
+      const formattedInterviews = res.data.map((interview: any) => {
+        return {
+          id: interview.id,
+          status: interview.status,
+          firstName: interview.first_name,
+          lastName: interview.last_name,
+          email: interview.email,
+          phone: interview.phone,
+          workExperience: interview.work_experience,
+          education: interview.education,
+          skills: interview.skills,
+          location: interview.location,
+          linkedinUrl: interview.linkedin_url,
+          portfolioUrl: interview.portfolio_url,
+          resumeUrl: interview.resume_url,
+          resumeMatchScore: interview.resume_match_score,
+          resumeMatchFeedback: interview.resume_match_feedback,
+          overallScore: interview.overall_score,
+          feedback: interview.feedback,
+          createdAt: interview.created_at,
+          jobId: interview.job_id,
+        };
+      });
+      console.log('Formatted Interviews:', formattedInterviews);
+      setInterviewsData(formattedInterviews);
+      
       // Calculate total pages based on total count from API
       const totalCount = res.headers['x-total-count'] || res.data.length;
+      console.log('Total Count:', totalCount);
       setTotalPages(Math.ceil(totalCount / itemsPerPage));
     } catch (error) {
       console.error("Error fetching interviews:", error);
@@ -281,11 +292,14 @@ const InterviewsPage = () => {
             {interviewsData && interviewsData.length > 0 ? (
               interviewsData
                 .filter((interview: InterviewData) => {
+                  console.log('Filtering interview:', interview);
                   // Filter by score
                   if (scoreFilter !== "all") {
                     const score = interview.overallScore || 0;
                     const [min, max] = scoreFilter.split("-").map(Number);
+                    console.log('Score filter:', { score, min, max });
                     if (score < min || score > max) {
+                      console.log('Interview filtered out by score');
                       return false;
                     }
                   }
@@ -293,13 +307,19 @@ const InterviewsPage = () => {
                   // Filter by search query
                   if (searchQuery) {
                     const searchLower = searchQuery.toLowerCase();
-                    return (
+                    const matches = (
                       interview.firstName?.toLowerCase().includes(searchLower) ||
                       interview.lastName?.toLowerCase().includes(searchLower) ||
                       interview.email?.toLowerCase().includes(searchLower)
                     );
+                    console.log('Search filter:', { searchLower, matches });
+                    if (!matches) {
+                      console.log('Interview filtered out by search');
+                      return false;
+                    }
                   }
 
+                  console.log('Interview passed all filters');
                   return true;
                 })
                 .map((interview) => (
