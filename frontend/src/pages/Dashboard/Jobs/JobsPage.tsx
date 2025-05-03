@@ -393,7 +393,7 @@ const JobsPage = () => {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link to={`/dashboard/jobs/${job.id}`}>
+                          <Link to={`/dashboard/jobs/${job.id}/edit`}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </Link>

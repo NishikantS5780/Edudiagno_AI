@@ -203,6 +203,15 @@ export const jobAPI = {
     });
     return res;
   },
+  updateJob: async (jobId: string, data: Partial<JobData>) => {
+    const res = await api.put(`/job`, {
+      id: parseInt(jobId),
+      ...data
+    }, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    return res;
+  },
   createJob: async (data: JobData) => {
     // First create the job without DSA questions
     const jobData = {

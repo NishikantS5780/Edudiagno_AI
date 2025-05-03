@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft,
   Edit,
@@ -23,6 +27,7 @@ import {
   Briefcase,
   Link as LinkIcon,
   BookOpen,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -39,6 +44,8 @@ const JobDetail = () => {
   const [interviews, setInterviews] = useState<InterviewData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedJob, setEditedJob] = useState<Partial<JobData>>({});
 
   useEffect(() => {
     fetchJobDetails();
@@ -75,6 +82,7 @@ const JobDetail = () => {
         dsa_questions: data.dsa_questions || [],
         requires_mcq: data.requires_mcq || false
       });
+      setEditedJob({});
     } catch (error) {
       console.error("Error fetching job details:", error);
       toast.error("Failed to load job details");
@@ -155,6 +163,37 @@ const JobDetail = () => {
     }
   };
 
+  const handleEditModeToggle = () => {
+    setIsEditMode(!isEditMode);
+    if (!isEditMode) {
+      setEditedJob({});
+    }
+  };
+
+  const handleJobChange = (field: keyof JobData, value: string | number | boolean) => {
+    setEditedJob(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveChanges = async () => {
+    if (!job) return;
+
+    try {
+      setLoading(true);
+      await jobAPI.updateJob(job.id.toString(), editedJob);
+      toast.success("Job details updated successfully");
+      fetchJobDetails();
+      setIsEditMode(false);
+    } catch (error) {
+      console.error("Error updating job:", error);
+      toast.error("Failed to update job details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -198,7 +237,7 @@ const JobDetail = () => {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
-              <Link to={`/dashboard/jobs/${job.id}/edit`}>
+              <Link to={`/dashboard/jobs/${job?.id}/edit`}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Link>
@@ -207,7 +246,7 @@ const JobDetail = () => {
             <Button
               variant="outline"
               onClick={() => {
-                const link = `${window.location.origin}/interview?job_id=${job.id}`;
+                const link = `${window.location.origin}/interview?job_id=${job?.id}`;
                 navigator.clipboard.writeText(link);
                 toast.success("Interview link copied to clipboard", {
                   description: link,

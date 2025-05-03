@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import PageHeader from "@/components/common/PageHeader";
 import { Switch } from "@/components/ui/switch";
+import { jobAPI } from "@/lib/api";
 
 const JobEdit = () => {
   const { id } = useParams();
@@ -25,15 +26,14 @@ const JobEdit = () => {
     jobType: "full-time",
     department: "",
     requirements: "",
-    benefits: "",
-    deadline: ""
+    benefits: ""
   });
 
   // Fetch job data
   const { data: job, isLoading, error } = useQuery({
     queryKey: ['job', id],
     queryFn: async () => {
-      const response = await jobAPI.getById(id);
+      const response = await jobAPI.recruiterGetJob(id as string);
       return response.data;
     }
   });
@@ -51,8 +51,7 @@ const JobEdit = () => {
         jobType: job.type || "full-time",
         department: job.department || "",
         requirements: job.requirements || "",
-        benefits: job.benefits || "",
-        deadline: job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : ""
+        benefits: job.benefits || ""
       });
     }
   }, [job]);
@@ -60,7 +59,7 @@ const JobEdit = () => {
   // Update job mutation
   const updateJobMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const response = await jobAPI.update(id, {
+      const response = await jobAPI.updateJob(id as string, {
         title: data.title,
         description: data.description,
         location: data.location,
@@ -70,8 +69,7 @@ const JobEdit = () => {
         type: data.jobType,
         department: data.department,
         requirements: data.requirements,
-        benefits: data.benefits,
-        deadline: data.deadline
+        benefits: data.benefits
       });
       return response.data;
     },
@@ -88,7 +86,7 @@ const JobEdit = () => {
   // Delete job mutation
   const deleteJobMutation = useMutation({
     mutationFn: async () => {
-      const response = await jobAPI.delete(Number(id));
+      const response = await jobAPI.deleteJob(id as string);
       return response.data;
     },
     onSuccess: () => {
@@ -255,17 +253,6 @@ const JobEdit = () => {
                     <SelectItem value="internship">Internship</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="deadline">Application Deadline</Label>
-                <Input
-                  id="deadline"
-                  name="deadline"
-                  type="date"
-                  value={formData.deadline}
-                  onChange={handleChange}
-                />
               </div>
             </div>
 
