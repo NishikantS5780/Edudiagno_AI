@@ -4,6 +4,8 @@ from brevo_python.rest import ApiException
 import brevo_python
 import os
 
+from app.lib.errors import CustomException
+
 
 def send_otp_email(to: str, otp: str, expiration_time: str):
     try:
@@ -25,3 +27,4 @@ def send_otp_email(to: str, otp: str, expiration_time: str):
         api_instance.send_transac_email(send_smtp_email)
     except ApiException as e:
         print("Exception when calling EmailCampaignsApi->send_test_email: %s\n" % e)
+        raise CustomException("Error while sending otp")

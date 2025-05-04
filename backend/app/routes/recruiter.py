@@ -1,10 +1,12 @@
 import datetime
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update
+import random
 
-from app import database, models, schemas
+from app import config, database, models, schemas
 from app.dependencies.authorization import authorize_recruiter
+from app.lib.errors import CustomException
 from app.models import Recruiter
 from app.services import brevo
 from app.utils import security
@@ -148,27 +150,27 @@ async def verify_recruiter_access_token(
 async def send_otp(
     send_otp_data: schemas.RecruiterSendEmailOtp, db: Session = Depends(database.get_db)
 ):
-    import random
-    import time
+    try:
+        otp = int(random.random() * 1000000)
 
-    # otp = int(random.random() * 1000000)
-    otp = 111111
-    brevo.send_otp_email(send_otp_data.email, otp, "1 min")
-    stmt = (
-        update(Recruiter)
-        .values(
-            email_otp=otp,
-            email_otp_expiry=datetime.datetime.now()
-            .astimezone()
-            .astimezone(tz=datetime.timezone.utc)
-            .replace(tzinfo=None)
-            + datetime.timedelta(seconds=60),
+        brevo.send_otp_email(send_otp_data.email, otp, "1 min")
+        stmt = (
+            update(Recruiter)
+            .values(
+                email_otp=otp,
+                email_otp_expiry=datetime.datetime.now()
+                .astimezone()
+                .astimezone(tz=datetime.timezone.utc)
+                .replace(tzinfo=None)
+                + datetime.timedelta(seconds=60),
+            )
+            .where(Recruiter.email == send_otp_data.email)
         )
-        .where(Recruiter.email == send_otp_data.email)
-    )
-    db.execute(stmt)
-    db.commit()
-    return {"message": "successfully sent otp"}
+        db.execute(stmt)
+        db.commit()
+        return {"message": "successfully sent otp"}
+    except CustomException as e:
+        raise HTTPException(status_code=400, detail=e.args[0])
 
 
 @router.post("/verify-otp")
