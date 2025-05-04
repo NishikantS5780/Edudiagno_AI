@@ -368,7 +368,7 @@ const InterviewsPage = () => {
                       {new Date(interview.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      {interview.status === "completed" ? (
+                      {interview.overallScore ? (
                         <span className={getScoreColor(interview.overallScore)}>
                           {interview.overallScore}%
                         </span>
