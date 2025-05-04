@@ -172,7 +172,7 @@ export function ThankYouStage({
                   <h3 className="text-xl font-semibold mb-4">Interview Feedback</h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-center space-x-2">
-                      <span className="text-3xl font-bold">{score}/10</span>
+                      <span className="text-3xl font-bold">{score}/100</span>
                       <div className="flex">
                         {[...Array(5)].map((_, i) => (
                           <Star
