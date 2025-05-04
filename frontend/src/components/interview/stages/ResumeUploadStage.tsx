@@ -78,6 +78,11 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
     setResumeFile(file);
   };
 
+  const handleResumeRemove = () => {
+    setResumeFile(null);
+    setCandidateData(undefined);
+  };
+
   const handleSubmitApplication = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -220,7 +225,7 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setResumeFile(null)}
+                    onClick={handleResumeRemove}
                     className="text-destructive hover:text-destructive"
                     disabled={isSubmitting || isCompleted}
                   >
