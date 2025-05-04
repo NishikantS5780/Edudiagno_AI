@@ -81,30 +81,45 @@ const DSAPlayground = () => {
     enabled: !!interviewId,
   });
 
-  // Fetch DSA question using job_id
-  const { data: dsaQuestion, isLoading: isLoadingQuestion } = useQuery({
-    queryKey: ["dsa-question", interviewData?.job_id],
+  // Fetch DSA questions using job_id
+  const { data: dsaQuestions, isLoading: isLoadingQuestions } = useQuery({
+    queryKey: ["dsa-questions", interviewData?.job_id],
     queryFn: async () => {
       const response = await api.get(`/dsa-question`, {
         params: { job_id: interviewData?.job_id },
       });
-      // Get the first question from the array
-      return response.data[0];
+      return response.data;
     },
     enabled: !!interviewData?.job_id,
   });
 
-  // Fetch test cases using question_id
+  const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
+
+  // Get current question and test cases
+  const currentQuestion = dsaQuestions?.[currentQuestionIndex];
+
   const { data: testCases, isLoading: isLoadingTestCases } = useQuery({
-    queryKey: ["dsa-test-cases", dsaQuestion?.id],
+    queryKey: ["dsa-test-cases", currentQuestion?.id],
     queryFn: async () => {
       const response = await api.get(`/dsa-test-case`, {
-        params: { question_id: dsaQuestion?.id },
+        params: { question_id: currentQuestion?.id },
       });
       return response.data;
     },
-    enabled: !!dsaQuestion?.id,
+    enabled: !!currentQuestion?.id,
   });
+
+  const handleNext = () => {
+    if (currentQuestionIndex < dsaQuestions.length - 1) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+      console.log("Go to next question: index", currentQuestionIndex + 1);
+    }
+  };
+
+  const handleSubmit = () => {
+    console.log("Submit DSA exam at question index", currentQuestionIndex);
+    handleComplete();
+  };
 
   const handleComplete = () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -116,7 +131,12 @@ const DSAPlayground = () => {
     }
   };
 
-  if (isLoadingInterview || isLoadingQuestion || isLoadingTestCases) {
+  // Add loggers before rendering navigation buttons
+  console.log('DSA Questions:', dsaQuestions);
+  console.log('Current Question Index:', currentQuestionIndex);
+  console.log('Current Question:', currentQuestion);
+
+  if (isLoadingInterview || isLoadingQuestions || isLoadingTestCases) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -124,10 +144,19 @@ const DSAPlayground = () => {
     );
   }
 
-  if (!dsaQuestion || !testCases) {
+  if (!dsaQuestions || dsaQuestions.length === 0 || !testCases) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <p className="text-red-500">No DSA question or test cases found</p>
+        <p className="text-red-500">No DSA questions or test cases found</p>
+      </div>
+    );
+  }
+
+  if (!currentQuestion) {
+    console.error('Current question is undefined! Index:', currentQuestionIndex, 'Questions:', dsaQuestions);
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <p className="text-red-500">Error: Current question is undefined. Please refresh or contact support.</p>
       </div>
     );
   }
@@ -258,17 +287,17 @@ const DSAPlayground = () => {
                 </CardHeader>
                 <CardContent className="flex-1 overflow-auto">
                   <DsaQuestion
-                    title={`Question ${dsaQuestion.id}`}
+                    title={`Question ${currentQuestionIndex + 1} of ${dsaQuestions.length}`}
                     successRate={successRate}
-                    questionNumber={`${dsaQuestion.id}.`}
-                    questionTitle={dsaQuestion.title}
-                    difficulty={dsaQuestion.difficulty}
-                    description={<>{dsaQuestion.description}</>}
+                    questionNumber={`${currentQuestionIndex + 1}.`}
+                    questionTitle={currentQuestion.title}
+                    difficulty={currentQuestion.difficulty}
+                    description={currentQuestion.description}
                     testCases={testCases.map((testCase: TestCase) => ({
                       input: testCase.input,
                       expectedOutput: testCase.expected_output,
                     }))}
-                    constraints={dsaQuestion.constraints}
+                    constraints={currentQuestion.constraints}
                     compilationStatus={compilationStatus}
                   />
                 </CardContent>
@@ -276,11 +305,18 @@ const DSAPlayground = () => {
               <Card className="h-full">
                 <CardContent className="p-0 h-full">
                   <CodeExecutionPanel
-                    questionId={dsaQuestion.id}
+                    questionId={currentQuestion.id}
                     expectedOutput={testCases[0]?.expected_output || ""}
                     onCompilationStatusChange={setCompilationStatus}
                     onSuccessRateChange={setSuccessRate}
                     compilationStatus={compilationStatus}
+                    onNext={handleNext}
+                    onSubmit={handleSubmit}
+                    isLastQuestion={currentQuestionIndex === dsaQuestions.length - 1}
+                    isOnlyQuestion={dsaQuestions.length === 1}
+                    isFirstQuestion={currentQuestionIndex === 0}
+                    currentQuestionIndex={currentQuestionIndex}
+                    totalQuestions={dsaQuestions.length}
                   />
                 </CardContent>
               </Card>

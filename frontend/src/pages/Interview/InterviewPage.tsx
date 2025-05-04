@@ -225,7 +225,7 @@ const InterviewPage = () => {
                   <h3 className="font-medium">Compensation</h3>
                   <p className="text-muted-foreground">
                     {jobDetails?.salaryMin && jobDetails?.salaryMax
-                      ? `$${jobDetails.salaryMin.toLocaleString()} - $${jobDetails.salaryMax.toLocaleString()}`
+                      ? `₹${jobDetails.salaryMin.toLocaleString()} - ₹${jobDetails.salaryMax.toLocaleString()}`
                       : "Not specified"}
                   </p>
                 </div>

@@ -13,7 +13,6 @@ import {
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import RequireAuth from "@/components/common/RequireAuth";
-import ChatbotButton from "@/components/common/ChatbotButton";
 import { useState, useEffect, useContext } from "react";
 import { toast } from "sonner";
 import VideoInterview from "@/pages/Interview/VideoInterview";
@@ -250,7 +249,6 @@ const App = () => {
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
-              <ChatbotButton />
             </TooltipProvider>
           </NotificationProvider>
         </UserProvider>

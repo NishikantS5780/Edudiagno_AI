@@ -13,6 +13,7 @@ interface UserContextType {
   signup: (data: RecruiterRegistrationData) => Promise<void>;
   login: (data: RecruiterLoginData) => Promise<void>;
   logout: () => Promise<void>;
+  setRecruiter: (recruiter: RecruiterData) => void;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(
@@ -71,6 +72,9 @@ export const UserProvider = ({ children }) => {
         },
         logout: async () => {
           localStorage.removeItem("token");
+        },
+        setRecruiter: (recruiter: RecruiterData) => {
+          setRecruiter(recruiter);
         },
       }}
     >

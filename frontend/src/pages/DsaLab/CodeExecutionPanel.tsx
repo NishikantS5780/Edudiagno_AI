@@ -13,6 +13,13 @@ interface CodeExecutionPanelProps {
   onCompilationStatusChange?: (status: string) => void;
   onSuccessRateChange?: (rate: string) => void;
   compilationStatus: string;
+  onNext?: () => void;
+  onSubmit?: () => void;
+  isLastQuestion?: boolean;
+  isOnlyQuestion?: boolean;
+  isFirstQuestion?: boolean;
+  currentQuestionIndex?: number;
+  totalQuestions?: number;
 }
 
 function CodeExecutionPanel({
@@ -21,6 +28,13 @@ function CodeExecutionPanel({
   onCompilationStatusChange,
   onSuccessRateChange,
   compilationStatus,
+  onNext,
+  onSubmit,
+  isLastQuestion,
+  isOnlyQuestion,
+  isFirstQuestion,
+  currentQuestionIndex,
+  totalQuestions,
 }: CodeExecutionPanelProps) {
   const [taskId, setTaskId] = React.useState("");
   const [output, setOutput] = React.useState("");
@@ -165,19 +179,6 @@ function CodeExecutionPanel({
               disabled={runStatus !== "successful"}
             >
               Continue
-            </Button>
-            <Button
-              onClick={handleFinish}
-              size="sm"
-              className={cn(
-                "px-4 py-2 rounded-lg transition-colors shadow-lg",
-                runStatus !== "successful"
-                  ? "bg-red-500 hover:bg-red-600 text-white hover:shadow-red-500/20"
-                  : "hidden"
-              )}
-              disabled={runStatus === "successful"}
-            >
-              Skip & Next
             </Button>
           </div>
         </div>
@@ -337,6 +338,22 @@ function CodeExecutionPanel({
               </TabsContent> */}
             </Tabs>
           </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-4">
+          {isOnlyQuestion ? (
+            <Button onClick={() => { console.log('Submit button (only question) clicked'); onSubmit && onSubmit(); }} variant="default">
+              Submit
+            </Button>
+          ) : !isLastQuestion ? (
+            <Button onClick={() => { console.log('Go to Next Question button clicked'); onNext && onNext(); }} variant="default">
+              Go to Next Question
+            </Button>
+          ) : (
+            <Button onClick={() => { console.log('Submit button (last question) clicked'); onSubmit && onSubmit(); }} variant="default">
+              Submit
+            </Button>
+          )}
         </div>
       </div>
     </div>
