@@ -252,7 +252,7 @@ const InterviewsPage = () => {
           </Select>
 
           <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[150px] hidden">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Department" />
             </SelectTrigger>
@@ -267,7 +267,7 @@ const InterviewsPage = () => {
           </Select>
 
           <Select value={jobFilter} onValueChange={setJobFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] hidden">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Job" />
             </SelectTrigger>
