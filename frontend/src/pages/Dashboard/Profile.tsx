@@ -66,7 +66,7 @@ const Profile = () => {
       try {
         const recruiterData = await recruiterAPI.verifyLogin();
         const userData = recruiterData.data;
-        
+
         setProfileData({
           name: userData.name || '',
           email: userData.email || '',
@@ -151,11 +151,11 @@ const Profile = () => {
           state: userData.state || '',
           zip: userData.zip || '',
           country: userData.country || '',
-        });
-      } catch (error) {
+      });
+    } catch (error) {
         console.error("Failed to fetch recruiter details:", error);
-      }
-    };
+    }
+  };
     fetchUserDetails();
   };
 
@@ -192,19 +192,19 @@ const Profile = () => {
         </div>
 
         {isNewUser && (
-          <div className="mb-6">
-            <Card className="border-brand bg-brand/5">
-              <CardContent className="pt-6">
-                <h3 className="text-lg font-semibold mb-2">Welcome to EduDiagno!</h3>
-                <p className="text-muted-foreground">
-                  Please complete your profile to get the most out of our platform. This will help us provide you with a better experience.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
+           <div className="mb-6">
+             <Card className="border-brand bg-brand/5">
+               <CardContent className="pt-6">
+                 <h3 className="text-lg font-semibold mb-2">Welcome to EduDiagno!</h3>
+                 <p className="text-muted-foreground">
+                   Please complete your profile to get the most out of our platform. This will help us provide you with a better experience.
+                 </p>
+               </CardContent>
+             </Card>
+           </div>
+         )}
+ 
+         <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="profile">
               <UserCircle className="mr-2 h-4 w-4" /> Profile
@@ -257,53 +257,53 @@ const Profile = () => {
                     <div className="space-y-2">
                       <span className="block text-sm text-muted-foreground mb-1">Full Name</span>
                       {isEditMode ? (
-                        <Input
-                          id="name"
+                      <Input 
+                        id="name" 
                           name="name"
-                          value={profileData.name}
+                        value={profileData.name}
                           onChange={handleInputChange}
                           className="text-base"
-                        />
+                      />
                       ) : (
                         <span className="block text-lg font-semibold">{profileData.name}</span>
                       )}
                     </div>
                     <div className="space-y-2">
                       <span className="block text-sm text-muted-foreground mb-1">Email Address</span>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          id="email"
-                          type="email"
-                          value={profileData.email}
+        <div className="flex items-center space-x-2">
+          <Input
+            id="email"
+            type="email"
+            value={profileData.email}
                           disabled
                           className="text-base"
-                        />
-                        {!emailVerified ? (
-                          <Button
-                            type="button"
-                            onClick={() =>
-                              navigate("/recruiter-email-verification", {
-                                state: { email: profileData.email },
-                              })
-                            }
-                            className="text-sm"
-                            disabled={!profileData.email}
-                          >
-                            Verify
-                          </Button>
-                        ) : (
-                          <span className="text-green-600 font-medium text-sm">
-                            Verified
-                          </span>
-                        )}
-                      </div>
-                    </div>
+          />
+          {!emailVerified ? (
+            <Button
+              type="button"
+              onClick={() =>
+                navigate("/recruiter-email-verification", {
+                  state: { email: profileData.email },
+                })
+              }
+              className="text-sm"
+              disabled={!profileData.email}
+            >
+              Verify
+            </Button>
+          ) : (
+            <span className="text-green-600 font-medium text-sm">
+              Verified
+            </span>
+          )}
+        </div>
+      </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                     <div className="space-y-2">
                       <span className="block text-sm text-muted-foreground mb-1">Job Title</span>
                       {isEditMode ? (
-                        <Input
+                      <Input 
                           id="designation"
                           name="designation"
                           value={profileData.designation}
@@ -317,10 +317,10 @@ const Profile = () => {
                     <div className="space-y-2">
                       <span className="block text-sm text-muted-foreground mb-1">Phone Number</span>
                       {isEditMode ? (
-                        <Input
-                          id="phone"
+                      <Input 
+                        id="phone" 
                           name="phone"
-                          value={profileData.phone}
+                        value={profileData.phone}
                           onChange={handleInputChange}
                           className="text-base"
                         />
@@ -341,7 +341,7 @@ const Profile = () => {
                       <Button variant="outline" onClick={handleCancel}>
                         <X className="mr-2 h-4 w-4" />
                         Cancel
-                      </Button>
+                    </Button>
                       <Button onClick={handleSave} disabled={isLoading}>
                         <Save className="mr-2 h-4 w-4" />
                         Save Changes
@@ -426,7 +426,7 @@ const Profile = () => {
                     <div className="space-y-2">
                       <span className="block text-sm text-muted-foreground mb-1">Company Name</span>
                       {isEditMode ? (
-                        <Input
+                      <Input 
                           id="company_name"
                           name="company_name"
                           value={profileData.company_name}
@@ -440,8 +440,8 @@ const Profile = () => {
                     <div className="space-y-2">
                       <span className="block text-sm text-muted-foreground mb-1">Website</span>
                       {isEditMode ? (
-                        <Input
-                          id="website"
+                      <Input 
+                        id="website" 
                           name="website"
                           value={profileData.website}
                           onChange={handleInputChange}
@@ -451,11 +451,11 @@ const Profile = () => {
                         <span className="block text-lg font-semibold">{profileData.website}</span>
                       )}
                     </div>
-                    <div className="space-y-2">
+                      <div className="space-y-2">
                       <span className="block text-sm text-muted-foreground mb-1">Industry</span>
                       {isEditMode ? (
                         <Input
-                          id="industry"
+                          id="industry" 
                           name="industry"
                           value={profileData.industry}
                           onChange={handleInputChange}
@@ -534,8 +534,8 @@ const Profile = () => {
                     <div className="space-y-2">
                       <span className="block text-sm text-muted-foreground mb-1">Street Address</span>
                       {isEditMode ? (
-                        <Input
-                          id="address"
+                      <Input 
+                        id="address" 
                           name="address"
                           value={profileData.address}
                           onChange={handleInputChange}
@@ -549,8 +549,8 @@ const Profile = () => {
                       <div className="space-y-2">
                         <span className="block text-sm text-muted-foreground mb-1">City</span>
                         {isEditMode ? (
-                          <Input
-                            id="city"
+                        <Input 
+                          id="city" 
                             name="city"
                             value={profileData.city}
                             onChange={handleInputChange}
@@ -563,8 +563,8 @@ const Profile = () => {
                       <div className="space-y-2">
                         <span className="block text-sm text-muted-foreground mb-1">State/Province</span>
                         {isEditMode ? (
-                          <Input
-                            id="state"
+                        <Input 
+                          id="state" 
                             name="state"
                             value={profileData.state}
                             onChange={handleInputChange}
@@ -577,8 +577,8 @@ const Profile = () => {
                       <div className="space-y-2">
                         <span className="block text-sm text-muted-foreground mb-1">Zip/Postal Code</span>
                         {isEditMode ? (
-                          <Input
-                            id="zip"
+                        <Input 
+                          id="zip" 
                             name="zip"
                             value={profileData.zip}
                             onChange={handleInputChange}
@@ -592,7 +592,7 @@ const Profile = () => {
                         <span className="block text-sm text-muted-foreground mb-1">Country</span>
                         {isEditMode ? (
                           <Input
-                            id="country"
+                          id="country" 
                             name="country"
                             value={profileData.country}
                             onChange={handleInputChange}
@@ -617,7 +617,7 @@ const Profile = () => {
                     <Button variant="outline" onClick={handleCancel}>
                       <X className="mr-2 h-4 w-4" />
                       Cancel
-                    </Button>
+                  </Button>
                     <Button onClick={handleSave} disabled={isLoading}>
                       <Save className="mr-2 h-4 w-4" />
                       Save Changes
