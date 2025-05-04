@@ -27,4 +27,4 @@ def send_otp_email(to: str, otp: str, expiration_time: str):
         api_instance.send_transac_email(send_smtp_email)
     except ApiException as e:
         print("Exception when calling EmailCampaignsApi->send_test_email: %s\n" % e)
-        raise CustomException("Error while sending otp")
+        raise CustomException("Could not send OTP")

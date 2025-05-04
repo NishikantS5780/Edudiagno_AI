@@ -1,4 +1,5 @@
 import logging
+from os import path
 from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,11 +8,11 @@ from fastapi.staticfiles import StaticFiles
 import openai
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
+from sqlalchemy.exc import IntegrityError
 
 load_dotenv()
 
 logging.basicConfig(
-    filename="logs",
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
@@ -54,6 +55,12 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     logger.error(f"SQLAlchemy error at {request.url.path}: {exc}")
+    if "unique constraint" in exc.args[0]:
+        column_name = exc.args[0].split("Key")[-1].split("=")[0].strip().strip("()")
+        return JSONResponse(
+            status_code=400,
+            content={"detail": f"{column_name} already exists"},
+        )
     return JSONResponse(
         status_code=500,
         content={"detail": "Unexpected database error."},
