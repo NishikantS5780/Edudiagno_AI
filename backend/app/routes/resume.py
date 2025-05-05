@@ -19,11 +19,8 @@ async def parse_resume(request: Request, file: UploadFile = File(...)):
     for page in reader.pages:
         text += page.extract_text()
 
-    if not text:
-        raise ValueError("No text could be extracted from the PDF")
-
     prompt = f"""Extract the following structured information from this resume text.  
-    Return ONLY a JSON object with these exact fields (all fields should be strings, arrays should not be empty):
+    Return ONLY a JSON object with these exact fields (all fields should be strings, arrays if the data is not present in resume assign those fields null):
 
     ```json
     {{
