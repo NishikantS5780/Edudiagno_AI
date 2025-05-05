@@ -54,7 +54,11 @@ export const recruiterAPI = {
 };
 
 export const interviewAPI = {
-  getInterviews: async (params?: { limit?: number; start?: number; job_id?: string }) => {
+  getInterviews: async (params?: {
+    limit?: number;
+    start?: number;
+    job_id?: string;
+  }) => {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.append("limit", params.limit.toString());
     if (params?.start) queryParams.append("start", params.start.toString());
@@ -106,6 +110,7 @@ export const interviewAPI = {
   uploadResume: async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
+    console.log(localStorage.getItem("i_token"));
     await api.put("/interview/upload-resume", formData, {
       headers: {
         "Content-Type": "multipart/formdata",
@@ -133,7 +138,10 @@ export const interviewAPI = {
     );
     return res.data;
   },
-  submitAudioResponse: async (audioFile: File, question_order_number: number) => {
+  submitAudioResponse: async (
+    audioFile: File,
+    question_order_number: number
+  ) => {
     const formData = new FormData();
     formData.append("audio_file", audioFile);
     formData.append("question_id", question_order_number.toString());
@@ -161,7 +169,7 @@ export const interviewAPI = {
       "/interview-question-and-response/submit-text-response",
       {
         question_order,
-        answer
+        answer,
       },
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
@@ -211,12 +219,16 @@ export const jobAPI = {
     return res;
   },
   updateJob: async (jobId: string, data: Partial<JobData>) => {
-    const res = await api.put(`/job`, {
-      id: parseInt(jobId),
-      ...data
-    }, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
+    const res = await api.put(
+      `/job`,
+      {
+        id: parseInt(jobId),
+        ...data,
+      },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
     return res;
   },
   createJob: async (data: JobData) => {
@@ -244,19 +256,29 @@ export const jobAPI = {
     });
 
     // If job has DSA questions, create them
-    if (data.requires_dsa && data.dsa_questions && data.dsa_questions.length > 0) {
+    if (
+      data.requires_dsa &&
+      data.dsa_questions &&
+      data.dsa_questions.length > 0
+    ) {
       for (const question of data.dsa_questions) {
         // Create DSA question
         const dsaQuestionData = {
           title: question.title,
           description: question.description,
           difficulty: question.difficulty,
-          job_id: jobResponse.data.id
+          job_id: jobResponse.data.id,
         };
 
-        const questionResponse = await api.post("/dsa-question", dsaQuestionData, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
+        const questionResponse = await api.post(
+          "/dsa-question",
+          dsaQuestionData,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
 
         // Create test cases for this question
         if (question.test_cases && question.test_cases.length > 0) {
@@ -264,11 +286,13 @@ export const jobAPI = {
             const testCaseData = {
               input: testCase.input,
               expected_output: testCase.expected_output,
-              dsa_question_id: questionResponse.data.id
+              dsa_question_id: questionResponse.data.id,
             };
 
             await api.post("/dsa-test-case", testCaseData, {
-              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
             });
           }
         }
@@ -320,23 +344,33 @@ export const jobAPI = {
   updateMcqQuestions: async (jobId: string, questions: any[]) => {
     // First update each question
     for (const question of questions) {
-      await api.put(`/quiz-question`, {
-        id: question.id,
-        description: question.description,
-        type: question.type
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      await api.put(
+        `/quiz-question`,
+        {
+          id: question.id,
+          description: question.description,
+          type: question.type,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
 
       // Then update each option
       for (const option of question.options) {
-        await api.put(`/quiz-option`, {
-          id: option.id,
-          label: option.label,
-          correct: option.correct
-        }, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
+        await api.put(
+          `/quiz-option`,
+          {
+            id: option.id,
+            label: option.label,
+            correct: option.correct,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
       }
     }
   },
@@ -390,7 +424,9 @@ export const quizAPI = {
     });
     return res;
   },
-  submitQuizResponses: async (responses: { question_id: number; option_id: number }[]) => {
+  submitQuizResponses: async (
+    responses: { question_id: number; option_id: number }[]
+  ) => {
     const res = await api.post("/quiz-response", responses, {
       headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
     });
