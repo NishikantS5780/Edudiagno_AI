@@ -39,6 +39,7 @@ interface ThankYouStageProps {
   }>;
   companyName?: string;
   jobTitle?: string;
+  jobId?: string;
 }
 
 export function ThankYouStage({
@@ -50,6 +51,7 @@ export function ThankYouStage({
   transcript = [],
   companyName = "the company",
   jobTitle = "the position",
+  jobId,
 }: ThankYouStageProps) {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [rating, setRating] = useState(0);
@@ -69,8 +71,11 @@ export function ThankYouStage({
   };
 
   const handleShare = () => {
-    setShowShareOptions(true);
-    toast.success("Share options displayed");
+    const interviewLink = `${window.location.origin}/interview?job_id=${jobId}`;
+    navigator.clipboard.writeText(interviewLink);
+    toast.success("Interview link copied to clipboard", {
+      description: interviewLink,
+    });
   };
 
   const handleFeedbackReaction = (reaction: "positive" | "negative") => {
@@ -390,7 +395,7 @@ export function ThankYouStage({
                     <Share2 className="mr-2 h-5 w-5" />
                     <div className="flex flex-col items-start">
                       <span className="font-medium">Share Interview</span>
-                      <span className="text-xs text-muted-foreground">Share your interview experience</span>
+                      <span className="text-xs text-muted-foreground">Copy interview link</span>
                     </div>
                   </Button>
                   

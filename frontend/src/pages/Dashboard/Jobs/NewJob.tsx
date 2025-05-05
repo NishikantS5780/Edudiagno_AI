@@ -247,11 +247,34 @@ const NewJob = () => {
         });
         setErrors(newErrors);
         
+        // Show error toast with all missing fields
+        const missingFields = Object.keys(newErrors).map(field => {
+          const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          return `${fieldName}: ${newErrors[field]}`;
+        });
+        
+        toast.error(
+          <div className="space-y-1">
+            <p className="font-medium">Please fill in the following required fields:</p>
+            {missingFields.map((field, index) => (
+              <p key={index} className="text-sm">{field}</p>
+            ))}
+          </div>
+        );
+        
         // Scroll to the first error
         const firstErrorField = Object.keys(newErrors)[0];
         const element = document.getElementById(firstErrorField);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Switch to the tab containing the error
+          if (firstErrorField.includes('dsa_questions')) {
+            setActiveTab('dsa-questions');
+          } else if (firstErrorField.includes('mcq_questions')) {
+            setActiveTab('mcq-questions');
+          } else {
+            setActiveTab('job-details');
+          }
         }
         
         setIsSubmitting(false);
