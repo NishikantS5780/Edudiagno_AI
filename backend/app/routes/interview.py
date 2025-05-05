@@ -179,8 +179,10 @@ async def upload_resume(
             status_code=status.HTTP_400_BAD_REQUEST, detail="No file provided"
         )
 
-    file_path = os.path.join("uploads", "resume", str(interview_id))
     os.makedirs("uploads/resume", exist_ok=True)
+    file_path = os.path.join(
+        "uploads", "resume", str(interview_id) + "_" + str(datetime.datetime.now())
+    )
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
