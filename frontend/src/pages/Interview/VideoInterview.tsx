@@ -267,7 +267,27 @@ export default function VideoInterview() {
         job_title: data.job_title || "",
       } as InterviewData);
       setCompanyData({ name: data.company_name });
-      setJobData({ title: data.title });
+      setJobData({
+        id: data.id || '',
+        title: data.title || '',
+        description: data.description || '',
+        department: data.department || '',
+        city: data.city || '',
+        min_experience: data.min_experience || 0,
+        max_experience: data.max_experience || 0,
+        salary_min: data.salary_min || 0,
+        salary_max: data.salary_max || 0,
+        requirements: data.requirements || '',
+        responsibilities: data.responsibilities || '',
+        skills: data.skills || '',
+        benefits: data.benefits || '',
+        type: data.type || '',
+        location: data.location || '',
+        remote: data.remote || false,
+        company_id: data.company_id || '',
+        created_at: data.created_at || '',
+        updated_at: data.updated_at || ''
+      } as unknown as JobData);
     };
     getCandidateData();
   }, []);
@@ -586,8 +606,8 @@ export default function VideoInterview() {
         setTimeout(() => setIsAiSpeaking(false), 3000);
       }, 2000);
     } else {
-      mediaRecorderRef.current.stop();
-      audioRecorderRef.current.stop();
+      if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
+      if (audioRecorderRef.current) audioRecorderRef.current.stop();
       stopCamera();
       analyzeInterview();
       setShowCompletionScreen(true);
