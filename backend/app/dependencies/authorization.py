@@ -16,6 +16,7 @@ def authorize_candidate(request: Request):
     authorization_header = request.headers.get("authorization")
     if not authorization_header:
         raise HTTPException(status_code=401, detail="unauthorized")
+    print(token)
     token = authorization_header.split("Bearer ")[1]
     decoded_data = jwt.decode(token)
 
