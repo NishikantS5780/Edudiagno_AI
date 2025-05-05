@@ -16,19 +16,10 @@ export const api = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  withCredentials: true, // Enable sending cookies in cross-origin requests
+  withCredentials: true,
   validateStatus: function (status) {
-    return (status >= 200 && status < 300) || status === 204; // Accept 204 No Content
+    return (status >= 200 && status < 300) || status === 204;
   },
-});
-
-// Add request interceptor to add auth token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
 });
 
 export const recruiterAPI = {
@@ -40,14 +31,16 @@ export const recruiterAPI = {
     return res;
   },
   verifyLogin: async () => {
+    const token = localStorage.getItem("token");
     const res = await api.get("/recruiter/verify-token", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     return res;
   },
   updateRecruiter: async (data: Partial<RecruiterData>) => {
+    const token = localStorage.getItem("token");
     const res = await api.put("/recruiter", data, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     return res;
   },
@@ -64,21 +57,24 @@ export const interviewAPI = {
     if (params?.start) queryParams.append("start", params.start.toString());
     if (params?.job_id) queryParams.append("job_id", params.job_id);
 
+    const token = localStorage.getItem("token");
     const res = await api.get(
       `/interview/recruiter-view/all?${queryParams.toString()}`,
       {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     return res;
   },
   candidateGetInterview: async () => {
+    const iToken = localStorage.getItem("i_token");
     const res = await api.get("/interview", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+      headers: { Authorization: `Bearer ${iToken}` },
     });
     return res;
   },
   createInterview: async (data: InterviewData, jobId: number) => {
+    const token = localStorage.getItem("token");
     const res = await api.post("/interview", {
       first_name: data.firstName,
       last_name: data.lastName,
@@ -92,48 +88,60 @@ export const interviewAPI = {
       portfolio_url: data.portfolioUrl,
       resume_text: data.resumeText,
       job_id: jobId,
+    }, {
+      headers: { Authorization: `Bearer ${token}` },
     });
     return res;
   },
   deleteInterview: async (id: number) => {
+    const token = localStorage.getItem("token");
     const res = await api.delete(`/interview?id=${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     return res;
   },
   analyzeCandidate: async () => {
+    const iToken = localStorage.getItem("i_token");
     const res = await api.post("/interview/analyze-resume", undefined, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+      headers: { Authorization: `Bearer ${iToken}` },
     });
     return res;
   },
   uploadResume: async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    console.log(localStorage.getItem("i_token"));
-    await api.put("/interview/upload-resume", formData, {
-      headers: {
-        "Content-Type": "multipart/formdata",
-        Authorization: `Bearer ${localStorage.getItem("i_token")}`,
-      },
-    });
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const iToken = localStorage.getItem("i_token");
+      const response = await api.put("/interview/upload-resume", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${iToken}`,
+        },
+      });
+      return response;
+    } catch (error) {
+      console.error("Error uploading resume:", error);
+      throw error;
+    }
   },
   generateQuestions: async () => {
+    const iToken = localStorage.getItem("i_token");
     const res = await api.post(
       "/interview-question-and-response/generate-questions",
       undefined,
       {
-        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+        headers: { Authorization: `Bearer ${iToken}` },
       }
     );
     return res;
   },
   analyzeTranscript: async (transcript: string, jobContext: any) => {
+    const iToken = localStorage.getItem("i_token");
     const res = await api.post(
       "/interview/analyze-transcript",
       { transcript, jobContext },
       {
-        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+        headers: { Authorization: `Bearer ${iToken}` },
       }
     );
     return res.data;
@@ -146,12 +154,13 @@ export const interviewAPI = {
     formData.append("audio_file", audioFile);
     formData.append("question_id", question_order_number.toString());
 
+    const iToken = localStorage.getItem("i_token");
     const res = await api.put(
       "interview-question-and-response/submit-audio-response",
       formData,
       {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+          Authorization: `Bearer ${iToken}`,
           "Content-Type": "multipart/form-data",
         },
       }
@@ -159,12 +168,14 @@ export const interviewAPI = {
     return res;
   },
   generateFeedback: async () => {
+    const iToken = localStorage.getItem("i_token");
     const res = await api.put("/interview/generate-feedback", undefined, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+      headers: { Authorization: `Bearer ${iToken}` },
     });
     return res.data;
   },
   submitTextResponse: async (question_order: number, answer: string) => {
+    const iToken = localStorage.getItem("i_token");
     const res = await api.put(
       "/interview-question-and-response/submit-text-response",
       {
@@ -172,16 +183,17 @@ export const interviewAPI = {
         answer,
       },
       {
-        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+        headers: { Authorization: `Bearer ${iToken}` },
       }
     );
     return res;
   },
   getInterviewQuestionsAndResponses: async (interviewId: string) => {
+    const token = localStorage.getItem("token");
     const res = await api.get(
       `/interview-question-and-response?interview_id=${interviewId}`,
       {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     return res;
