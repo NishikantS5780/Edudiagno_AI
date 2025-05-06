@@ -98,7 +98,7 @@ async def create_dsa_response(
                     )
                     .decode()
                     .rstrip("="),
-                    "callbackUrlOnExecutionCompletion": "https://codeappmedia.in/api/dsa-response/callback",
+                    "callbackUrlOnExecutionCompletion": "https://edudiagno.com/api/dsa-response/callback",
                     "shouldEnablePerProcessAndThreadCpuTimeLimit": False,
                     "shouldEnablePerProcessAndThreadMemoryLimit": False,
                     "shouldAllowInternetAccess": False,
