@@ -233,6 +233,7 @@ class DSAResponse(Base):
 
     id = Column(Integer, primary_key=True)
     code = Column(String)
+    passed = Column(Boolean, default=False)
     interview_id = Column(Integer, ForeignKey("interviews.id", ondelete="CASCADE"))
     question_id = Column(Integer, ForeignKey("dsa_questions.id", ondelete="CASCADE"))
 

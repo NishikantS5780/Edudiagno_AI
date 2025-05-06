@@ -3,6 +3,7 @@ import os
 
 class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL")
+    URL: str = os.getenv("URL")
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-keep-it-secret")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
         os.getenv("ACCESS_TOKEN_EXPIRATION_MINUTES", "3")

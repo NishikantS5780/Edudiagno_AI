@@ -98,7 +98,8 @@ async def create_dsa_response(
                     )
                     .decode()
                     .rstrip("="),
-                    "callbackUrlOnExecutionCompletion": "https://edudiagno.com/api/dsa-response/callback",
+                    "callbackUrlOnExecutionCompletion": config.settings.URL
+                    + "/api/dsa-response/callback",
                     "shouldEnablePerProcessAndThreadCpuTimeLimit": False,
                     "shouldEnablePerProcessAndThreadMemoryLimit": False,
                     "shouldAllowInternetAccess": False,
@@ -186,6 +187,14 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
         data = dict(db.execute(stmt).all()[0]._mapping)
         output: str
 
+        stmt = (
+            update(DSAResponse)
+            .values(passed=False)
+            .where(DSAResponse.id == dsa_response_id)
+        )
+        db.execute(stmt)
+        db.commit()
+
         await interview_connection_manager.send_data(
             data["interview_id"],
             {
@@ -228,6 +237,10 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     total_count = db.execute(stmt).all()[0]._mapping["total_count"]
 
     if total_count == passed_count:
+        stmt = update(DSAResponse).values(passed=True).where(id == dsa_response_id)
+        db.execute(stmt)
+        db.commit()
+
         await interview_connection_manager.send_data(
             data["interview_id"],
             {
@@ -240,11 +253,24 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
 
 @router.get("")
 async def get_dsa_response(
-    dsa_response_data: schemas.UpdateDSAResponse, db: Session = Depends(database.get_db)
+    interview_id: str, question_id: str, db: Session = Depends(database.get_db)
 ):
-    return {}
+    stmt = select(
+        DSAResponse.id,
+        DSAResponse.code,
+        DSAResponse.passed,
+        DSAResponse.interview_id,
+        DSAResponse.question_id,
+    ).where(
+        and_(
+            DSAResponse.interview_id == int(interview_id),
+            DSAResponse.question_id == int(question_id),
+        )
+    )
+    result = db.execute(stmt).mappings().one()
+    return result
 
 
-@router.put("")
-async def update_dsa_response(db: Session = Depends(database.get_db)):
-    return {}
+# @router.put("")
+# async def update_dsa_response(db: Session = Depends(database.get_db)):
+#     return {}

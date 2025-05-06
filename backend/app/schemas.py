@@ -247,8 +247,8 @@ class CreateQuizOption(BaseModel):
 
 
 class UpdateQuizOption(BaseModel):
-    label: str
-    correct: bool
+    label: Optional[str] = None
+    correct: Optional[bool] = None
     id: int
 
 

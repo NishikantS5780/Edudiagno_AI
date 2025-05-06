@@ -3,6 +3,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app import database, schemas
+from app.dependencies.authorization import authorize_recruiter
 from app.models import DSATestCase
 
 router = APIRouter()
@@ -10,7 +11,9 @@ router = APIRouter()
 
 @router.post("")
 async def create_test_case(
-    test_case_data: schemas.CreateDSATestCase, db: Session = Depends(database.get_db)
+    test_case_data: schemas.CreateDSATestCase,
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
 ):
     dsa_test_case = DSATestCase(
         input=test_case_data.input,
@@ -34,7 +37,9 @@ async def get_test_case(question_id: str, db: Session = Depends(database.get_db)
 
 @router.put("")
 async def update_test_case(
-    test_case_data: schemas.UpdateDSATestCase, db: Session = Depends(database.get_db)
+    test_case_data: schemas.UpdateDSATestCase,
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
 ):
     stmt = (
         update(DSATestCase)
