@@ -443,6 +443,7 @@ async def generate_feedback(
     stmt = (
         update(Interview)
         .values(
+            status="completed",
             overall_score=int(interview_data["score"]),
             feedback=interview_data["feedback_for_recruiter"],
             technical_skills_score=interview_data["scoreBreakdown"]["technicalSkills"],
