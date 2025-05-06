@@ -180,7 +180,10 @@ async def upload_resume(
         )
 
     os.makedirs("uploads/resume", exist_ok=True)
-    file_path = os.path.join("uploads", "resume", str(interview_id))
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_path = os.path.join(
+        "uploads", "resume", f"{interview_id}_{timestamp}_{file.filename}"
+    )
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
