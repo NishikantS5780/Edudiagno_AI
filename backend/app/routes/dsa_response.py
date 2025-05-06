@@ -202,6 +202,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 },
             },
         )
+        return
 
     stmt = (
         select(
