@@ -18,11 +18,48 @@ from sqlalchemy import and_, delete, select, update
 
 from app import database, schemas
 from app.configs import openai
+from app.lib.errors import CustomException
 from app.models import Interview, InterviewQuestionAndResponse, Job, Recruiter
 from app.utils import jwt
 from app.dependencies.authorization import authorize_candidate, authorize_recruiter
 
 router = APIRouter()
+
+
+@router.post("")
+async def create_interview(
+    response: Response,
+    interview_data: schemas.CreateInterview,
+    db: Session = Depends(database.get_db),
+):
+    interview = Interview(
+        first_name=interview_data.first_name,
+        last_name=interview_data.last_name,
+        email=interview_data.email,
+        phone=interview_data.phone,
+        work_experience=interview_data.work_experience,
+        education=interview_data.education,
+        skills=interview_data.skills,
+        location=interview_data.location,
+        linkedin_url=interview_data.linkedin_url,
+        portfolio_url=interview_data.portfolio_url,
+        resume_text=interview_data.resume_text,
+        job_id=interview_data.job_id,
+    )
+    db.add(interview)
+    db.commit()
+    db.refresh(interview)
+
+    encoded_jwt = jwt.encode(
+        {
+            "interview_id": interview.id,
+            "exp": datetime.datetime.now(tz=datetime.timezone.utc)
+            + datetime.timedelta(hours=3),
+        }
+    )
+
+    response.headers["Authorization"] = f"Bearer {encoded_jwt}"
+    return interview
 
 
 @router.get("")
@@ -100,7 +137,7 @@ async def get_interview_recruiter_view(
     )
 
     result = db.execute(stmt)
-    interview = result.all()[0]._mapping
+    interview = result.mappings().one()
     return interview
 
 
@@ -131,42 +168,6 @@ async def get_interview(
     return interviews
 
 
-@router.post("")
-async def create_interview(
-    response: Response,
-    interview_data: schemas.CreateInterview,
-    db: Session = Depends(database.get_db),
-):
-    interview = Interview(
-        first_name=interview_data.first_name,
-        last_name=interview_data.last_name,
-        email=interview_data.email,
-        phone=interview_data.phone,
-        work_experience=interview_data.work_experience,
-        education=interview_data.education,
-        skills=interview_data.skills,
-        location=interview_data.location,
-        linkedin_url=interview_data.linkedin_url,
-        portfolio_url=interview_data.portfolio_url,
-        resume_text=interview_data.resume_text,
-        job_id=interview_data.job_id,
-    )
-    db.add(interview)
-    db.commit()
-    db.refresh(interview)
-
-    encoded_jwt = jwt.encode(
-        {
-            "interview_id": interview.id,
-            "exp": datetime.datetime.now(tz=datetime.timezone.utc)
-            + datetime.timedelta(hours=3),
-        }
-    )
-
-    response.headers["Authorization"] = f"Bearer {encoded_jwt}"
-    return interview
-
-
 @router.put("/upload-resume")
 async def upload_resume(
     request: Request,
@@ -194,7 +195,27 @@ async def upload_resume(
         .values(
             resume_url=file_path,
         )
-        .returning(Interview)
+        .returning(
+            Interview.id,
+            Interview.status,
+            Interview.first_name,
+            Interview.last_name,
+            Interview.email,
+            Interview.phone,
+            Interview.work_experience,
+            Interview.education,
+            Interview.skills,
+            Interview.location,
+            Interview.linkedin_url,
+            Interview.portfolio_url,
+            Interview.resume_url,
+            Interview.resume_text,
+            Interview.resume_match_score,
+            Interview.resume_match_feedback,
+            Interview.overall_score,
+            Interview.feedback,
+            Interview.job_id,
+        )
     )
     result = db.execute(stmt)
     db.commit()
@@ -210,68 +231,58 @@ async def get_resume(
     db: Session = Depends(database.get_db),
 ):
     stmt = select(Interview.resume_url).where(Interview.id == int(interview_id))
-    interviews = db.execute(stmt).all()
-    file_path = None
-    if len(interviews):
-        file_path = interviews[0]._mapping["resume_url"]
+    interview = db.execute(stmt).mappings().one()
+
+    file_path = interview["resume_url"]
 
     if not file_path:
-        return {"message": "no content"}
+        return {"message": "No content"}
 
     return FileResponse(file_path, headers={"Content-Type": "application/pdf"})
 
 
 @router.put("")
 async def update_interview(
-    request: Request,
     interview_data: schemas.UpdateInterview,
     db: Session = Depends(database.get_db),
+    interview_id=Depends(authorize_candidate),
 ):
+    interview_data = interview_data.model_dump(exclude_unset=True)
+
     stmt = (
         update(Interview)
-        .where(Interview.id == interview_data.id)
-        .values(
-            work_experience=interview_data.work_experience,
-            education=interview_data.education,
-            skills=interview_data.skills,
-            location=interview_data.location,
-            linkedin_url=interview_data.linkedin_url,
-            portfolio_url=interview_data.portfolio_url,
-            resume_url=interview_data.resume_url,
-            resume_text=interview_data.resume_text,
-            resume_match_score=interview_data.resume_match_score,
-            resume_match_feedback=interview_data.resume_match_feedback,
-            overall_score=interview_data.overall_score,
-            feedback=interview_data.feedback,
+        .where(Interview.id == interview_id)
+        .values(interview_data)
+        .returning(
+            Interview.id,
+            Interview.status,
+            Interview.first_name,
+            Interview.last_name,
+            Interview.email,
+            Interview.phone,
+            Interview.work_experience,
+            Interview.education,
+            Interview.skills,
+            Interview.location,
+            Interview.linkedin_url,
+            Interview.portfolio_url,
+            Interview.resume_url,
+            Interview.resume_text,
+            Interview.resume_match_score,
+            Interview.resume_match_feedback,
+            Interview.overall_score,
+            Interview.feedback,
+            Interview.job_id,
         )
-        .returning(Interview)
     )
     result = db.execute(stmt)
     db.commit()
-    interview = result.scalars().all()[0]
+    interview = result.mappings().one()
     return interview
-
-
-@router.delete("", status_code=204)
-async def update_interview(
-    id: str,
-    db: Session = Depends(database.get_db),
-    recruiter_id=Depends(authorize_recruiter),
-):
-    job_subq = select(Job.id).where(Job.company_id == recruiter_id).subquery()
-    stmt = (
-        delete(Interview)
-        .where(Interview.job_id.in_(select(job_subq)))
-        .where(Interview.id == int(id))
-    )
-    db.execute(stmt)
-    db.commit()
-    return
 
 
 @router.post("/analyze-resume")
 async def analyze_resume(
-    request: Request,
     db: Session = Depends(database.get_db),
     interview_id=Depends(authorize_candidate),
 ):
@@ -280,12 +291,7 @@ async def analyze_resume(
         .join(Interview)
         .where(Interview.id == interview_id)
     )
-    data = db.execute(stmt).all()[0]
-
-    if not data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
-        )
+    data = db.execute(stmt).one()
 
     prompt = f"""Analyze how well this resume matches the job description and requirements.
     Return ONLY a JSON object with these exact fields:
@@ -333,12 +339,32 @@ async def analyze_resume(
             resume_match_score=int(match_data["resume_match_score"]),
             resume_match_feedback=match_data["resume_match_feedback"],
         )
-        .returning(Interview)
+        .returning(
+            Interview.id,
+            Interview.status,
+            Interview.first_name,
+            Interview.last_name,
+            Interview.email,
+            Interview.phone,
+            Interview.work_experience,
+            Interview.education,
+            Interview.skills,
+            Interview.location,
+            Interview.linkedin_url,
+            Interview.portfolio_url,
+            Interview.resume_url,
+            Interview.resume_text,
+            Interview.resume_match_score,
+            Interview.resume_match_feedback,
+            Interview.overall_score,
+            Interview.feedback,
+            Interview.job_id,
+        )
     )
 
     result = db.execute(stmt)
     db.commit()
-    interview = result.scalars().all()[0]
+    interview = result.mappings().one()
 
     return interview
 
@@ -353,7 +379,7 @@ async def generate_feedback(
         .join(Interview)
         .where(Interview.id == interview_id)
     )
-    data = db.execute(stmt).all()[0]
+    data = db.execute(stmt).mappings().one()
 
     stmt = select(
         InterviewQuestionAndResponse.question,
@@ -455,10 +481,30 @@ async def generate_feedback(
             ],
             cultural_fit_score=interview_data["scoreBreakdown"]["culturalFit"],
         )
-        .returning(Interview)
+        .returning(
+            Interview.id,
+            Interview.status,
+            Interview.first_name,
+            Interview.last_name,
+            Interview.email,
+            Interview.phone,
+            Interview.work_experience,
+            Interview.education,
+            Interview.skills,
+            Interview.location,
+            Interview.linkedin_url,
+            Interview.portfolio_url,
+            Interview.resume_url,
+            Interview.resume_text,
+            Interview.resume_match_score,
+            Interview.resume_match_feedback,
+            Interview.overall_score,
+            Interview.feedback,
+            Interview.job_id,
+        )
     )
 
-    db.execute(stmt).scalars().all()[0]
+    db.execute(stmt)
     db.commit()
 
     return {
@@ -468,3 +514,20 @@ async def generate_feedback(
         "suggestions": interview_data["suggestions"],
         "keywords": interview_data["keywords"],
     }
+
+
+@router.delete("", status_code=204)
+async def update_interview(
+    id: str,
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
+):
+    job_subq = select(Job.id).where(Job.company_id == recruiter_id).subquery()
+    stmt = (
+        delete(Interview)
+        .where(Interview.job_id.in_(select(job_subq)))
+        .where(Interview.id == int(id))
+    )
+    db.execute(stmt)
+    db.commit()
+    return

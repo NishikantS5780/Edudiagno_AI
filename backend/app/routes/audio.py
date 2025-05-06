@@ -36,6 +36,6 @@ async def speech_to_text(
     )
 
     if not result or not result.text:
-        raise HTTPException(status_code=500, detail="Failed to transcribe audio")
+        raise HTTPException(status_code=500, detail="Unable to comprehend, please re-record answer")
 
     return {"transcript": result.text}

@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 573cc2c61938
+Revision ID: 4137aa0ea881
 Revises: 
-Create Date: 2025-04-10 16:02:51.785693
+Create Date: 2025-05-06 14:44:36.673747
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '573cc2c61938'
+revision: str = '4137aa0ea881'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,6 +25,9 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
     sa.Column('email', sa.String(), nullable=False),
+    sa.Column('email_otp', sa.String(), nullable=True),
+    sa.Column('email_otp_expiry', sa.DateTime(), nullable=True),
+    sa.Column('email_verified', sa.Boolean(), nullable=True),
     sa.Column('password_hash', sa.String(), nullable=False),
     sa.Column('phone', sa.String(), nullable=True),
     sa.Column('designation', sa.String(), nullable=True),
@@ -39,6 +42,7 @@ def upgrade() -> None:
     sa.Column('city', sa.String(), nullable=True),
     sa.Column('zip', sa.String(), nullable=True),
     sa.Column('address', sa.String(), nullable=True),
+    sa.Column('verified', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
@@ -51,23 +55,39 @@ def upgrade() -> None:
     sa.Column('title', sa.String(), nullable=False),
     sa.Column('description', sa.String(), nullable=True),
     sa.Column('department', sa.String(), nullable=True),
+    sa.Column('city', sa.String(), nullable=True),
     sa.Column('location', sa.String(), nullable=True),
     sa.Column('type', sa.String(), nullable=True),
+    sa.Column('duration_months', sa.Integer(), nullable=True),
     sa.Column('min_experience', sa.Integer(), nullable=True),
     sa.Column('max_experience', sa.Integer(), nullable=True),
+    sa.Column('currency', sa.String(), nullable=True),
     sa.Column('salary_min', sa.Integer(), nullable=True),
     sa.Column('salary_max', sa.Integer(), nullable=True),
     sa.Column('show_salary', sa.Boolean(), nullable=True),
+    sa.Column('qualification', sa.String(), nullable=True),
     sa.Column('requirements', sa.String(), nullable=True),
     sa.Column('benefits', sa.String(), nullable=True),
     sa.Column('status', sa.String(), nullable=True),
+    sa.Column('quiz_time_minutes', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('company_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['company_id'], ['recruiters.id'], ),
+    sa.ForeignKeyConstraint(['company_id'], ['recruiters.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_jobs_id'), 'jobs', ['id'], unique=False)
+    op.create_table('dsa_questions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('title', sa.String(), nullable=True),
+    sa.Column('description', sa.String(), nullable=True),
+    sa.Column('difficulty', sa.String(), nullable=True),
+    sa.Column('time_minutes', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('job_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['job_id'], ['jobs.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('interviews',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('status', sa.String(), nullable=True),
@@ -86,14 +106,47 @@ def upgrade() -> None:
     sa.Column('resume_match_score', sa.Integer(), nullable=True),
     sa.Column('resume_match_feedback', sa.String(), nullable=True),
     sa.Column('overall_score', sa.Integer(), nullable=True),
+    sa.Column('technical_skills_score', sa.Integer(), nullable=True),
+    sa.Column('communication_skills_score', sa.Integer(), nullable=True),
+    sa.Column('problem_solving_skills_score', sa.Integer(), nullable=True),
+    sa.Column('cultural_fit_score', sa.Integer(), nullable=True),
     sa.Column('feedback', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('job_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['job_id'], ['jobs.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['job_id'], ['jobs.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('email', 'job_id', name='uq_email_job')
     )
     op.create_index(op.f('ix_interviews_id'), 'interviews', ['id'], unique=False)
+    op.create_table('quiz_questions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('description', sa.String(), nullable=True),
+    sa.Column('type', sa.String(), nullable=True),
+    sa.Column('time_seconds', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('job_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['job_id'], ['jobs.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('dsa_responses',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('code', sa.String(), nullable=True),
+    sa.Column('interview_id', sa.Integer(), nullable=True),
+    sa.Column('question_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['interview_id'], ['interviews.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['question_id'], ['dsa_questions.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('interview_id', 'question_id', name='uq_interview_and_question')
+    )
+    op.create_table('dsa_test_cases',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('input', sa.String(), nullable=True),
+    sa.Column('expected_output', sa.String(), nullable=True),
+    sa.Column('dsa_question_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['dsa_question_id'], ['dsa_questions.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('interview_question_and_responses',
     sa.Column('question', sa.String(), nullable=False),
     sa.Column('question_type', sa.String(), nullable=False),
@@ -101,8 +154,34 @@ def upgrade() -> None:
     sa.Column('answer', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('interview_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['interview_id'], ['interviews.id'], ),
+    sa.ForeignKeyConstraint(['interview_id'], ['interviews.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('order_number', 'interview_id')
+    )
+    op.create_table('quiz_options',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('label', sa.String(), nullable=True),
+    sa.Column('correct', sa.Boolean(), nullable=True),
+    sa.Column('question_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['question_id'], ['quiz_questions.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('dsa_test_case_responses',
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('dsa_response_id', sa.Integer(), nullable=False),
+    sa.Column('task_id', sa.String(), nullable=True),
+    sa.Column('dsa_test_case_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['dsa_response_id'], ['dsa_responses.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['dsa_test_case_id'], ['dsa_test_cases.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('dsa_response_id', 'dsa_test_case_id')
+    )
+    op.create_table('quiz_responses',
+    sa.Column('interview_id', sa.Integer(), nullable=False),
+    sa.Column('question_id', sa.Integer(), nullable=False),
+    sa.Column('option_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['interview_id'], ['interviews.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['option_id'], ['quiz_options.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['question_id'], ['quiz_questions.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('interview_id', 'question_id', 'option_id')
     )
     # ### end Alembic commands ###
 
@@ -110,9 +189,16 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('quiz_responses')
+    op.drop_table('dsa_test_case_responses')
+    op.drop_table('quiz_options')
     op.drop_table('interview_question_and_responses')
+    op.drop_table('dsa_test_cases')
+    op.drop_table('dsa_responses')
+    op.drop_table('quiz_questions')
     op.drop_index(op.f('ix_interviews_id'), table_name='interviews')
     op.drop_table('interviews')
+    op.drop_table('dsa_questions')
     op.drop_index(op.f('ix_jobs_id'), table_name='jobs')
     op.drop_table('jobs')
     op.drop_index(op.f('ix_recruiters_name'), table_name='recruiters')

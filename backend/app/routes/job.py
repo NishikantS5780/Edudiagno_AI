@@ -12,6 +12,38 @@ from app.configs import openai
 router = APIRouter()
 
 
+@router.post("")
+async def create_job(
+    job_data: schemas.CreateJob,
+    db: Session = Depends(database.get_db),
+    recruiter_id=Depends(authorize_recruiter),
+):
+    job = Job(
+        title=job_data.title,
+        description=job_data.description,
+        department=job_data.department,
+        city=job_data.city,
+        location=job_data.location,
+        type=job_data.type,
+        duration_months=job_data.duration_months,
+        min_experience=job_data.min_experience,
+        max_experience=job_data.max_experience,
+        currency=job_data.currency,
+        salary_min=job_data.salary_min,
+        salary_max=job_data.salary_max,
+        show_salary=job_data.show_salary,
+        key_qualification=job_data.key_qualification,
+        requirements=job_data.requirements,
+        benefits=job_data.benefits,
+        status=job_data.status,
+        company_id=recruiter_id,
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    return job
+
+
 @router.get("")
 async def get_job(
     id: str,
@@ -26,18 +58,22 @@ async def get_job(
         Job.city,
         Job.location,
         Job.type,
+        Job.duration_months,
         Job.min_experience,
         Job.max_experience,
+        Job.currency,
         Job.salary_min,
         Job.salary_max,
         Job.show_salary,
+        Job.key_qualification,
         Job.requirements,
         Job.benefits,
         Job.status,
+        Job.quiz_time_minutes,
         Job.created_at,
     ).where(Job.id == int(id))
     result = db.execute(stmt)
-    job = result.all()[0]._mapping
+    job = result.mappings().one()
 
     return job
 
@@ -149,40 +185,12 @@ async def get_job_candidate_view(
     return job
 
 
-@router.post("", response_model=schemas.Job)
-async def create_job(
-    job_data: schemas.CreateJob,
-    db: Session = Depends(database.get_db),
-    recruiter_id=Depends(authorize_recruiter),
-):
-    job = Job(
-        title=job_data.title,
-        description=job_data.description,
-        department=job_data.department,
-        city=job_data.city,
-        location=job_data.location,
-        type=job_data.type,
-        min_experience=job_data.min_experience,
-        max_experience=job_data.max_experience,
-        salary_min=job_data.salary_min,
-        salary_max=job_data.salary_max,
-        show_salary=job_data.show_salary,
-        requirements=job_data.requirements,
-        benefits=job_data.benefits,
-        status=job_data.status,
-        company_id=recruiter_id,
-    )
-    db.add(job)
-    db.commit()
-    db.refresh(job)
-    return job
-
-
 @router.post("/generate-description")
 async def generate_description(generate_jd_data: schemas.GenerateJobDescription):
     prompt = f"""
     Create a detailed job description for a {generate_jd_data.title} position in the {generate_jd_data.department} department.
     The position is {generate_jd_data.location}-based.
+    The qualification requirement is {generate_jd_data.key_qualification} and Experience requirement is {generate_jd_data.min_experience}-{generate_jd_data.max_experience}yrs
     
     Focus ONLY on describing the role, responsibilities, and day-to-day activities.
     Do NOT include requirements, qualifications, or benefits.
@@ -215,6 +223,7 @@ async def generate_requirements(generate_jr_data: schemas.GenerateJobRequirement
     prompt = f"""
     Create a focused list of requirements for a {generate_jr_data.title} position in the {generate_jr_data.department} department.
     The position is {generate_jr_data.location}-based.
+    The qualification requirement is {generate_jr_data.key_qualification} and Experience requirement is {generate_jr_data.min_experience}-{generate_jr_data.max_experience}yrs
     
     {f"Additional keywords to consider: {generate_jr_data.keywords}" if generate_jr_data.keywords else ""}
     
@@ -251,25 +260,12 @@ async def update_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
+    job_data = job_data.model_dump(exclude_unset=True)
+    job_id = job_data.pop("id", None)
     stmt = (
         update(Job)
-        .values(
-            title=job_data.title,
-            description=job_data.description,
-            department=job_data.department,
-            city=job_data.city,
-            location=job_data.location,
-            type=job_data.type,
-            min_experience=job_data.min_experience,
-            max_experience=job_data.max_experience,
-            salary_min=job_data.salary_min,
-            salary_max=job_data.salary_max,
-            show_salary=job_data.show_salary,
-            requirements=job_data.requirements,
-            benefits=job_data.benefits,
-            status=job_data.status,
-        )
-        .where(and_(Job.company_id == recruiter_id, Job.id == job_data.id))
+        .values(job_data)
+        .where(and_(Job.company_id == recruiter_id, Job.id == job_id))
         .returning(
             Job.id,
             Job.title,

@@ -71,14 +71,18 @@ class CreateJob(BaseModel):
     city: str
     location: str
     type: str
+    duration_months: int
     min_experience: int
     max_experience: int
+    currency: str
     salary_min: int
     salary_max: int
     show_salary: Optional[bool] = True
+    key_qualification: str
     requirements: str
     benefits: str
     status: str
+    quiz_time_minutes: Optional[int] = None
 
 
 class UpdateJob(BaseModel):
@@ -89,14 +93,18 @@ class UpdateJob(BaseModel):
     city: Optional[str] = None
     location: Optional[str] = None
     type: Optional[str] = None
+    duration_months: Optional[int] = None
     min_experience: Optional[int] = None
     max_experience: Optional[int] = None
+    currency: Optional[str] = None
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
     show_salary: Optional[bool] = None
+    key_qualification: Optional[str] = None
     requirements: Optional[str] = None
     benefits: Optional[str] = None
     status: Optional[str] = None
+    quiz_time_minutes: Optional[int] = None
 
 
 class Job(BaseModel):
@@ -106,14 +114,18 @@ class Job(BaseModel):
     department: str
     location: str
     type: str
+    duration_months: int
     min_experience: int
     max_experience: int
+    currency: str
     salary_min: int
     salary_max: int
     show_salary: bool
+    key_qualification: str
     requirements: str
     benefits: str
     status: str
+    quiz_time_minutes: int
     company_id: int
 
 
@@ -133,19 +145,18 @@ class CreateInterview(BaseModel):
 
 
 class UpdateInterview(BaseModel):
-    id: int
-    work_experience: int
-    education: str
-    skills: str
-    location: str
-    linkedin_url: str
-    portfolio_url: str
-    resume_url: str
-    resume_text: str
-    resume_match_score: int
-    resume_match_feedback: str
-    overall_score: int
-    feedback: str
+    work_experience: Optional[int] = None
+    education: Optional[str] = None
+    skills: Optional[str] = None
+    location: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    resume_url: Optional[str] = None
+    resume_text: Optional[str] = None
+    resume_match_score: Optional[int] = None
+    resume_match_feedback: Optional[str] = None
+    overall_score: Optional[int] = None
+    feedback: Optional[str] = None
 
 
 class TextToSpeech(BaseModel):
@@ -156,12 +167,18 @@ class GenerateJobDescription(BaseModel):
     title: str
     department: str
     location: str
+    key_qualification: str
+    min_experience: str
+    max_experience: str
 
 
 class GenerateJobRequirement(BaseModel):
     title: str
     department: str
     location: str
+    key_qualification: str
+    min_experience: str
+    max_experience: str
     keywords: str
 
 
@@ -174,6 +191,7 @@ class CreateDSAQuestion(BaseModel):
     title: str
     description: str
     difficulty: str
+    time_minutes: Optional[int] = None
     job_id: int
 
 
@@ -182,6 +200,7 @@ class UpdateDSAQuestion(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     difficulty: Optional[str] = None
+    time_minutes: Optional[int] = None
 
 
 class CreateDSATestCase(BaseModel):
@@ -211,11 +230,13 @@ class CreateQuizQuestion(BaseModel):
     description: str
     type: str
     job_id: int
+    time_seconds: Optional[int] = None
 
 
 class UpdateQuizQuestion(BaseModel):
-    description: str
-    type: str
+    description: Optional[str] = None
+    type: Optional[str] = None
+    time_seconds: Optional[int] = None
     id: int
 
 

@@ -19,7 +19,10 @@ async def create_quiz_question(
     recruiter_id=Depends(authorize_recruiter),
 ):
     quiz_question = QuizQuestion(
-        description=quiz_data.description, type=quiz_data.type, job_id=quiz_data.job_id
+        description=quiz_data.description,
+        type=quiz_data.type,
+        job_id=quiz_data.job_id,
+        time_seconds=quiz_data.time_seconds,
     )
     db.add(quiz_question)
     db.commit()
@@ -42,10 +45,9 @@ async def get_quiz_questions_for_interview(
             .where(Interview.id == int(interview_id))
         )
     elif job_id:
-        stmt = (
-            select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
-            .where(QuizQuestion.job_id == int(job_id))
-        )
+        stmt = select(
+            QuizQuestion.id, QuizQuestion.description, QuizQuestion.type
+        ).where(QuizQuestion.job_id == int(job_id))
     else:
         # stmt = select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
         response.status_code = 400
@@ -71,15 +73,17 @@ async def update_quiz_question(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
+    quiz_data = quiz_data.model_dump(exclude_unset=True)
+    question_id = quiz_data.pop("id", None)
     stmt = (
         update(QuizQuestion)
-        .values(description=quiz_data.description, type=quiz_data.type)
-        .where(QuizQuestion.id == quiz_data.id)
+        .values(quiz_data)
+        .where(QuizQuestion.id == question_id)
         .returning(QuizQuestion.description, QuizQuestion.type)
     )
     result = db.execute(stmt)
     db.commit()
-    quiz_question = result.all()[0]._mapping
+    quiz_question = result.mappings().one()
     return quiz_question
 
 

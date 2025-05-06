@@ -1,4 +1,5 @@
 import jwt
+from jwt import exceptions
 from app.config import settings
 
 

@@ -53,14 +53,18 @@ class Job(Base):
     city = Column(String)
     location = Column(String)
     type = Column(String)  # full-time, part-time, contract, etc.
+    duration_months = Column(Integer)
     min_experience = Column(Integer)
     max_experience = Column(Integer)
+    currency = Column(String)
     salary_min = Column(Integer)
     salary_max = Column(Integer)
     show_salary = Column(Boolean, default=True)
+    key_qualification = Column(String)
     requirements = Column(String)
     benefits = Column(String)
     status = Column(String, default="active")  # active, closed, draft
+    quiz_time_minutes = Column(Integer)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     company_id = Column(
@@ -89,6 +93,7 @@ class QuizQuestion(Base):
     id = Column(Integer, primary_key=True)
     description = Column(String)
     type = Column(String)
+    time_seconds = Column(Integer)
     created_at = Column(DateTime, default=func.now())
     job_id = Column(Integer, ForeignKey("jobs.id", ondelete="CASCADE"))
 
@@ -125,6 +130,7 @@ class DSAQuestion(Base):
     title = Column(String)
     description = Column(String)
     difficulty = Column(String)
+    time_minutes = Column(Integer)
     created_at = Column(DateTime, default=func.now())
     job_id = Column(Integer, ForeignKey("jobs.id", ondelete="CASCADE"))
 
@@ -161,7 +167,7 @@ class Interview(Base):
     __table_args__ = (UniqueConstraint("email", "job_id", name="uq_email_job"),)
 
     id = Column(Integer, primary_key=True, index=True)
-    status = Column(String, default="pending")  # pending, completed, cancelled
+    status = Column(String, default="incomplete")  # incomplete, completed
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     email = Column(String, nullable=False)
@@ -272,7 +278,9 @@ class QuizResponse(Base):
     question_id = Column(
         Integer, ForeignKey("quiz_questions.id", ondelete="CASCADE"), primary_key=True
     )
-    option_id = Column(Integer, ForeignKey("quiz_options.id", ondelete="CASCADE"))
+    option_id = Column(
+        Integer, ForeignKey("quiz_options.id", ondelete="CASCADE"), primary_key=True
+    )
 
     interview = relationship("Interview", back_populates="quiz_responses")
     question = relationship("QuizQuestion", back_populates="responses")
