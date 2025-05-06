@@ -15,6 +15,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 interface DSAQuestion {
   id: number;
@@ -275,52 +276,59 @@ const DSAPlayground = () => {
 
           <TabsContent
             value="playground"
-            className="flex-1 overflow-hidden p-4"
+            className="flex-1 overflow-auto p-4"
           >
-            <div className="grid md:grid-cols-2 grid-cols-1 gap-4 h-full">
-              <Card className="h-full flex flex-col">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Terminal className="h-5 w-5 text-primary" />
-                    <CardTitle>DSA Assessment</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 overflow-auto">
-                  <DsaQuestion
-                    title={`Question ${currentQuestionIndex + 1} of ${dsaQuestions.length}`}
-                    successRate={successRate}
-                    questionNumber={`${currentQuestionIndex + 1}.`}
-                    questionTitle={currentQuestion.title}
-                    difficulty={currentQuestion.difficulty}
-                    description={currentQuestion.description}
-                    testCases={testCases.map((testCase: TestCase) => ({
-                      input: testCase.input,
-                      expectedOutput: testCase.expected_output,
-                    }))}
-                    constraints={currentQuestion.constraints}
-                    compilationStatus={compilationStatus}
-                  />
-                </CardContent>
-              </Card>
-              <Card className="h-full">
-                <CardContent className="p-0 h-full">
-                  <CodeExecutionPanel
-                    questionId={currentQuestion.id}
-                    expectedOutput={testCases[0]?.expected_output || ""}
-                    onCompilationStatusChange={setCompilationStatus}
-                    onSuccessRateChange={setSuccessRate}
-                    compilationStatus={compilationStatus}
-                    onNext={handleNext}
-                    onSubmit={handleSubmit}
-                    isLastQuestion={currentQuestionIndex === dsaQuestions.length - 1}
-                    isOnlyQuestion={dsaQuestions.length === 1}
-                    isFirstQuestion={currentQuestionIndex === 0}
-                    currentQuestionIndex={currentQuestionIndex}
-                    totalQuestions={dsaQuestions.length}
-                  />
-                </CardContent>
-              </Card>
-            </div>
+            <PanelGroup direction="horizontal" className="h-full">
+              <Panel defaultSize={50} minSize={30}>
+                <Card className="h-full flex flex-col">
+                  <CardHeader className="pb-3 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="h-5 w-5 text-primary" />
+                      <CardTitle>DSA Assessment</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-1 overflow-auto">
+                    <DsaQuestion
+                      title={`Question ${currentQuestionIndex + 1} of ${dsaQuestions.length}`}
+                      successRate={successRate}
+                      questionNumber={`${currentQuestionIndex + 1}.`}
+                      questionTitle={currentQuestion.title}
+                      difficulty={currentQuestion.difficulty}
+                      description={currentQuestion.description}
+                      testCases={testCases.map((testCase: TestCase) => ({
+                        input: testCase.input,
+                        expectedOutput: testCase.expected_output,
+                      }))}
+                      constraints={currentQuestion.constraints}
+                      compilationStatus={compilationStatus}
+                    />
+                  </CardContent>
+                </Card>
+              </Panel>
+
+              <PanelResizeHandle className="w-2 bg-border hover:bg-primary/50 transition-colors" />
+
+              <Panel defaultSize={50} minSize={30}>
+                <Card className="h-full">
+                  <CardContent className="p-0 h-full">
+                    <CodeExecutionPanel
+                      questionId={currentQuestion.id}
+                      expectedOutput={testCases[0]?.expected_output || ""}
+                      onCompilationStatusChange={setCompilationStatus}
+                      onSuccessRateChange={setSuccessRate}
+                      compilationStatus={compilationStatus}
+                      onNext={handleNext}
+                      onSubmit={handleSubmit}
+                      isLastQuestion={currentQuestionIndex === dsaQuestions.length - 1}
+                      isOnlyQuestion={dsaQuestions.length === 1}
+                      isFirstQuestion={currentQuestionIndex === 0}
+                      currentQuestionIndex={currentQuestionIndex}
+                      totalQuestions={dsaQuestions.length}
+                    />
+                  </CardContent>
+                </Card>
+              </Panel>
+            </PanelGroup>
           </TabsContent>
         </Tabs>
       </div>

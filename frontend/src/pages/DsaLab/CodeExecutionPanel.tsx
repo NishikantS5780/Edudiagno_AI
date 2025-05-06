@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api, { dsaAPI } from "@/lib/api";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 interface CodeExecutionPanelProps {
   questionId: number;
@@ -90,103 +91,88 @@ function CodeExecutionPanel({
   }, [selectedLanguage]);
 
   return (
-    <div className="bg-[#18181b] min-h-screen">
-      <div className="flex flex-col h-full">
-        {/* Header with controls */}
-        <div className="flex justify-between items-center p-4 bg-[#27272a] border-b border-[#3f3f46]">
-          <div className="flex items-center gap-3">
-            <button
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-green-500/20"
-              onClick={() => {
-                setOutput("");
-                setCodeError("");
-                setSyntaxError("");
-                setRunStatus("");
+    <div className="bg-[#18181b] h-full flex flex-col">
+      {/* Header with controls */}
+      <div className="flex justify-between items-center p-4 bg-[#27272a] border-b border-[#3f3f46] shrink-0">
+        <div className="flex items-center gap-3">
+          <button
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-green-500/20"
+            onClick={() => {
+              setOutput("");
+              setCodeError("");
+              setSyntaxError("");
+              setRunStatus("");
 
-                const currentCode = code || codeTemplates[selectedLanguage];
-                setCode(currentCode);
+              const currentCode = code || codeTemplates[selectedLanguage];
+              setCode(currentCode);
 
-                fetch(import.meta.env.VITE_API_BASE_URL + "/dsa-response", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("i_token")}`,
-                  },
-                  body: JSON.stringify({
-                    language: selectedLanguage,
-                    code: currentCode,
-                    question_id: questionId,
-                  }),
-                });
-              }}
+              fetch(import.meta.env.VITE_API_BASE_URL + "/dsa-response", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+                },
+                body: JSON.stringify({
+                  language: selectedLanguage,
+                  code: currentCode,
+                  question_id: questionId,
+                }),
+              });
+            }}
+          >
+            <Play size={16} />
+            Run Code
+          </button>
+          <div className="relative">
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="appearance-none bg-[#3f3f46] text-white rounded-lg px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             >
-              <Play size={16} />
-              Run Code
-            </button>
-            {/* <button
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-green-500/20"
-              onClick={handleCodeRun}
-            >
-              <Play size={16} />
-              <span>Run Code</span>
-            </button> */}
-            {/* <button
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-blue-500/20"
-              onClick={handleViewStatus}
-            >
-              <Terminal size={16} />
-              <span>View Status</span>
-            </button> */}
-            <div className="relative">
-              <select
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
-                className="appearance-none bg-[#3f3f46] text-white rounded-lg px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              {availableLanguages.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                {availableLanguages.map((lang) => (
-                  <option key={lang} value={lang}>
-                    {lang}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={handleFinish}
-              size="sm"
-              className={cn(
-                "px-4 py-2 rounded-lg transition-colors shadow-lg",
-                runStatus === "successful"
-                  ? "bg-green-500 hover:bg-green-600 text-white hover:shadow-green-500/20"
-                  : "hidden"
-              )}
-              disabled={runStatus !== "successful"}
-            >
-              Continue
-            </Button>
-          </div>
         </div>
+        <div className="flex gap-3">
+          <Button
+            onClick={handleFinish}
+            size="sm"
+            className={cn(
+              "px-4 py-2 rounded-lg transition-colors shadow-lg",
+              runStatus === "successful"
+                ? "bg-green-500 hover:bg-green-600 text-white hover:shadow-green-500/20"
+                : "hidden"
+            )}
+            disabled={runStatus !== "successful"}
+          >
+            Continue
+          </Button>
+        </div>
+      </div>
 
-        {/* Editor and Output Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Code Editor */}
-          <div className="flex-1 min-h-[400px] relative">
+      {/* Editor and Output Area */}
+      <PanelGroup direction="vertical" className="flex-1">
+        <Panel defaultSize={70} minSize={30}>
+          <div className="h-full relative">
             <div className="absolute top-0 left-0 right-0 h-8 bg-[#1e1e1e] flex items-center px-4 border-b border-[#3f3f46]">
               <span className="text-sm text-gray-400">{selectedLanguage}</span>
             </div>
@@ -223,34 +209,23 @@ function CodeExecutionPanel({
               />
             </div>
           </div>
+        </Panel>
 
-          {/* Output Tabs */}
-          <div className="bg-[#18181b] border-t border-[#3f3f46]">
-            <Tabs defaultValue="result" className="w-full">
-              <TabsList className="bg-[#27272a] w-full justify-start border-b border-[#3f3f46]">
+        <PanelResizeHandle className="h-2 bg-border hover:bg-primary/50 transition-colors" />
+
+        <Panel defaultSize={30} minSize={20}>
+          <div className="h-full bg-[#18181b] border-t border-[#3f3f46]">
+            <Tabs defaultValue="result" className="w-full h-full flex flex-col">
+              <TabsList className="bg-[#27272a] w-full justify-start border-b border-[#3f3f46] shrink-0">
                 <TabsTrigger
                   value="result"
                   className="data-[state=active]:bg-[#18181b] data-[state=active]:text-white rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 px-4 py-2"
                 >
                   Result
                 </TabsTrigger>
-                {/* <TabsTrigger
-                  value="test-case"
-                  className="data-[state=active]:bg-[#18181b] data-[state=active]:text-white rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 px-4 py-2"
-                >
-                  Test Case
-                </TabsTrigger> */}
               </TabsList>
 
-              <TabsContent value="result" className="p-4 space-y-4">
-                {/* {runStatus === "compilation-error" ? null : (
-                  <div className="flex items-start gap-2 text-green-400 bg-[#27272a] p-3 rounded-lg">
-                    <Terminal className="mt-1 flex-shrink-0" />
-                    <pre className="whitespace-pre-wrap font-mono text-sm">
-                      {output}
-                    </pre>
-                  </div>
-                )} */}
+              <TabsContent value="result" className="p-4 space-y-4 flex-1 overflow-auto">
                 {codeError && (
                   <div className="text-red-500 bg-[#27272a] p-3 rounded-lg">
                     <h3 className="font-semibold mb-1 text-red-400">
@@ -282,79 +257,26 @@ function CodeExecutionPanel({
                     {compilationStatus}
                   </pre>
                 </div>
-                {/* <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
-                  <span className="font-semibold text-gray-400">
-                    Execution Status:
-                  </span>
-                  <span
-                    className={`${
-                      runStatus === "successful"
-                        ? "text-green-400"
-                        : "text-red-500"
-                    } font-mono`}
-                  >
-                    {runStatus === "successful"
-                      ? "Successfully Executed"
-                      : runStatus === "wrong-answer"
-                      ? "Wrong Answer"
-                      : runStatus === "compilation-error"
-                      ? "Compilation Error"
-                      : runStatus === "error"
-                      ? "Runtime Error"
-                      : runStatus || "Not Executed"}
-                  </span>
-                </div> */}
-                {/* <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
-                  <span className="font-semibold text-gray-400">
-                    Expected Output:
-                  </span>
-                  <span className="text-yellow-400 font-mono">
-                    {expectedOutput}
-                  </span>
-                </div> */}
               </TabsContent>
-
-              {/* <TabsContent value="test-case" className="p-4 space-y-4">
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
-                  <span className="font-semibold text-gray-400">Status:</span>
-                  <span
-                    className={`${
-                      runStatus === "successful"
-                        ? "text-green-400"
-                        : "text-red-500"
-                    } font-mono`}
-                  >
-                    {runStatus}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 bg-[#27272a] p-3 rounded-lg">
-                  <span className="font-semibold text-gray-400">
-                    Expected Output:
-                  </span>
-                  <span className="text-yellow-400 font-mono">
-                    {expectedOutput}
-                  </span>
-                </div>
-              </TabsContent> */}
             </Tabs>
           </div>
-        </div>
+        </Panel>
+      </PanelGroup>
 
-        <div className="flex justify-end gap-2 mt-4">
-          {isOnlyQuestion ? (
-            <Button onClick={() => { console.log('Submit button (only question) clicked'); onSubmit && onSubmit(); }} variant="default">
-              Submit
-            </Button>
-          ) : !isLastQuestion ? (
-            <Button onClick={() => { console.log('Go to Next Question button clicked'); onNext && onNext(); }} variant="default">
-              Go to Next Question
-            </Button>
-          ) : (
-            <Button onClick={() => { console.log('Submit button (last question) clicked'); onSubmit && onSubmit(); }} variant="default">
-              Submit
-            </Button>
-          )}
-        </div>
+      <div className="flex justify-end gap-2 p-4 shrink-0">
+        {isOnlyQuestion ? (
+          <Button onClick={() => { console.log('Submit button (only question) clicked'); onSubmit && onSubmit(); }} variant="default">
+            Submit
+          </Button>
+        ) : !isLastQuestion ? (
+          <Button onClick={() => { console.log('Go to Next Question button clicked'); onNext && onNext(); }} variant="default">
+            Go to Next Question
+          </Button>
+        ) : (
+          <Button onClick={() => { console.log('Submit button (last question) clicked'); onSubmit && onSubmit(); }} variant="default">
+            Submit
+          </Button>
+        )}
       </div>
     </div>
   );
