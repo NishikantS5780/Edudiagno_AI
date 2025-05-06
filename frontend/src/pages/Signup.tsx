@@ -24,6 +24,21 @@ import RegularLayout from "@/components/layout/RegularLayout";
 import { CommandList } from "cmdk";
 import { UserContext } from "@/context/UserContext";
 
+interface Country {
+  id: number;
+  name: string;
+}
+
+interface State {
+  id: number;
+  name: string;
+}
+
+interface City {
+  id: number;
+  name: string;
+}
+
 const countries = ["Afghanistan", "Albania", "Algeria", "India"];
 
 const SignUp = () => {
@@ -39,6 +54,14 @@ const SignUp = () => {
   const [phone, setPhone] = useState("");
 
   const [countryPopupOpen, setCountryPopupOpen] = useState(false);
+  const [statePopupOpen, setStatePopupOpen] = useState(false);
+  const [cityPopupOpen, setCityPopupOpen] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
+  const [selectedState, setSelectedState] = useState<State | null>(null);
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [states, setStates] = useState<State[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
   const [country, setCountry] = useState("");
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
@@ -75,6 +98,54 @@ const SignUp = () => {
     if (passwordStrengthScore <= 2) return "bg-destructive";
     if (passwordStrengthScore <= 4) return "bg-yellow-500";
     return "bg-success";
+  };
+
+  const fetchCountries = async (keyword?: string) => {
+    try {
+      const url = new URL('http://13.201.51.54:8000/country');
+      if (keyword) url.searchParams.append('keyword', keyword);
+      const response = await fetch(url.toString());
+      const data = await response.json();
+      const countriesArray = data.countries || [];
+      setCountries(countriesArray);
+    } catch (error: any) {
+      console.error('Error fetching countries:', error);
+      toast.error('Failed to fetch countries');
+      setCountries([]);
+    }
+  };
+
+  const fetchStates = async (countryId: number, keyword?: string) => {
+    try {
+      const url = new URL('http://13.201.51.54:8000/state');
+      url.searchParams.append('country_id', countryId.toString());
+      if (keyword) url.searchParams.append('keyword', keyword);
+      const response = await fetch(url.toString());
+      const data = await response.json();
+      const statesArray = data.states || [];
+      setStates(statesArray);
+    } catch (error: any) {
+      console.error('Error fetching states:', error);
+      toast.error('Failed to fetch states');
+      setStates([]);
+    }
+  };
+
+  const fetchCities = async (countryId: number, stateId: number, keyword?: string) => {
+    try {
+      const url = new URL('http://13.201.51.54:8000/city');
+      url.searchParams.append('country_id', countryId.toString());
+      url.searchParams.append('state_id', stateId.toString());
+      if (keyword) url.searchParams.append('keyword', keyword);
+      const response = await fetch(url.toString());
+      const data = await response.json();
+      const citiesArray = data.cities || [];
+      setCities(citiesArray);
+    } catch (error: any) {
+      console.error('Error fetching cities:', error);
+      toast.error('Failed to fetch cities');
+      setCities([]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -273,38 +344,40 @@ const SignUp = () => {
                         role="combobox"
                         className={cn(
                           "w-full justify-between",
-                          !country && "text-muted-foreground"
+                          !selectedCountry && "text-muted-foreground"
                         )}
                       >
-                        {country || "Select a country"}
+                        {selectedCountry?.name || "Select a country"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0">
                       <Command>
-                        <CommandInput placeholder="Search country..." />
+                        <CommandInput 
+                          placeholder="Search country..." 
+                          onValueChange={(value) => fetchCountries(value)}
+                        />
                         <CommandList>
                           <CommandEmpty>No country found.</CommandEmpty>
                           <CommandGroup className="max-h-[300px] overflow-auto">
-                            {countries.map((countryName) => (
+                            {countries.map((country) => (
                               <CommandItem
-                                key={countryName}
-                                value={countryName}
-                                onSelect={(currentValue) => {
-                                  setCountry(
-                                    currentValue === country ? "" : currentValue
-                                  );
+                                key={country.id}
+                                value={country.name}
+                                onSelect={() => {
+                                  setSelectedCountry(country);
+                                  setCountryPopupOpen(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    country === countryName
+                                    selectedCountry?.id === country.id
                                       ? "opacity-100"
                                       : "opacity-0"
                                   )}
                                 />
-                                {countryName}
+                                {country.name}
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -316,26 +389,113 @@ const SignUp = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="state">State/Province</Label>
-                  <Input
-                    id="state"
-                    type="text"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    required
-                    aria-required="true"
-                  />
+                  <Popover
+                    open={statePopupOpen}
+                    onOpenChange={setStatePopupOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full justify-between",
+                          !selectedState && "text-muted-foreground"
+                        )}
+                        disabled={!selectedCountry}
+                      >
+                        {selectedState?.name || "Select a state"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                      <CommandInput 
+                          placeholder="Search state..." 
+                          onValueChange={(value) => selectedCountry && fetchStates(selectedCountry.id, value)}
+                        />
+                        <CommandList>
+                          <CommandEmpty>No state found.</CommandEmpty>
+                          <CommandGroup className="max-h-[300px] overflow-auto">
+                            {states.map((state) => (
+                              <CommandItem
+                                key={state.id}
+                                value={state.name}
+                                onSelect={() => {
+                                  setSelectedState(state);
+                                  setStatePopupOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedState?.id === state.id
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                {state.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    required
-                    aria-required="true"
-                  />
+                  <Popover
+                    open={cityPopupOpen}
+                    onOpenChange={setCityPopupOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full justify-between",
+                          !selectedCity && "text-muted-foreground"
+                        )}
+                        disabled={!selectedState}
+                      >
+                        {selectedCity?.name || "Select a city"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput 
+                          placeholder="Search city..." 
+                          onValueChange={(value) => selectedCountry && selectedState && fetchCities(selectedCountry.id, selectedState.id, value)}
+                        />
+                        <CommandList>
+                          <CommandEmpty>No city found.</CommandEmpty>
+                          <CommandGroup className="max-h-[300px] overflow-auto">
+                            {cities.map((city) => (
+                              <CommandItem
+                                key={city.id}
+                                value={city.name}
+                                onSelect={() => {
+                                  setSelectedCity(city);
+                                  setCityPopupOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedCity?.id === city.id
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                {city.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2">
@@ -363,7 +523,6 @@ const SignUp = () => {
                 />
               </div>
             </div>
-
             {/* Password */}
             <div className="space-y-4">
               <h3 className="font-medium">Password</h3>
