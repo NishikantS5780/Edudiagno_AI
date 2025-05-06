@@ -62,9 +62,6 @@ const SignUp = () => {
   const [countries, setCountries] = useState<Country[]>([]);
   const [states, setStates] = useState<State[]>([]);
   const [cities, setCities] = useState<City[]>([]);
-  const [country, setCountry] = useState("");
-  const [state, setState] = useState("");
-  const [city, setCity] = useState("");
   const [zip, setZip] = useState("");
   const [address, setAddress] = useState("");
 
@@ -159,9 +156,9 @@ const SignUp = () => {
       !designation.trim() ||
       !industry.trim() ||
       !phone.trim() ||
-      !country.trim() ||
-      !state.trim() ||
-      !city.trim() ||
+      !selectedCountry?.name.trim() ||
+      !selectedState?.name.trim() ||
+      !selectedCity?.name.trim() ||
       !zip.trim() ||
       !address.trim()
     ) {
@@ -169,7 +166,7 @@ const SignUp = () => {
       return;
     }
 
-    if (!country) {
+    if (!selectedCountry) {
       toast.error("Please select a country");
       return;
     }
@@ -200,9 +197,9 @@ const SignUp = () => {
         designation,
         company_name: companyName,
         industry,
-        country,
-        state,
-        city,
+        country: selectedCountry.name,
+        state: selectedState.name,
+        city: selectedCity.name,
         zip,
         address,
       });
@@ -353,8 +350,8 @@ const SignUp = () => {
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0">
                       <Command>
-                        <CommandInput 
-                          placeholder="Search country..." 
+                        <CommandInput
+                          placeholder="Search country..."
                           onValueChange={(value) => fetchCountries(value)}
                         />
                         <CommandList>
@@ -409,8 +406,8 @@ const SignUp = () => {
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0">
                       <Command>
-                      <CommandInput 
-                          placeholder="Search state..." 
+                        <CommandInput
+                          placeholder="Search state..."
                           onValueChange={(value) => selectedCountry && fetchStates(selectedCountry.id, value)}
                         />
                         <CommandList>
@@ -464,8 +461,8 @@ const SignUp = () => {
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0">
                       <Command>
-                        <CommandInput 
-                          placeholder="Search city..." 
+                        <CommandInput
+                          placeholder="Search city..."
                           onValueChange={(value) => selectedCountry && selectedState && fetchCities(selectedCountry.id, selectedState.id, value)}
                         />
                         <CommandList>
