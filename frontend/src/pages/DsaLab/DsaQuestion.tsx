@@ -45,11 +45,11 @@ function DsaQuestion({
   };
 
   return (
-    <div className="bg-[#18181b] text-white p-4 rounded-lg h-screen flex flex-col">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-[#18181b] text-white p-4 rounded-lg flex flex-col">
+      <div className="flex justify-between items-center mb-4 shrink-0">
         <h2 className="text-xl font-bold">{title}</h2>
       </div>
-      <div className="mb-4">
+      <div className="mb-4 shrink-0">
         <h3 className="text-lg font-semibold">
           {questionNumber} {questionTitle}
         </h3>
@@ -83,14 +83,13 @@ function DsaQuestion({
         )}
       </div> */}
       <div
-        className="mb-4 prose max-w-none dark:prose-invert"
+        className="mb-4 prose max-w-none dark:prose-invert overflow-auto"
         data-color-mode="dark"
       >
         <MDEditor.Markdown source={String(description)}
           style={{
             backgroundColor: "#18181b",
             color: "white",
-            // padding: "1rem",
             borderRadius: "8px",
           }}
         />
@@ -98,28 +97,30 @@ function DsaQuestion({
         {constraints && <p className="mt-2">{constraints}</p>}
       </div>
 
-      <div>
+      <div className="shrink-0">
         <h4 className="text-lg font-semibold mb-2">Sample Test Cases</h4>
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              <th className="border border-gray-600 p-2">Input</th>
-              <th className="border border-gray-600 p-2">Expected Output</th>
-            </tr>
-          </thead>
-          <tbody>
-            {testCases.map((testCase, index) => (
-              <tr key={index}>
-                <td className="border border-gray-600 p-2">
-                  <code>{testCase.input}</code>
-                </td>
-                <td className="border border-gray-600 p-2">
-                  <code>{testCase.expectedOutput}</code>
-                </td>
+        <div className="overflow-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th className="border border-gray-600 p-2">Input</th>
+                <th className="border border-gray-600 p-2">Expected Output</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {testCases.map((testCase, index) => (
+                <tr key={index}>
+                  <td className="border border-gray-600 p-2">
+                    <code>{testCase.input}</code>
+                  </td>
+                  <td className="border border-gray-600 p-2">
+                    <code>{testCase.expectedOutput}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
