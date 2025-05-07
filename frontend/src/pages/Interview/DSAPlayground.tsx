@@ -391,6 +391,7 @@ const DSAPlayground = () => {
                       <CodeExecutionPanel
                         questionId={currentQuestion.id}
                         expectedOutput={testCases[0]?.expected_output || ""}
+                        setCompilationStatus={setCompilationStatus}
                         onCompilationStatusChange={setCompilationStatus}
                         onSuccessRateChange={setSuccessRate}
                         compilationStatus={compilationStatus}
