@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ResumeUpload } from "@/components/common/ResumeUpload";
 import { useNavigate, useParams } from "react-router-dom";
 import { interviewAPI, resumeAPI } from "@/lib/api";
-import { Loader2 } from "lucide-react";
+import { Loader2, User, Mail, Phone, MapPin, Briefcase, GraduationCap, Brain, Link as LucideLink, Globe } from "lucide-react";
 import { InterviewData } from "@/types/interview";
 import { MatchResultsStage } from "./MatchResultsStage";
 
@@ -39,6 +39,7 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
   const [isCompleted, setIsCompleted] = useState(false);
   const navigate = useNavigate();
   const { accessCode } = useParams<{ accessCode: string }>();
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   const handleResumeChange = (file: File) => {
     if (isCompleted) return;
@@ -46,7 +47,23 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
       setIsLoading(true);
       const res = await resumeAPI.extractResumeData(file);
       const data = res.data;
-      setCandidateData({
+
+      // Log the raw AI response
+      console.log('Raw AI Response:', data);
+
+      // Check and log which fields are null or empty
+      const nullFields = Object.entries(data).filter(([_, value]) => {
+        if (Array.isArray(value)) {
+          return value.length === 0 || (value.length === 1 && value[0] === "");
+        }
+        return !value || value === "";
+      }).map(([key]) => key);
+
+      console.log('Missing or Empty Fields:', nullFields);
+      console.log('Fields that need manual input:', nullFields);
+
+      // Log the parsed data that will be used
+      const parsedData = {
         id: 0,
         firstName: data.first_name,
         lastName: data.last_name,
@@ -71,7 +88,11 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
         problem_solving_skills_score: 0,
         cultural_fit_score: 0,
         resumeUrl: '',
-      });
+      };
+
+      console.log('Parsed Candidate Data:', parsedData);
+
+      setCandidateData(parsedData);
       setIsLoading(false);
     };
     extractResumeData();
@@ -83,6 +104,43 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
     setCandidateData(undefined);
   };
 
+  const validateForm = () => {
+    const errors: { [key: string]: string } = {};
+    // Full Name
+    if (!candidateData?.firstName || candidateData.firstName.trim() === "" || !candidateData?.lastName || candidateData.lastName.trim() === "") {
+      errors.fullName = "Full name is required";
+    }
+    // Email
+    if (!candidateData?.email || candidateData.email.trim() === "" || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(candidateData.email)) {
+      errors.email = "Valid email is required";
+    }
+    // Phone
+    if (!candidateData?.phone || candidateData.phone.trim() === "" || candidateData.phone.length < 10) {
+      errors.phone = "Valid phone number is required";
+    }
+    // Location
+    if (!candidateData?.location || candidateData.location.trim() === "") {
+      errors.location = "Location is required";
+    }
+    // Work Experience
+    if (
+      candidateData?.workExperience === undefined ||
+      candidateData?.workExperience === null ||
+      isNaN(Number(candidateData?.workExperience))
+    ) {
+      errors.workExperience = "Work experience is required";
+    }
+    // Education
+    if (!candidateData?.education || candidateData.education.trim() === "") {
+      errors.education = "Education is required";
+    }
+    // Skills
+    if (!candidateData?.skills || candidateData.skills.trim() === "") {
+      errors.skills = "Skills are required";
+    }
+    return errors;
+  };
+
   const handleSubmitApplication = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -90,6 +148,13 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
 
     if (!resumeFile) {
       toast.error("Please upload your resume");
+      return;
+    }
+
+    const errors = validateForm();
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error("Please fill in all required fields correctly.");
       return;
     }
 
@@ -193,126 +258,260 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       {isLoading && (
-        <div className="absolute h-full w-full bg-gray-700/85 backdrop-blur-sm  top-0 left-0 flex flex-col items-center justify-center">
+        <div className="absolute h-full w-full bg-gray-700/85 backdrop-blur-sm  top-0 left-0 flex flex-col items-center justify-center z-50">
           <div>Extracting Resume Data</div>
           <Loader2 size={32} className="animate-spin" />
         </div>
       )}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">
-            Apply for {jobTitle} at {companyName}
+          <h2 className="text-2xl font-bold tracking-tight">
+            Apply for <span className="text-brand">{jobTitle}</span> at <span className="text-brand">{companyName}</span>
           </h2>
           <p className="text-muted-foreground">
-            Upload your resume and provide your contact information to begin the
-            interview process.
+            Upload your resume and provide your contact information to begin the interview process.
           </p>
         </div>
 
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium mb-2">Resume Upload</h3>
-            <ResumeUpload
-              onUpload={handleResumeChange}
-              disabled={isSubmitting || isCompleted}
-            />
-            {resumeFile && (
-              <div className="mt-4 p-4 bg-muted rounded-md">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="font-medium">{resumeFile.name}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResumeRemove}
-                    className="text-destructive hover:text-destructive"
-                    disabled={isSubmitting || isCompleted}
-                  >
-                    Remove
-                  </Button>
-                </div>
+        {/* Resume Upload Card */}
+        <div className="bg-card rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold mb-4 border-b pb-2">Resume Upload</h3>
+          <ResumeUpload
+            onUpload={handleResumeChange}
+            disabled={isSubmitting || isCompleted}
+          />
+          {resumeFile && (
+            <div className="mt-4 p-3 bg-muted rounded-md flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-brand">{resumeFile.name}</span>
               </div>
-            )}
-          </div>
-
-          {candidateData && (
-            <div>
-              <h3 className="text-lg font-medium mb-4">
-                Verify Your Information
-              </h3>
-              <form onSubmit={handleSubmitApplication} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Full Name
-                  </label>
-                  <Input
-                    value={candidateData.firstName + " " + candidateData.lastName}
-                    onChange={(e) => {
-                      const [firstName, ...lastNameParts] = e.target.value.split(" ");
-                      if (candidateData) {
-                        setCandidateData({
-                          ...candidateData,
-                          firstName: firstName || "",
-                          lastName: lastNameParts.join(" ") || ""
-                        });
-                      }
-                    }}
-                    placeholder="John Doe"
-                    disabled={isSubmitting || isCompleted}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Email Address
-                  </label>
-                  <Input
-                    value={candidateData.email}
-                    onChange={(e) => {
-                      if (candidateData) {
-                        setCandidateData({
-                          ...candidateData,
-                          email: e.target.value
-                        });
-                      }
-                    }}
-                    type="email"
-                    placeholder="you@example.com"
-                    disabled={isSubmitting || isCompleted}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Phone Number
-                  </label>
-                  <Input
-                    value={candidateData.phone}
-                    onChange={(e) => {
-                      if (candidateData) {
-                        setCandidateData({
-                          ...candidateData,
-                          phone: e.target.value
-                        });
-                      }
-                    }}
-                    placeholder="(123) 456-7890"
-                    disabled={isSubmitting || isCompleted}
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isSubmitting || isCompleted || !resumeFile}
-                >
-                  {isSubmitting ? "Processing..." : "Submit Application"}
-                </Button>
-              </form>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResumeRemove}
+                className="text-destructive hover:text-destructive"
+                disabled={isSubmitting || isCompleted}
+              >
+                Remove
+              </Button>
             </div>
           )}
         </div>
+
+        {/* Candidate Data Card */}
+        {candidateData && (
+          <div className="bg-card rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold mb-4 border-b pb-2">
+              Verify Your Information
+            </h3>
+            <form onSubmit={handleSubmitApplication} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Full Name */}
+              <div className="col-span-1">
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <User className="text-brand w-4 h-4" /> Full Name <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={candidateData.firstName + " " + candidateData.lastName}
+                  onChange={(e) => {
+                    const [firstName, ...lastNameParts] = e.target.value.split(" ");
+                    if (candidateData) {
+                      setCandidateData({
+                        ...candidateData,
+                        firstName: firstName || "",
+                        lastName: lastNameParts.join(" ") || ""
+                      });
+                    }
+                  }}
+                  placeholder="John Doe"
+                  disabled={isSubmitting || isCompleted}
+                />
+                {formErrors.fullName && <p className="text-sm text-destructive mt-1">{formErrors.fullName}</p>}
+              </div>
+
+              {/* Email */}
+              <div className="col-span-1">
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <Mail className="text-brand w-4 h-4" /> Email Address <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={candidateData.email || ""}
+                  onChange={(e) => {
+                    if (candidateData) {
+                      setCandidateData({
+                        ...candidateData,
+                        email: e.target.value
+                      });
+                    }
+                  }}
+                  type="email"
+                  placeholder="you@example.com"
+                  disabled={isSubmitting || isCompleted}
+                />
+                {formErrors.email && <p className="text-sm text-destructive mt-1">{formErrors.email}</p>}
+              </div>
+
+              {/* Phone */}
+              <div className="col-span-1">
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <Phone className="text-brand w-4 h-4" /> Phone Number <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={candidateData.phone || ""}
+                  onChange={(e) => {
+                    if (candidateData) {
+                      setCandidateData({
+                        ...candidateData,
+                        phone: e.target.value
+                      });
+                    }
+                  }}
+                  placeholder="(123) 456-7890"
+                  disabled={isSubmitting || isCompleted}
+                />
+                {formErrors.phone && <p className="text-sm text-destructive mt-1">{formErrors.phone}</p>}
+              </div>
+
+              {/* Location */}
+              <div className="col-span-1">
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <MapPin className="text-brand w-4 h-4" /> Location <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={candidateData.location || ""}
+                  onChange={(e) => {
+                    if (candidateData) {
+                      setCandidateData({
+                        ...candidateData,
+                        location: e.target.value
+                      });
+                    }
+                  }}
+                  placeholder="City, State"
+                  disabled={isSubmitting || isCompleted}
+                />
+                {formErrors.location && <p className="text-sm text-destructive mt-1">{formErrors.location}</p>}
+              </div>
+
+              {/* Work Experience */}
+              <div className="col-span-1">
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <Briefcase className="text-brand w-4 h-4" /> Work Experience (years) <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  type="number"
+                  value={candidateData.workExperience || ""}
+                  onChange={(e) => {
+                    if (candidateData) {
+                      setCandidateData({
+                        ...candidateData,
+                        workExperience: Number(e.target.value)
+                      });
+                    }
+                  }}
+                  placeholder="e.g. 5"
+                  disabled={isSubmitting || isCompleted}
+                />
+                {formErrors.workExperience && <p className="text-sm text-destructive mt-1">{formErrors.workExperience}</p>}
+              </div>
+
+              {/* Education */}
+              <div className="col-span-1">
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <GraduationCap className="text-brand w-4 h-4" /> Education <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={candidateData.education || ""}
+                  onChange={(e) => {
+                    if (candidateData) {
+                      setCandidateData({
+                        ...candidateData,
+                        education: e.target.value
+                      });
+                    }
+                  }}
+                  placeholder="e.g. Bachelor's in Computer Science"
+                  disabled={isSubmitting || isCompleted}
+                />
+                {formErrors.education && <p className="text-sm text-destructive mt-1">{formErrors.education}</p>}
+              </div>
+
+              {/* Skills */}
+              <div className="col-span-2">
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <Brain className="text-brand w-4 h-4" /> Skills <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={candidateData.skills || ""}
+                  onChange={(e) => {
+                    if (candidateData) {
+                      setCandidateData({
+                        ...candidateData,
+                        skills: e.target.value
+                      });
+                    }
+                  }}
+                  placeholder="e.g. JavaScript, React, Node.js"
+                  disabled={isSubmitting || isCompleted}
+                />
+                {formErrors.skills && <p className="text-sm text-destructive mt-1">{formErrors.skills}</p>}
+              </div>
+
+              {/* LinkedIn URL */}
+              <div className="col-span-1">
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <LucideLink className="text-brand w-4 h-4" /> LinkedIn URL
+                </label>
+                <Input
+                  value={candidateData.linkedinUrl || ""}
+                  onChange={(e) => {
+                    if (candidateData) {
+                      setCandidateData({
+                        ...candidateData,
+                        linkedinUrl: e.target.value
+                      });
+                    }
+                  }}
+                  placeholder="https://linkedin.com/in/yourprofile"
+                  disabled={isSubmitting || isCompleted}
+                />
+              </div>
+
+              {/* Portfolio URL */}
+              <div className="col-span-1">
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <Globe className="text-brand w-4 h-4" /> Portfolio URL
+                </label>
+                <Input
+                  value={candidateData.portfolioUrl || ""}
+                  onChange={(e) => {
+                    if (candidateData) {
+                      setCandidateData({
+                        ...candidateData,
+                        portfolioUrl: e.target.value
+                      });
+                    }
+                  }}
+                  placeholder="https://yourportfolio.com"
+                  disabled={isSubmitting || isCompleted}
+                />
+              </div>
+
+              <div className="col-span-2 mt-4">
+                <Button
+                  type="submit"
+                  className="w-full py-3 text-lg font-semibold rounded-lg shadow-md bg-brand hover:bg-brand-dark transition"
+                  disabled={isSubmitting || isCompleted || !resumeFile}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2 justify-center"><Loader2 className="animate-spin" size={20}/> Processing...</span>
+                  ) : (
+                    "Submit Application"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );
