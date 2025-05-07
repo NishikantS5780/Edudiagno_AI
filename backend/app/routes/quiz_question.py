@@ -45,6 +45,7 @@ async def get_quiz_questions_for_interview(
                 QuizQuestion.description,
                 QuizQuestion.type,
                 QuizQuestion.category,
+                QuizQuestion.time_seconds,
             )
             .join(Job, QuizQuestion.job_id == Job.id)
             .join(Interview, Interview.job_id == Job.id)
