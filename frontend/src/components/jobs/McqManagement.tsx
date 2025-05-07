@@ -9,6 +9,7 @@ import { jobAPI } from "@/lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 
 interface QuizOption {
   id: number;
@@ -19,7 +20,9 @@ interface QuizOption {
 interface McqQuestion {
   id: number;
   description: string;
-  type: 'technical' | 'aptitude';
+  type: 'single' | 'multiple' | 'true_false';
+  category: 'technical' | 'aptitude';
+  time_seconds: number;
   options: QuizOption[];
 }
 
@@ -52,14 +55,16 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
     setQuestions([
       ...questions,
       {
-        id: Date.now(), // Temporary ID for new questions
+        id: -Date.now(), // Use negative ID for new questions
         description: "",
-        type: "technical",
+        type: "single",
+        category: "technical",
+        time_seconds: 60,
         options: [
-          { id: 1, label: "", correct: false },
-          { id: 2, label: "", correct: false },
-          { id: 3, label: "", correct: false },
-          { id: 4, label: "", correct: false }
+          { id: -1, label: "", correct: false },
+          { id: -2, label: "", correct: false },
+          { id: -3, label: "", correct: false },
+          { id: -4, label: "", correct: false }
         ]
       },
     ]);
@@ -142,10 +147,129 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
 
   const handleSaveQuestions = async () => {
     try {
-      await jobAPI.updateMcqQuestions(jobId.toString(), questions);
+      console.log('Starting to save questions:', questions);
+      
+      for (const question of questions) {
+        let questionId = question.id;
+        console.log('Processing question:', {
+          id: questionId,
+          description: question.description,
+          type: question.type,
+          category: question.category,
+          time_seconds: question.time_seconds,
+          options: question.options
+        });
+        
+        // If the question has a negative ID, it's a new question
+        if (questionId < 0) {
+          console.log('Creating new question with data:', {
+            description: question.description,
+            type: question.type,
+            category: question.category,
+            time_seconds: question.time_seconds,
+            job_id: jobId
+          });
+          
+          const createResponse = await api.post(
+            `/quiz-question`,
+            {
+              description: question.description,
+              type: question.type,
+              category: question.category,
+              time_seconds: question.time_seconds,
+              job_id: jobId
+            },
+            {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            }
+          );
+          questionId = createResponse.data.id;
+          console.log('Created new question with ID:', questionId);
+
+          // Create all options for the new question
+          for (const option of question.options) {
+            console.log('Creating new option for new question');
+            const optionResponse = await api.post(
+              `/quiz-option`,
+              {
+                label: option.label,
+                correct: option.correct,
+                question_id: questionId
+              },
+              {
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+              }
+            );
+            console.log('Created new option:', optionResponse.data);
+          }
+        } else {
+          console.log('Updating existing question:', {
+            id: questionId,
+            description: question.description,
+            type: question.type,
+            category: question.category,
+            time_seconds: question.time_seconds
+          });
+          
+          await api.put(
+            `/quiz-question`,
+            {
+              id: questionId,
+              description: question.description,
+              type: question.type,
+              category: question.category,
+              time_seconds: question.time_seconds
+            },
+            {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            }
+          );
+
+          // Update existing options
+          for (const option of question.options) {
+            if (option.id < 0) {
+              // Create new option for existing question
+              console.log('Creating new option for existing question');
+              const optionResponse = await api.post(
+                `/quiz-option`,
+                {
+                  label: option.label,
+                  correct: option.correct,
+                  question_id: questionId
+                },
+                {
+                  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                }
+              );
+              console.log('Created new option:', optionResponse.data);
+            } else {
+              // Update existing option
+              console.log('Updating existing option');
+              const optionResponse = await api.put(
+                `/quiz-option`,
+                {
+                  id: option.id,
+                  label: option.label,
+                  correct: option.correct,
+                },
+                {
+                  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                }
+              );
+              console.log('Updated option:', optionResponse.data);
+            }
+          }
+        }
+      }
       toast.success("MCQ questions saved successfully");
-    } catch (error) {
+      // Refresh the questions after saving
+      await fetchMcqQuestions();
+    } catch (error: any) {
       console.error("Error saving MCQ questions:", error);
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Error response status:", error.response.status);
+      }
       toast.error("Failed to save MCQ questions");
     }
   };
@@ -202,6 +326,67 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                     ) : (
                       <p className="text-lg">{question.description}</p>
                     )}
+                    <div className="flex gap-4">
+                      <div className="space-y-2">
+                        <Label>Question Type</Label>
+                        <Select
+                          value={question.category}
+                          onValueChange={(value) => handleUpdateQuestion(index, "category", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select question type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="technical">Technical</SelectItem>
+                            <SelectItem value="aptitude">Aptitude</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Answer Type</Label>
+                        <Select
+                          value={question.type}
+                          onValueChange={(value) => {
+                            handleUpdateQuestion(index, "type", value);
+                            // Only reset options for true/false type
+                            if (value === "true_false") {
+                              handleUpdateQuestion(index, "options", [
+                                { id: 1, label: "True", correct: false },
+                                { id: 2, label: "False", correct: false }
+                              ]);
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select answer type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="single">Single Choice</SelectItem>
+                            <SelectItem value="multiple">Multiple Choice</SelectItem>
+                            <SelectItem value="true_false">True/False</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Time Limit (seconds)</Label>
+                        <Select
+                          value={question.time_seconds?.toString() || "60"}
+                          onValueChange={(value) => handleUpdateQuestion(index, "time_seconds", parseInt(value))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select time limit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="30">30 seconds</SelectItem>
+                            <SelectItem value="45">45 seconds</SelectItem>
+                            <SelectItem value="60">60 seconds</SelectItem>
+                            <SelectItem value="90">90 seconds</SelectItem>
+                            <SelectItem value="120">120 seconds</SelectItem>
+                            <SelectItem value="180">180 seconds</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       {question.options.map((option, optionIndex) => (
                         <div 
@@ -214,19 +399,34 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                         >
                           {isEditMode ? (
                             <>
-                              <input
-                                type="radio"
-                                name={`correct-${index}`}
-                                checked={option.correct}
-                                onChange={() => {
-                                  const newOptions = question.options.map((opt, idx) => ({
-                                    ...opt,
-                                    correct: idx === optionIndex
-                                  }));
-                                  handleUpdateQuestion(index, "options", newOptions);
-                                }}
-                                className="h-4 w-4 text-green-600 focus:ring-green-500"
-                              />
+                              {question.type === "multiple" ? (
+                                <input
+                                  type="checkbox"
+                                  checked={option.correct}
+                                  onChange={() => {
+                                    const newOptions = question.options.map((opt, idx) => ({
+                                      ...opt,
+                                      correct: idx === optionIndex ? !opt.correct : opt.correct
+                                    }));
+                                    handleUpdateQuestion(index, "options", newOptions);
+                                  }}
+                                  className="h-4 w-4 text-green-600 focus:ring-green-500"
+                                />
+                              ) : (
+                                <input
+                                  type="radio"
+                                  name={`correct-${index}`}
+                                  checked={option.correct}
+                                  onChange={() => {
+                                    const newOptions = question.options.map((opt, idx) => ({
+                                      ...opt,
+                                      correct: idx === optionIndex
+                                    }));
+                                    handleUpdateQuestion(index, "options", newOptions);
+                                  }}
+                                  className="h-4 w-4 text-green-600 focus:ring-green-500"
+                                />
+                              )}
                               <Input
                                 placeholder={`Option ${optionIndex + 1}`}
                                 value={option.label}
@@ -288,9 +488,16 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
-                    <Badge variant={question.type === "technical" ? "default" : "secondary"}>
-                      {question.type}
-                    </Badge>
+                    <div className="flex gap-2">
+                      <Badge variant={question.category === "technical" ? "default" : "secondary"}>
+                        {question.category}
+                      </Badge>
+                      <Badge variant="outline">
+                        {question.type === "single" ? "Single Choice" : 
+                         question.type === "multiple" ? "Multiple Choice" : 
+                         "True/False"}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </div>

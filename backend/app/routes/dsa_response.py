@@ -267,8 +267,17 @@ async def get_dsa_response(
             DSAResponse.question_id == int(question_id),
         )
     )
-    result = db.execute(stmt).mappings().one()
-    return result
+    response = db.execute(stmt).mappings().one()
+    stmt = (
+        select(
+            DSATestCaseResponse.status, DSATestCase.input, DSATestCase.expected_output
+        )
+        .join(DSATestCase, DSATestCase.id == DSATestCaseResponse.dsa_test_case_id)
+        .where(DSATestCaseResponse.dsa_response_id == response["id"])
+    )
+    test_case_responses = db.execute(stmt).mappings().all()
+
+    return {"response": response, "test_case_responses": test_case_responses}
 
 
 # @router.put("")
