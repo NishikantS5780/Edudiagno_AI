@@ -21,6 +21,7 @@ async def create_quiz_question(
     quiz_question = QuizQuestion(
         description=quiz_data.description,
         type=quiz_data.type,
+        category=quiz_data.category,
         job_id=quiz_data.job_id,
         time_seconds=quiz_data.time_seconds,
     )
@@ -39,14 +40,22 @@ async def get_quiz_questions_for_interview(
 ):
     if interview_id:
         stmt = (
-            select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
+            select(
+                QuizQuestion.id,
+                QuizQuestion.description,
+                QuizQuestion.type,
+                QuizQuestion.category,
+            )
             .join(Job, QuizQuestion.job_id == Job.id)
             .join(Interview, Interview.job_id == Job.id)
             .where(Interview.id == int(interview_id))
         )
     elif job_id:
         stmt = select(
-            QuizQuestion.id, QuizQuestion.description, QuizQuestion.type
+            QuizQuestion.id,
+            QuizQuestion.description,
+            QuizQuestion.type,
+            QuizQuestion.category,
         ).where(QuizQuestion.job_id == int(job_id))
     else:
         # stmt = select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
@@ -79,7 +88,7 @@ async def update_quiz_question(
         update(QuizQuestion)
         .values(quiz_data)
         .where(QuizQuestion.id == question_id)
-        .returning(QuizQuestion.description, QuizQuestion.type)
+        .returning(QuizQuestion.description, QuizQuestion.type, QuizQuestion.category)
     )
     result = db.execute(stmt)
     db.commit()

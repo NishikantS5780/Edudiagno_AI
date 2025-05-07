@@ -229,6 +229,7 @@ class UpdateDSAResponse(BaseModel):
 class CreateQuizQuestion(BaseModel):
     description: str
     type: str
+    category: str
     job_id: int
     time_seconds: Optional[int] = None
 
@@ -236,6 +237,7 @@ class CreateQuizQuestion(BaseModel):
 class UpdateQuizQuestion(BaseModel):
     description: Optional[str] = None
     type: Optional[str] = None
+    category: Optional[str] = None
     time_seconds: Optional[int] = None
     id: int
 
