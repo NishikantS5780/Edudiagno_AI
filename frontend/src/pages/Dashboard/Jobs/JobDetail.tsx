@@ -296,6 +296,18 @@ const JobDetail = () => {
                       {job.description}
                     </p>
                   </div>
+                  {job.show_salary && job.salary_min && job.salary_max && (
+                    <div className="space-y-4">
+                      <h3 className="font-medium">Salary Range</h3>
+                      <p className="text-muted-foreground">
+                        {job.currency === 'INR' && '₹'}
+                        {job.currency === 'USD' && '$'}
+                        {job.currency === 'EUR' && '€'}
+                        {job.currency === 'GBP' && '£'}
+                        {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()} {job.currency}
+                      </p>
+                    </div>
+                  )}
                   <div className="space-y-4">
                     <h3 className="font-medium">Requirements</h3>
                     <p className="text-muted-foreground whitespace-pre-wrap">

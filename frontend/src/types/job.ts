@@ -8,6 +8,8 @@ export interface JobData {
   type: string;
   min_experience: number;
   max_experience: number;
+  duration_months: number;
+  key_qualification: string;
   salary_min: number | null;
   salary_max: number | null;
   currency: string;
@@ -47,6 +49,7 @@ export interface CandidateJobData {
   benefits?: string;
   salaryMin?: number;
   salaryMax?: number;
+  currency?: string;
   createdAt?: string;
   requires_dsa?: boolean;
   city?: string;

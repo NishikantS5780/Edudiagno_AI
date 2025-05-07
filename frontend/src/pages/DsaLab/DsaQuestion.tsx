@@ -100,26 +100,26 @@ function DsaQuestion({
       <div className="shrink-0">
         <h4 className="text-lg font-semibold mb-2">Sample Test Cases</h4>
         <div className="overflow-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="border border-gray-600 p-2">Input</th>
-                <th className="border border-gray-600 p-2">Expected Output</th>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              <th className="border border-gray-600 p-2">Input</th>
+              <th className="border border-gray-600 p-2">Expected Output</th>
+            </tr>
+          </thead>
+          <tbody>
+            {testCases.map((testCase, index) => (
+              <tr key={index}>
+                <td className="border border-gray-600 p-2">
+                  <code>{testCase.input}</code>
+                </td>
+                <td className="border border-gray-600 p-2">
+                  <code>{testCase.expectedOutput}</code>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {testCases.map((testCase, index) => (
-                <tr key={index}>
-                  <td className="border border-gray-600 p-2">
-                    <code>{testCase.input}</code>
-                  </td>
-                  <td className="border border-gray-600 p-2">
-                    <code>{testCase.expectedOutput}</code>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            ))}
+          </tbody>
+        </table>
         </div>
       </div>
     </div>

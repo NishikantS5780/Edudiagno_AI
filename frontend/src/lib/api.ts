@@ -5,10 +5,22 @@ import {
   RecruiterRegistrationData,
   RecruiterData,
 } from "@/types/recruiter";
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
+
+// Extend AxiosRequestConfig to include our custom properties
+interface CustomAxiosRequestConfig extends AxiosRequestConfig {
+  retry?: boolean;
+  retryCount?: number;
+}
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+
+// Add retry logic
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -21,6 +33,37 @@ export const api = axios.create({
     return (status >= 200 && status < 300) || status === 204;
   },
 });
+
+// Add response interceptor for retry logic
+api.interceptors.response.use(undefined, async (err) => {
+  const { config } = err;
+  if (!config || !(config as CustomAxiosRequestConfig).retry) {
+    return Promise.reject(err);
+  }
+  
+  const customConfig = config as CustomAxiosRequestConfig;
+  customConfig.retryCount = customConfig.retryCount || 0;
+  
+  if (customConfig.retryCount >= MAX_RETRIES) {
+    return Promise.reject(err);
+  }
+  
+  customConfig.retryCount += 1;
+  await sleep(RETRY_DELAY * customConfig.retryCount);
+  
+  return api(config);
+});
+
+// Add request interceptor for network error handling
+api.interceptors.request.use(
+  (config) => {
+    (config as CustomAxiosRequestConfig).retry = true; // Enable retry for all requests
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export const recruiterAPI = {
   signup: async (data: RecruiterRegistrationData) => {
@@ -254,6 +297,8 @@ export const jobAPI = {
       type: data.type,
       min_experience: data.min_experience,
       max_experience: data.max_experience,
+      duration_months: data.duration_months,
+      key_qualification: data.key_qualification,
       salary_min: data.salary_min,
       salary_max: data.salary_max,
       currency: data.currency,

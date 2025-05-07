@@ -41,6 +41,8 @@ const jobFormSchema = z.object({
   type: z.string().nonempty({ message: "Please select a job type" }),
   min_experience: z.number().min(0, { message: "Minimum experience must be 0 or greater" }),
   max_experience: z.number().min(0, { message: "Maximum experience must be 0 or greater" }),
+  duration_months: z.number().min(1, { message: "Duration must be at least 1 month" }),
+  key_qualification: z.string().nonempty({ message: "Please select a key qualification" }),
   salary_min: z.number().min(0, { message: "Minimum salary must be 0 or greater" }),
   salary_max: z.number().min(0, { message: "Maximum salary must be 0 or greater" }),
   show_salary: z.boolean().default(true),
@@ -61,6 +63,7 @@ const jobFormSchema = z.object({
     title: z.string().nonempty({ message: "DSA question title is required" }),
     description: z.string().nonempty({ message: "DSA question description is required" }),
     difficulty: z.string().nonempty({ message: "Please select difficulty level" }),
+    time_minutes: z.number().min(1, { message: "Time limit must be at least 1 minute" }).max(180, { message: "Time limit cannot exceed 3 hours" }),
     test_cases: z.array(z.object({
       input: z.string().nonempty({ message: "Test case input is required" }),
       expected_output: z.string().nonempty({ message: "Test case expected output is required" })
@@ -70,6 +73,7 @@ const jobFormSchema = z.object({
     title: z.string().nonempty({ message: "MCQ question title is required" }),
     type: z.enum(["single", "multiple", "true_false"]),
     question_type: z.enum(["technical", "aptitude"]),
+    time_seconds: z.number().min(30, { message: "Time limit must be at least 30 seconds" }).max(180, { message: "Time limit cannot exceed 3 minutes" }),
     options: z.array(z.string().nonempty({ message: "Option text is required" })),
     correct_options: z.array(z.number())
   })).optional()
@@ -84,7 +88,8 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
       const questionResponse = await api.post('/quiz-question', {
         description: question.title,
         job_id: jobId,
-        type: question.question_type // Only send the question type (technical/aptitude)
+        type: question.question_type,
+        time_seconds: question.time_seconds
       }, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -158,9 +163,11 @@ const NewJob = () => {
     department: "",
     city: "",
     location: "",
-    type: "",
+    type: "full-time",
     min_experience: 0,
     max_experience: 0,
+    duration_months: 12,
+    key_qualification: "bachelors",
     salary_min: null,
     salary_max: null,
     currency: "INR",
@@ -180,6 +187,7 @@ const NewJob = () => {
     title: string;
     type: "single" | "multiple" | "true_false";
     question_type: "technical" | "aptitude";
+    time_seconds: number;
     options: string[];
     correct_options: number[];
   }
@@ -193,6 +201,7 @@ const NewJob = () => {
     title: string;
     description: string;
     difficulty: string;
+    time_minutes: number;
     test_cases: TestCase[];
   }
 
@@ -206,6 +215,8 @@ const NewJob = () => {
     type: string;
     min_experience: number;
     max_experience: number;
+    duration_months: number;
+    key_qualification: string;
     salary_min: number | null;
     salary_max: number | null;
     currency: string;
@@ -334,6 +345,7 @@ const NewJob = () => {
           title: "",
           description: "",
           difficulty: "Easy",
+          time_minutes: 30, // Default to 30 minutes
           test_cases: [
             { input: "", expected_output: "" }
           ]
@@ -392,6 +404,7 @@ const NewJob = () => {
       title: "",
       type: "single",
       question_type: "technical",
+      time_seconds: 60, // Default to 60 seconds
       options: ["", "", "", ""],
       correct_options: [0]
     };
@@ -430,6 +443,11 @@ const NewJob = () => {
       updatedQuestions[index] = {
         ...updatedQuestions[index],
         question_type: value
+      };
+    } else if (field === "time_seconds") {
+      updatedQuestions[index] = {
+        ...updatedQuestions[index],
+        time_seconds: parseInt(value)
       };
     } else {
       updatedQuestions[index] = {
@@ -486,6 +504,27 @@ const NewJob = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Time Limit (seconds)</Label>
+              <Select
+                value={question.time_seconds.toString()}
+                onValueChange={(value) =>
+                  handleMcqQuestionUpdate(index, "time_seconds", parseInt(value))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select time limit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30 seconds</SelectItem>
+                  <SelectItem value="45">45 seconds</SelectItem>
+                  <SelectItem value="60">60 seconds</SelectItem>
+                  <SelectItem value="90">90 seconds</SelectItem>
+                  <SelectItem value="120">120 seconds</SelectItem>
+                  <SelectItem value="180">180 seconds</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <Button
@@ -798,12 +837,52 @@ const NewJob = () => {
 
                   <div className="space-y-2">
                     <Label>
+                      Required Qualification <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={jobData.key_qualification}
+                      onValueChange={(value) =>
+                        handleChange("key_qualification", value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select qualification" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bachelors">Bachelor's Degree</SelectItem>
+                        <SelectItem value="masters">Master's Degree</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.key_qualification && (
+                      <p className="text-sm text-destructive">{errors.key_qualification}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>
+                      Job Duration (Months) <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={jobData.duration_months}
+                      onChange={(e) =>
+                        handleChange("duration_months", parseInt(e.target.value) || 0)
+                      }
+                    />
+                    {errors.duration_months && (
+                      <p className="text-sm text-destructive">{errors.duration_months}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>
                       Salary Range <span className="text-destructive">*</span>
                     </Label>
                     <div className="flex gap-2">
                       <Select
                         onValueChange={(val) => handleChange("currency", val)}
-                        defaultValue={jobData.currency || "INR"}
+                        value={jobData.currency}
                       >
                         <SelectTrigger className="w-[100px]">
                           <SelectValue placeholder="Currency" />
@@ -988,6 +1067,30 @@ const NewJob = () => {
                                     <SelectItem value="Easy">Easy</SelectItem>
                                     <SelectItem value="Medium">Medium</SelectItem>
                                     <SelectItem value="Hard">Hard</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Time Limit (minutes)</Label>
+                                <Select
+                                  value={question.time_minutes.toString()}
+                                  onValueChange={(value) =>
+                                    handleDsaQuestionUpdate(questionIndex, "time_minutes", parseInt(value))
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select time limit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="15">15 minutes</SelectItem>
+                                    <SelectItem value="30">30 minutes</SelectItem>
+                                    <SelectItem value="45">45 minutes</SelectItem>
+                                    <SelectItem value="60">60 minutes</SelectItem>
+                                    <SelectItem value="90">90 minutes</SelectItem>
+                                    <SelectItem value="120">120 minutes</SelectItem>
+                                    <SelectItem value="150">150 minutes</SelectItem>
+                                    <SelectItem value="180">180 minutes</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
