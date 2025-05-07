@@ -160,16 +160,20 @@ async def get_job_candidate_view(
             Job.city,
             Job.location,
             Job.type,
+            Job.duration_months,
             Job.min_experience,
             Job.max_experience,
+            case((Job.show_salary == True, Job.currency), else_=None).label("currency"),
             case((Job.show_salary == True, Job.salary_min), else_=None).label(
                 "salary_min"
             ),
             case((Job.show_salary == True, Job.salary_max), else_=None).label(
                 "salary_max"
             ),
+            Job.key_qualification,
             Job.requirements,
             Job.benefits,
+            Job.quiz_time_minutes,
             Job.created_at,
             Job.company_id,
             Recruiter.company_name,
