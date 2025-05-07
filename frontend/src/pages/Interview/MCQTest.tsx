@@ -22,7 +22,8 @@ interface QuizQuestion {
     label: string;
     correct: boolean;
   }[];
-  type: 'technical' | 'aptitude';
+  type: 'single' | 'multiple' | 'true_false';
+  category: 'technical' | 'aptitude';
   answerType: 'single' | 'multiple' | 'true_false';
 }
 
@@ -77,24 +78,26 @@ const MCQTest = () => {
         
         // Process questions to determine their type
         const processedQuestions = response.data.map((question: any) => {
-          const correctOptions = question.options.filter((opt: any) => opt.correct).length;
-          let answerType: 'single' | 'multiple' | 'true_false' = 'single';
-          
-          if (question.options.length === 2) {
-            answerType = 'true_false';
-          } else if (correctOptions > 1) {
-            answerType = 'multiple';
-          }
+          // Use the type directly from the API
+          const answerType = question.type;
+          // Set default category if null
+          const category = question.category || 'technical';
           
           return {
             ...question,
-            answerType
+            answerType,
+            category
           };
         });
 
-        // Separate questions by type
-        const technicalQuestions = processedQuestions.filter((q: QuizQuestion) => q.type === 'technical');
-        const aptitudeQuestions = processedQuestions.filter((q: QuizQuestion) => q.type === 'aptitude');
+        // Separate questions by category
+        const technicalQuestions = processedQuestions.filter((q: QuizQuestion) => q.category === 'technical');
+        const aptitudeQuestions = processedQuestions.filter((q: QuizQuestion) => q.category === 'aptitude');
+        
+        console.log('Processed questions:', {
+          technical: technicalQuestions,
+          aptitude: aptitudeQuestions
+        });
         
         setQuestions({
           technical: technicalQuestions,
@@ -121,8 +124,10 @@ const MCQTest = () => {
       }
     };
 
-    fetchQuestions();
-  }, []);
+    if (interviewId) {
+      fetchQuestions();
+    }
+  }, [interviewId]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
