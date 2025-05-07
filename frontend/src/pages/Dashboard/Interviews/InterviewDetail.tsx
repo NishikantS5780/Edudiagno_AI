@@ -648,6 +648,18 @@ const InterviewDetail = () => {
                     <p className="text-sm text-muted-foreground">Job Title</p>
                     <p className="font-medium">{job.title}</p>
                   </div>
+                  {job.show_salary && job.salary_min && job.salary_max && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Salary Range</p>
+                      <p className="font-medium">
+                        {job.currency === 'INR' && '₹'}
+                        {job.currency === 'USD' && '$'}
+                        {job.currency === 'EUR' && '€'}
+                        {job.currency === 'GBP' && '£'}
+                        {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()} {job.currency}
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-sm text-muted-foreground">Match Score</p>
                     <div className="flex items-center gap-2">

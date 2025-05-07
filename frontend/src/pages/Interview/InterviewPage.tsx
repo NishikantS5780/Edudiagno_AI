@@ -33,6 +33,9 @@ const InterviewPage = () => {
         const response = await jobAPI.candidateGetJob(jobId);
         const data = response.data;
 
+        console.log('Raw API Response:', data);
+        console.log('Currency from API:', data.currency);
+
         setJobDetails({
           id: data.id,
           title: data.title,
@@ -45,11 +48,14 @@ const InterviewPage = () => {
           requirements: data.requirements || "",
           salaryMin: data.salary_min,
           salaryMax: data.salary_max,
+          currency: data.currency,
 
           companyId: data.company_id,
           companyName: data.company_name,
           companyLogo: data.company_logo || "https://placehold.co/100",
         });
+
+        console.log('Job Details after setting:', jobDetails);
 
         setLoading(false);
       } catch (err) {
@@ -224,9 +230,21 @@ const InterviewPage = () => {
                 <div className="space-y-4">
                   <h3 className="font-medium">Compensation</h3>
                   <p className="text-muted-foreground">
-                    {jobDetails?.salaryMin && jobDetails?.salaryMax
-                      ? `₹${jobDetails.salaryMin.toLocaleString()} - ₹${jobDetails.salaryMax.toLocaleString()}`
-                      : "Not specified"}
+                    {(() => {
+                      if (!jobDetails?.salaryMin || !jobDetails?.salaryMax || !jobDetails?.currency) {
+                        return "Not specified";
+                      }
+                      console.log('Current currency:', jobDetails.currency);
+                      const currencySymbols: Record<string, string> = {
+                        'INR': '₹',
+                        'USD': '$',
+                        'EUR': '€',
+                        'GBP': '£'
+                      };
+                      const currencySymbol = currencySymbols[jobDetails.currency] || '';
+                      console.log('Selected currency symbol:', currencySymbol);
+                      return `${currencySymbol}${jobDetails.salaryMin.toLocaleString()} - ${jobDetails.salaryMax.toLocaleString()} ${jobDetails.currency}`;
+                    })()}
                   </p>
                 </div>
 

@@ -297,6 +297,8 @@ export const jobAPI = {
       type: data.type,
       min_experience: data.min_experience,
       max_experience: data.max_experience,
+      duration_months: data.duration_months,
+      key_qualification: data.key_qualification,
       salary_min: data.salary_min,
       salary_max: data.salary_max,
       currency: data.currency,

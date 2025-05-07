@@ -41,6 +41,8 @@ const jobFormSchema = z.object({
   type: z.string().nonempty({ message: "Please select a job type" }),
   min_experience: z.number().min(0, { message: "Minimum experience must be 0 or greater" }),
   max_experience: z.number().min(0, { message: "Maximum experience must be 0 or greater" }),
+  duration_months: z.number().min(1, { message: "Duration must be at least 1 month" }),
+  key_qualification: z.string().nonempty({ message: "Please select a key qualification" }),
   salary_min: z.number().min(0, { message: "Minimum salary must be 0 or greater" }),
   salary_max: z.number().min(0, { message: "Maximum salary must be 0 or greater" }),
   show_salary: z.boolean().default(true),
@@ -158,9 +160,11 @@ const NewJob = () => {
     department: "",
     city: "",
     location: "",
-    type: "",
+    type: "full-time",
     min_experience: 0,
     max_experience: 0,
+    duration_months: 12,
+    key_qualification: "bachelors",
     salary_min: null,
     salary_max: null,
     currency: "INR",
@@ -206,6 +210,8 @@ const NewJob = () => {
     type: string;
     min_experience: number;
     max_experience: number;
+    duration_months: number;
+    key_qualification: string;
     salary_min: number | null;
     salary_max: number | null;
     currency: string;
@@ -798,12 +804,52 @@ const NewJob = () => {
 
                   <div className="space-y-2">
                     <Label>
+                      Required Qualification <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={jobData.key_qualification}
+                      onValueChange={(value) =>
+                        handleChange("key_qualification", value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select qualification" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bachelors">Bachelor's Degree</SelectItem>
+                        <SelectItem value="masters">Master's Degree</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.key_qualification && (
+                      <p className="text-sm text-destructive">{errors.key_qualification}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>
+                      Job Duration (Months) <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={jobData.duration_months}
+                      onChange={(e) =>
+                        handleChange("duration_months", parseInt(e.target.value) || 0)
+                      }
+                    />
+                    {errors.duration_months && (
+                      <p className="text-sm text-destructive">{errors.duration_months}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>
                       Salary Range <span className="text-destructive">*</span>
                     </Label>
                     <div className="flex gap-2">
                       <Select
                         onValueChange={(val) => handleChange("currency", val)}
-                        defaultValue={jobData.currency || "INR"}
+                        value={jobData.currency}
                       >
                         <SelectTrigger className="w-[100px]">
                           <SelectValue placeholder="Currency" />
