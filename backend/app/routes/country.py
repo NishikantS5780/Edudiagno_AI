@@ -11,7 +11,7 @@ router = APIRouter()
 @router.get("")
 async def get_country(keyword: str = "", db: Session = Depends(database.get_db)):
     stmt = (
-        select(Country.id, Country.name)
+        select(Country.id, Country.name, Country.currency)
         .where(Country.name.ilike(f"%{keyword}%"))
         .order_by(Country.name)
         .offset(0)
