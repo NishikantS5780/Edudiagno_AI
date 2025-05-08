@@ -25,6 +25,7 @@ interface QuizQuestion {
   type: 'single' | 'multiple' | 'true_false';
   category: 'technical' | 'aptitude';
   answerType: 'single' | 'multiple' | 'true_false';
+  time_seconds: number;
 }
 
 const MCQTest = () => {
@@ -56,16 +57,16 @@ const MCQTest = () => {
     aptitude: boolean[];
   }>({ technical: [], aptitude: [] });
 
-  // Calculate total time based on number of questions
+  // Calculate total time based on questions' time_seconds
   const calculateTotalTime = (questions: QuizQuestion[]) => {
-    const totalQuestions = questions.length;
-    if (totalQuestions <= 5) {
-      return 5 * 60; // 5 minutes
-    } else if (totalQuestions <= 10) {
-      return 10 * 60; // 10 minutes
-    } else {
-      return (10 * 60) + ((totalQuestions - 10) * 90); // 10 minutes + 90 seconds per additional question
-    }
+    console.log('Calculating total time for all questions:', questions);
+    const totalTime = questions.reduce((total, question) => {
+      const questionTime = question.time_seconds || 60;
+      console.log(`Question ${question.id}: ${questionTime} seconds`);
+      return total + questionTime;
+    }, 0);
+    console.log('Total time calculated:', totalTime, 'seconds');
+    return totalTime;
   };
 
   useEffect(() => {
@@ -82,11 +83,20 @@ const MCQTest = () => {
           const answerType = question.type;
           // Set default category if null
           const category = question.category || 'technical';
+          // Set default time if null
+          const time_seconds = question.time_seconds || 60;
+          
+          console.log(`Processing question ${question.id}:`, {
+            category,
+            time_seconds,
+            answerType
+          });
           
           return {
             ...question,
             answerType,
-            category
+            category,
+            time_seconds
           };
         });
 
@@ -168,9 +178,12 @@ const MCQTest = () => {
     } else if (isCountingDown && countdown === 0) {
       setIsCountingDown(false);
       setIsTestStarted(true);
-      // Set initial time based on current section's questions
-      const currentQuestions = questions[currentSection];
-      setTimeLeft(calculateTotalTime(currentQuestions));
+      // Calculate total time for all questions
+      const allQuestions = [...questions.technical, ...questions.aptitude];
+      console.log('Starting test with all questions:', allQuestions);
+      const totalTime = calculateTotalTime(allQuestions);
+      console.log('Setting total time for entire test:', totalTime, 'seconds');
+      setTimeLeft(totalTime);
     }
 
     return () => {
@@ -178,7 +191,7 @@ const MCQTest = () => {
         clearInterval(countdownTimer);
       }
     };
-  }, [countdown, isCountingDown, questions, currentSection]);
+  }, [countdown, isCountingDown, questions]);
 
   const handleAnswerSelect = (questionIndex: number, optionId: number) => {
     const currentQuestions = questions[currentSection];
