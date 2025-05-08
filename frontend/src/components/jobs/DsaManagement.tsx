@@ -412,18 +412,18 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <p className="text-sm font-medium text-muted-foreground">Input</p>
-                            <Input
+                            <Textarea
                               value={testCase.input}
                               onChange={(e) => handleNewTestCaseChange(question.id, index, "input", e.target.value)}
-                              className="bg-background"
+                              className="bg-background min-h-[100px]"
                             />
                           </div>
                           <div className="space-y-2">
                             <p className="text-sm font-medium text-muted-foreground">Expected Output</p>
-                            <Input
+                            <Textarea
                               value={testCase.expected_output}
                               onChange={(e) => handleNewTestCaseChange(question.id, index, "expected_output", e.target.value)}
-                              className="bg-background"
+                              className="bg-background min-h-[100px]"
                             />
                           </div>
                         </div>
@@ -527,10 +527,10 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                           <div className="space-y-2">
                             <p className="text-sm font-medium text-muted-foreground">Input</p>
                             {isEditMode ? (
-                              <Input
+                              <Textarea
                                 value={editedTestCases[testCase.id]?.input ?? testCase.input}
                                 onChange={(e) => handleTestCaseChange(testCase.id, "input", e.target.value)}
-                                className="bg-background"
+                                className="bg-background min-h-[100px]"
                               />
                             ) : (
                               <p className="text-sm">{testCase.input}</p>
@@ -539,10 +539,10 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                           <div className="space-y-2">
                             <p className="text-sm font-medium text-muted-foreground">Expected Output</p>
                             {isEditMode ? (
-                              <Input
+                              <Textarea
                                 value={editedTestCases[testCase.id]?.expected_output ?? testCase.expected_output}
                                 onChange={(e) => handleTestCaseChange(testCase.id, "expected_output", e.target.value)}
-                                className="bg-background"
+                                className="bg-background min-h-[100px]"
                               />
                             ) : (
                               <p className="text-sm">{testCase.expected_output}</p>
@@ -626,18 +626,20 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
           <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Input</p>
-              <Input
+              <Textarea
                 value={newTestCase.input}
                 onChange={(e) => setNewTestCase({ ...newTestCase, input: e.target.value })}
                 placeholder="Enter test case input"
+                className="min-h-[100px]"
               />
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Expected Output</p>
-              <Input
+              <Textarea
                 value={newTestCase.expected_output}
                 onChange={(e) => setNewTestCase({ ...newTestCase, expected_output: e.target.value })}
                 placeholder="Enter expected output"
+                className="min-h-[100px]"
               />
             </div>
           </div>

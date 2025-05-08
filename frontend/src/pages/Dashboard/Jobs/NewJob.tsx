@@ -1123,22 +1123,24 @@ const NewJob = () => {
                                 <div key={testCaseIndex} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div className="space-y-2">
                                     <Label>Input</Label>
-                                    <Input
+                                    <Textarea
                                       value={testCase.input}
                                       onChange={(e) =>
                                         handleTestCaseUpdate(questionIndex, testCaseIndex, "input", e.target.value)
                                       }
                                       placeholder="Input"
+                                      className="min-h-[100px]"
                                     />
                                   </div>
                                   <div className="space-y-2">
                                     <Label>Expected Output</Label>
-                                    <Input
+                                    <Textarea
                                       value={testCase.expected_output}
                                       onChange={(e) =>
                                         handleTestCaseUpdate(questionIndex, testCaseIndex, "expected_output", e.target.value)
                                       }
                                       placeholder="Expected Output"
+                                      className="min-h-[100px]"
                                     />
                                   </div>
                                   <Button
