@@ -1129,7 +1129,8 @@ const NewJob = () => {
                                         handleTestCaseUpdate(questionIndex, testCaseIndex, "input", e.target.value)
                                       }
                                       placeholder="Input"
-                                      className="min-h-[100px]"
+                                      className="min-h-[100px] font-mono whitespace-pre"
+                                      rows={4}
                                     />
                                   </div>
                                   <div className="space-y-2">
@@ -1140,7 +1141,8 @@ const NewJob = () => {
                                         handleTestCaseUpdate(questionIndex, testCaseIndex, "expected_output", e.target.value)
                                       }
                                       placeholder="Expected Output"
-                                      className="min-h-[100px]"
+                                      className="min-h-[100px] font-mono whitespace-pre"
+                                      rows={4}
                                     />
                                   </div>
                                   <Button

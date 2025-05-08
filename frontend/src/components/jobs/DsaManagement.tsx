@@ -415,7 +415,8 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                             <Textarea
                               value={testCase.input}
                               onChange={(e) => handleNewTestCaseChange(question.id, index, "input", e.target.value)}
-                              className="bg-background min-h-[100px]"
+                              className="bg-background min-h-[100px] font-mono whitespace-pre"
+                              rows={4}
                             />
                           </div>
                           <div className="space-y-2">
@@ -423,7 +424,8 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                             <Textarea
                               value={testCase.expected_output}
                               onChange={(e) => handleNewTestCaseChange(question.id, index, "expected_output", e.target.value)}
-                              className="bg-background min-h-[100px]"
+                              className="bg-background min-h-[100px] font-mono whitespace-pre"
+                              rows={4}
                             />
                           </div>
                         </div>
@@ -530,7 +532,8 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                               <Textarea
                                 value={editedTestCases[testCase.id]?.input ?? testCase.input}
                                 onChange={(e) => handleTestCaseChange(testCase.id, "input", e.target.value)}
-                                className="bg-background min-h-[100px]"
+                                className="bg-background min-h-[100px] font-mono whitespace-pre"
+                                rows={4}
                               />
                             ) : (
                               <p className="text-sm">{testCase.input}</p>
@@ -542,7 +545,8 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                               <Textarea
                                 value={editedTestCases[testCase.id]?.expected_output ?? testCase.expected_output}
                                 onChange={(e) => handleTestCaseChange(testCase.id, "expected_output", e.target.value)}
-                                className="bg-background min-h-[100px]"
+                                className="bg-background min-h-[100px] font-mono whitespace-pre"
+                                rows={4}
                               />
                             ) : (
                               <p className="text-sm">{testCase.expected_output}</p>
@@ -630,7 +634,8 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                 value={newTestCase.input}
                 onChange={(e) => setNewTestCase({ ...newTestCase, input: e.target.value })}
                 placeholder="Enter test case input"
-                className="min-h-[100px]"
+                className="min-h-[100px] font-mono whitespace-pre"
+                rows={4}
               />
             </div>
             <div className="space-y-2">
@@ -639,7 +644,8 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                 value={newTestCase.expected_output}
                 onChange={(e) => setNewTestCase({ ...newTestCase, expected_output: e.target.value })}
                 placeholder="Enter expected output"
-                className="min-h-[100px]"
+                className="min-h-[100px] font-mono whitespace-pre"
+                rows={4}
               />
             </div>
           </div>
