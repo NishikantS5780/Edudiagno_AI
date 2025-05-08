@@ -99,11 +99,11 @@ const SignUp = () => {
 
   const fetchCountries = async (keyword?: string) => {
     try {
-      const url = new URL('http://13.201.51.54:8000/country');
+      const url = new URL(import.meta.env.VITE_API_BASE_URL + '/country');
       if (keyword) url.searchParams.append('keyword', keyword);
       const response = await fetch(url.toString());
       const data = await response.json();
-      const countriesArray = data.countries || [];
+      const countriesArray = data || [];
       setCountries(countriesArray);
     } catch (error: any) {
       console.error('Error fetching countries:', error);
@@ -114,12 +114,12 @@ const SignUp = () => {
 
   const fetchStates = async (countryId: number, keyword?: string) => {
     try {
-      const url = new URL('http://13.201.51.54:8000/state');
+      const url = new URL(import.meta.env.VITE_API_BASE_URL + '/state');
       url.searchParams.append('country_id', countryId.toString());
       if (keyword) url.searchParams.append('keyword', keyword);
       const response = await fetch(url.toString());
       const data = await response.json();
-      const statesArray = data.states || [];
+      const statesArray = data || [];
       setStates(statesArray);
     } catch (error: any) {
       console.error('Error fetching states:', error);
@@ -130,13 +130,13 @@ const SignUp = () => {
 
   const fetchCities = async (countryId: number, stateId: number, keyword?: string) => {
     try {
-      const url = new URL('http://13.201.51.54:8000/city');
+      const url = new URL(import.meta.env.VITE_API_BASE_URL + '/city');
       url.searchParams.append('country_id', countryId.toString());
       url.searchParams.append('state_id', stateId.toString());
       if (keyword) url.searchParams.append('keyword', keyword);
       const response = await fetch(url.toString());
       const data = await response.json();
-      const citiesArray = data.cities || [];
+      const citiesArray = data || [];
       setCities(citiesArray);
     } catch (error: any) {
       console.error('Error fetching cities:', error);
