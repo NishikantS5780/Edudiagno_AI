@@ -264,14 +264,7 @@ const NewJob = () => {
           return `${fieldName}: ${newErrors[field]}`;
         });
         
-        toast.error(
-          <div className="space-y-1">
-            <p className="font-medium">Please fill in the following required fields:</p>
-            {missingFields.map((field, index) => (
-              <p key={index} className="text-sm">{field}</p>
-            ))}
-          </div>
-        );
+        toast.error("Please fill in all required fields");
         
         // Scroll to the first error
         const firstErrorField = Object.keys(newErrors)[0];
