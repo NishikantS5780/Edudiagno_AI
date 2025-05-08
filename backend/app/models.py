@@ -287,3 +287,38 @@ class QuizResponse(Base):
     interview = relationship("Interview", back_populates="quiz_responses")
     question = relationship("QuizQuestion", back_populates="responses")
     option = relationship("QuizOption", back_populates="responses")
+
+
+class Country(Base):
+    __tablename__ = "countries"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    iso3 = Column(String)
+    phonecode = Column(String)
+
+    states = relationship("State", back_populates="country")
+    cities = relationship("City", back_populates="country")
+
+
+class State(Base):
+    __tablename__ = "states"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    country_id = Column(Integer, ForeignKey("countries.id"))
+
+    country = relationship("Country", back_populates="states")
+    cities = relationship("City", back_populates="state")
+
+
+class City(Base):
+    __tablename__ = "cities"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    state_id = Column(Integer, ForeignKey("states.id"))
+    country_id = Column(Integer, ForeignKey("countries.id"))
+
+    country = relationship("Country", back_populates="cities")
+    state = relationship("State", back_populates="cities")

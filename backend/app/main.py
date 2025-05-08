@@ -92,6 +92,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 from app.routes import (
+    city,
+    country,
     dsa_response,
     dsa_test_case,
     interview_question_and_response,
@@ -102,6 +104,7 @@ from app.routes import (
     job,
     interview,
     resume,
+    state,
     text,
     audio,
     dsa_question,
@@ -134,6 +137,9 @@ app.include_router(quiz_option.router, prefix="/api/quiz-option", tags=["Quiz Op
 app.include_router(
     quiz_response.router, prefix="/api/quiz-response", tags=["Quiz Response"]
 )
+app.include_router(country.router, prefix="/api/country", tags=["Country"])
+app.include_router(state.router, prefix="/api/state", tags=["State"])
+app.include_router(city.router, prefix="/api/city", tags=["City"])
 
 
 @app.get("/api", tags=["Health"])
