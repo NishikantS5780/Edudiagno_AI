@@ -339,6 +339,7 @@ async def analyze_resume(
             resume_match_score=int(match_data["resume_match_score"]),
             resume_match_feedback=match_data["resume_match_feedback"],
         )
+        .where(Interview.id == interview_id)
         .returning(
             Interview.id,
             Interview.status,
