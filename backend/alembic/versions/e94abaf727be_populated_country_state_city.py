@@ -29,19 +29,19 @@ def upgrade() -> None:
     bind = op.get_bind()
     session = Session(bind=bind)
 
-    with open("alembic/countries.json") as f:
+    with open("alembic/countries.json", encoding="utf-8") as f:
         data = json.load(f)
 
     countries = [Country(**item) for item in data]
     session.add_all(countries)
 
-    with open("alembic/states.json") as f:
+    with open("alembic/states.json", encoding="utf-8") as f:
         data = json.load(f)
 
     states = [State(**item) for item in data]
     session.add_all(states)
 
-    with open("alembic/cities.json") as f:
+    with open("alembic/cities.json", encoding="utf-8") as f:
         data = json.load(f)
 
     cities = [City(**item) for item in data]

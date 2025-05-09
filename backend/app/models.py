@@ -296,6 +296,7 @@ class Country(Base):
     name = Column(String)
     iso3 = Column(String)
     phonecode = Column(String)
+    currency = Column(String)
 
     states = relationship("State", back_populates="country")
     cities = relationship("City", back_populates="country")
