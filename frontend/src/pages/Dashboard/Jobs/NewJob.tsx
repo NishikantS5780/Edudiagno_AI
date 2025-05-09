@@ -89,6 +89,7 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
         description: question.title,
         job_id: jobId,
         type: question.question_type,
+        category: question.category || 'technical',
         time_seconds: question.time_seconds
       }, {
         headers: {
@@ -851,26 +852,28 @@ const NewJob = () => {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>
-                      Job Duration (Months) <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={jobData.duration_months}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        // Only allow positive integers
-                        if (value === '' || /^\d+$/.test(value)) {
-                          handleChange("duration_months", value === '' ? 0 : parseInt(value));
-                        }
-                      }}
-                    />
-                    {errors.duration_months && (
-                      <p className="text-sm text-destructive">{errors.duration_months}</p>
-                    )}
-                  </div>
+                  {(jobData.type === "internship" || jobData.type === "contract" || jobData.type === "temporary") && (
+                    <div className="space-y-2">
+                      <Label>
+                        Job Duration (Months) <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={jobData.duration_months}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Only allow positive integers
+                          if (value === '' || /^\d+$/.test(value)) {
+                            handleChange("duration_months", value === '' ? 0 : parseInt(value));
+                          }
+                        }}
+                      />
+                      {errors.duration_months && (
+                        <p className="text-sm text-destructive">{errors.duration_months}</p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label>
