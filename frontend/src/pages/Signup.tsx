@@ -274,7 +274,13 @@ const SignUp = () => {
                     id="phone"
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      // Only allow numbers
+                      const value = e.target.value.replace(/\D/g, '');
+                      setPhone(value);
+                    }}
+                    pattern="[0-9]*"
+                    placeholder="1234567890"
                     autoComplete="tel"
                     required
                     aria-required="true"

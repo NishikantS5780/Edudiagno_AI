@@ -162,9 +162,15 @@ const Contact = () => {
                   <Input
                     id="phone"
                     name="phone"
+                    type="tel"
                     placeholder="(123) 456-7890"
                     value={formData.phone}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      // Only allow numbers and basic phone formatting characters
+                      const value = e.target.value.replace(/[^\d\s\-\(\)]/g, '');
+                      setFormData(prev => ({ ...prev, phone: value }));
+                    }}
+                    pattern="[0-9\s\-\(\)]*"
                   />
                 </div>
               </div>
