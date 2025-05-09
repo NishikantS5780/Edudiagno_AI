@@ -957,6 +957,9 @@ const NewJob = () => {
                         department={jobData.department}
                         location={jobData.location}
                         jobType={jobData.type}
+                        keyQualification={jobData.key_qualification}
+                        minExperience={jobData.min_experience.toString()}
+                        maxExperience={jobData.max_experience.toString()}
                         onGenerated={(content) => handleChange("description", content)}
                       />
                     </div>
@@ -983,6 +986,9 @@ const NewJob = () => {
                         department={jobData.department}
                         location={jobData.location}
                         jobType={jobData.type}
+                        keyQualification={jobData.key_qualification}
+                        minExperience={jobData.min_experience.toString()}
+                        maxExperience={jobData.max_experience.toString()}
                         onGenerated={(content) => handleChange("requirements", content)}
                       />
                     </div>
