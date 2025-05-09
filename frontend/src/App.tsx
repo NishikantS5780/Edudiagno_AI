@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import VideoInterview from "@/pages/Interview/VideoInterview";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ScrollToTop from "@/components/common/ScrollToTop";
 
 import Landing from "@/pages/Landing";
 import Features from "@/pages/Features";
@@ -88,6 +89,7 @@ const App = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
+              <ScrollToTop />
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/features" element={<Features />} />
