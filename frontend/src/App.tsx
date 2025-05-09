@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 
 import Landing from "@/pages/Landing";
 import Features from "@/pages/Features";
-import Pricing from "@/pages/Pricing";
 import About from "@/pages/About";
 import CaseStudies from "@/pages/CaseStudies";
 import Contact from "@/pages/Contact";
@@ -92,9 +91,11 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/features" element={<Features />} />
+                {/* Case Studies, About, and Pricing pages temporarily hidden
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/case-studies" element={<CaseStudies />} />
+                */}
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/careers" element={<Careers />} />

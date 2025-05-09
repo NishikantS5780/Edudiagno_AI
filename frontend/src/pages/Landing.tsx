@@ -207,7 +207,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Testimonials section */}
+      {/* Testimonials section - temporarily hidden
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
@@ -219,7 +219,6 @@ const Landing = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Testimonial 1 */}
             <Card className="glass-card p-6 card-hover">
               <div className="mb-4 flex">
                 {[1, 2, 3, 4, 5].map((_, i) => (
@@ -242,7 +241,6 @@ const Landing = () => {
               </div>
             </Card>
 
-            {/* Testimonial 2 */}
             <Card className="glass-card p-6 card-hover">
               <div className="mb-4 flex">
                 {[1, 2, 3, 4, 5].map((_, i) => (
@@ -265,7 +263,6 @@ const Landing = () => {
               </div>
             </Card>
 
-            {/* Testimonial 3 */}
             <Card className="glass-card p-6 card-hover">
               <div className="mb-4 flex">
                 {[1, 2, 3, 4, 5].map((_, i) => (
@@ -290,6 +287,7 @@ const Landing = () => {
           </div>
         </div>
       </section>
+      */}
 
       {/* Benefits section */}
       <section className="py-20">
