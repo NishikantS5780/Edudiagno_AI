@@ -363,7 +363,9 @@ export const jobAPI = {
     return res;
   },
   deleteJob: async (jobId: string) => {
-    const res = await api.delete(`/job?id=${jobId}`);
+    const res = await api.delete(`/job?id=${jobId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
     return res;
   },
   generateDescription: async (
