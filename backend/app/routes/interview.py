@@ -469,6 +469,7 @@ async def generate_feedback(
 
     stmt = (
         update(Interview)
+        .where(Interview.id == interview_id)
         .values(
             status="completed",
             overall_score=int(interview_data["score"]),
