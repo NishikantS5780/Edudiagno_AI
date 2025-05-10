@@ -436,7 +436,9 @@ const NewJob = () => {
     } else if (field === "question_type") {
       updatedQuestions[index] = {
         ...updatedQuestions[index],
-        question_type: value
+        question_type: value,
+        // Ensure exactly 4 options when changing question type
+        options: ["", "", "", ""]
       };
     } else if (field === "time_seconds") {
       updatedQuestions[index] = {
@@ -592,7 +594,7 @@ const NewJob = () => {
             ))
           )}
         </div>
-        {question.type === "single" && (
+        {question.type !== "true_false" && question.options.length < 4 && (
           <Button
             variant="outline"
             size="sm"
