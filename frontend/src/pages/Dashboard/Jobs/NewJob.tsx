@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/common/PageHeader";
@@ -155,34 +155,66 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
 const NewJob = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDsa, setIsSavingDsa] = useState(false);
   const [activeTab, setActiveTab] = useState("job-details");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [jobData, setJobData] = useState<JobData>({
-    id: 0,
-    title: "",
-    description: "",
-    department: "",
-    city: "",
-    location: "",
-    type: "full-time",
-    min_experience: 0,
-    max_experience: 0,
-    duration_months: 12,
-    key_qualification: "bachelors",
-    salary_min: null,
-    salary_max: null,
-    currency: "INR",
-    show_salary: true,
-    requirements: "",
-    benefits: "",
-    status: "active",
-    createdAt: new Date().toISOString(),
-    requires_dsa: false,
-    requires_mcq: false,
-    dsa_questions: [],
-    mcq_questions: []
+  const [jobData, setJobData] = useState<JobData>(() => {
+    // Try to load saved job data from localStorage
+    const savedJobData = localStorage.getItem('draftJobData');
+    if (savedJobData) {
+      try {
+        const parsed = JSON.parse(savedJobData);
+        return {
+          ...parsed,
+          createdAt: parsed.createdAt || new Date().toISOString()
+        };
+      } catch (e) {
+        console.error('Error parsing saved job data:', e);
+      }
+    }
+    // Return default state if no saved data
+    return {
+      id: 0,
+      title: "",
+      description: "",
+      department: "",
+      city: "",
+      location: "",
+      type: "full-time",
+      min_experience: 0,
+      max_experience: 0,
+      duration_months: 12,
+      key_qualification: "bachelors",
+      salary_min: null,
+      salary_max: null,
+      currency: "INR",
+      show_salary: true,
+      requirements: "",
+      benefits: "",
+      status: "active",
+      createdAt: new Date().toISOString(),
+      requires_dsa: false,
+      requires_mcq: false,
+      dsa_questions: [],
+      mcq_questions: []
+    };
   });
   const { addNotification } = useNotifications();
+
+  // Save job data to localStorage whenever it changes
+  useEffect(() => {
+    if (jobData.id) { // Only save if we have a job ID (after initial save)
+      localStorage.setItem('draftJobData', JSON.stringify(jobData));
+    }
+  }, [jobData]);
+
+  // Clear saved job data when component unmounts or job is created
+  useEffect(() => {
+    return () => {
+      localStorage.removeItem('draftJobData');
+    };
+  }, []);
 
   interface MCQQuestion {
     title: string;
@@ -302,6 +334,8 @@ const NewJob = () => {
             }${jobData.requires_mcq ? ' MCQ questions have been added.' : ''}`
         });
         toast.success("Job created successfully");
+        // Clear saved job data after successful creation
+        localStorage.removeItem('draftJobData');
         navigate("/dashboard/jobs");
       } else {
         throw new Error("Failed to create job");
@@ -609,6 +643,123 @@ const NewJob = () => {
         )}
       </div>
     );
+  };
+
+  const handleSaveJobDetails = async () => {
+    setIsSaving(true);
+    try {
+      // Validate job details fields
+      const jobDetailsFields = [
+        'title', 'department', 'city', 'location', 'type',
+        'min_experience', 'max_experience', 'duration_months',
+        'key_qualification', 'salary_min', 'salary_max',
+        'show_salary', 'description', 'requirements', 'benefits'
+      ];
+
+      const validationResult = jobFormSchema.pick(
+        Object.fromEntries(jobDetailsFields.map(field => [field, true])) as any
+      ).safeParse(jobData);
+
+      if (!validationResult.success) {
+        const newErrors: Record<string, string> = {};
+        validationResult.error.errors.forEach(error => {
+          newErrors[error.path[0]] = error.message;
+        });
+        setErrors(newErrors);
+        
+        toast.error("Please fill in all required fields");
+        
+        const firstErrorField = Object.keys(newErrors)[0];
+        const element = document.getElementById(firstErrorField);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        setIsSaving(false);
+        return;
+      }
+
+      // Create job with only job details
+      const response = await jobAPI.createJob({
+        ...jobData,
+        status: 'draft' // Set status as draft when saving job details
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        toast.success("Job details saved successfully");
+        // Update the job ID in the state
+        setJobData(prev => ({ ...prev, id: response.data.id }));
+      } else {
+        throw new Error("Failed to save job details");
+      }
+    } catch (error: any) {
+      console.error("Error saving job details:", error);
+      let errorMessage = "Failed to save job details";
+
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveDsaQuestions = async () => {
+    if (!jobData.id) {
+      toast.error("Please save job details first");
+      return;
+    }
+
+    setIsSavingDsa(true);
+    try {
+      // Validate DSA questions
+      if (!jobData.dsa_questions || jobData.dsa_questions.length === 0) {
+        toast.error("Please add at least one DSA question");
+        setIsSavingDsa(false);
+        return;
+      }
+
+      const validationResult = jobFormSchema.shape.dsa_questions.safeParse(jobData.dsa_questions);
+      if (!validationResult.success) {
+        const newErrors: Record<string, string> = {};
+        validationResult.error.errors.forEach(error => {
+          newErrors[error.path[0]] = error.message;
+        });
+        setErrors(newErrors);
+        toast.error("Please fill in all required fields for DSA questions");
+        setIsSavingDsa(false);
+        return;
+      }
+
+      // Update job with DSA questions
+      const response = await jobAPI.updateJob(jobData.id.toString(), {
+        ...jobData,
+        dsa_questions: jobData.dsa_questions
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        toast.success("DSA questions saved successfully");
+      } else {
+        throw new Error("Failed to save DSA questions");
+      }
+    } catch (error: any) {
+      console.error("Error saving DSA questions:", error);
+      let errorMessage = "Failed to save DSA questions";
+
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsSavingDsa(false);
+    }
   };
 
   return (
@@ -1041,6 +1192,27 @@ const NewJob = () => {
                     />
                     <Label>Requires MCQ Assessment</Label>
                   </div>
+
+                  <div className="flex justify-end mt-6">
+                    <Button
+                      type="button"
+                      onClick={handleSaveJobDetails}
+                      disabled={isSaving}
+                      variant="outline"
+                    >
+                      {isSaving ? (
+                        <>
+                          <LoadingSpinner size="sm" className="mr-2" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Job Details
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1205,6 +1377,27 @@ const NewJob = () => {
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add DSA Question
+                        </Button>
+                      </div>
+
+                      <div className="flex justify-end mt-4">
+                        <Button
+                          type="button"
+                          onClick={handleSaveDsaQuestions}
+                          disabled={isSavingDsa}
+                          variant="outline"
+                        >
+                          {isSavingDsa ? (
+                            <>
+                              <LoadingSpinner size="sm" className="mr-2" />
+                              Saving DSA Questions...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Save DSA Questions
+                            </>
+                          )}
                         </Button>
                       </div>
                     </>
