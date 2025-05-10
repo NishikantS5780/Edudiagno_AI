@@ -319,11 +319,17 @@ const Profile = () => {
                       {isEditMode ? (
                       <Input 
                         id="phone" 
-                          name="phone"
+                        name="phone"
+                        type="tel"
                         value={profileData.phone}
-                          onChange={handleInputChange}
-                          className="text-base"
-                        />
+                        onChange={(e) => {
+                          // Only allow numbers and basic phone formatting characters
+                          const value = e.target.value.replace(/[^\d\s\-\(\)]/g, '');
+                          handleInputChange({ target: { name: 'phone', value } } as React.ChangeEvent<HTMLInputElement>);
+                        }}
+                        pattern="[0-9\s\-\(\)]*"
+                        className="text-base"
+                      />
                       ) : (
                         <span className="block text-lg font-semibold">{profileData.phone}</span>
                       )}

@@ -3,7 +3,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from app import database
-from app.models import City
+from app.models import City, Country
 
 router = APIRouter()
 
@@ -22,7 +22,8 @@ async def get_city(
         filters.append(City.state_id == state_id)
 
     stmt = (
-        select(City.id, City.name)
+        select(City.id, City.name, Country.currency)
+        .join(Country)
         .where(and_(*filters))
         .order_by(City.name)
         .offset(0)

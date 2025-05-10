@@ -51,12 +51,14 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
   const fetchQuestions = async () => {
     try {
       const response = await api.get("/dsa-question", {
-        params: { job_id: jobId }
+        params: { job_id: jobId },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       })
       const questionsWithTestCases = await Promise.all(
         response.data.map(async (question: DSAQuestion) => {
           const testCasesResponse = await api.get("/dsa-test-case", {
-            params: { question_id: question.id }
+            params: { question_id: question.id },
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
           })
           return {
             ...question,
@@ -97,6 +99,8 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
         title: question.title,
         description: question.description,
         difficulty: question.difficulty
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       })
 
       // Create test cases if any
@@ -107,6 +111,8 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
               input: testCase.input,
               expected_output: testCase.expected_output,
               dsa_question_id: response.data.id
+            }, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
             })
           )
         )
@@ -215,7 +221,9 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
           description: editedQuestion.description ?? currentQuestion.description,
           difficulty: editedQuestion.difficulty ?? currentQuestion.difficulty
         }
-        await api.put("/dsa-question", updatedQuestion)
+        await api.put("/dsa-question", updatedQuestion, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        })
       }
 
       // Update test cases if there are changes
@@ -229,7 +237,9 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
       if (editedTestCasesForQuestion.length > 0) {
         await Promise.all(
           editedTestCasesForQuestion.map(testCase =>
-            api.put("/dsa-test-case", testCase)
+            api.put("/dsa-test-case", testCase, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            })
           )
         )
       }
@@ -261,7 +271,9 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
   const handleDeleteQuestion = async (questionId: number) => {
     try {
       setLoading(true)
-      await api.delete(`/dsa-question?id=${questionId}`)
+      await api.delete(`/dsa-question?id=${questionId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      })
       toast.success("Question deleted successfully")
       fetchQuestions()
     } catch (error) {
@@ -288,6 +300,8 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
         input: newTestCase.input,
         expected_output: newTestCase.expected_output,
         dsa_question_id: selectedQuestionId
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       })
       toast.success("Test case added successfully")
       fetchQuestions()
@@ -324,7 +338,8 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
     try {
       setLoading(true)
       await api.delete("/dsa-test-case", {
-        params: { id: testCaseId }
+        params: { id: testCaseId },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       })
       toast.success("Test case deleted successfully")
       fetchQuestions()

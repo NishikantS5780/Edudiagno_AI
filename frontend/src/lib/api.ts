@@ -363,18 +363,28 @@ export const jobAPI = {
     return res;
   },
   deleteJob: async (jobId: string) => {
-    const res = await api.delete(`/job?id=${jobId}`);
+    const res = await api.delete(`/job?id=${jobId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
     return res;
   },
   generateDescription: async (
     jobTitle: string,
     department: string,
-    location: string
+    location: string,
+    keyQualification: string,
+    minExperience: string,
+    maxExperience: string
   ) => {
     const res = await api.post("/job/generate-description", {
       title: jobTitle,
       department: department,
       location: location,
+      key_qualification: keyQualification,
+      min_experience: minExperience,
+      max_experience: maxExperience
+    }, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
     });
     return res;
   },
@@ -382,13 +392,21 @@ export const jobAPI = {
     jobTitle: string,
     department: string,
     location: string,
+    keyQualification: string,
+    minExperience: string,
+    maxExperience: string,
     keywords: string
   ) => {
     const res = await api.post("/job/generate-requirements", {
       title: jobTitle,
       department: department,
       location: location,
+      key_qualification: keyQualification,
+      min_experience: minExperience,
+      max_experience: maxExperience,
       keywords: keywords,
+    }, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
     });
     return res;
   },

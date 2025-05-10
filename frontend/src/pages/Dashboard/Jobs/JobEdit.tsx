@@ -13,15 +13,28 @@ import PageHeader from "@/components/common/PageHeader";
 import { Switch } from "@/components/ui/switch";
 import { jobAPI } from "@/lib/api";
 
+interface FormData {
+  title: string;
+  description: string;
+  location: string;
+  salary_min: number | null;
+  salary_max: number | null;
+  show_salary: boolean;
+  jobType: string;
+  department: string;
+  requirements: string;
+  benefits: string;
+}
+
 const JobEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     title: "",
     description: "",
     location: "",
-    salary_min: "",
-    salary_max: "",
+    salary_min: null,
+    salary_max: null,
     show_salary: false,
     jobType: "full-time",
     department: "",
@@ -45,8 +58,8 @@ const JobEdit = () => {
         title: job.title || "",
         description: job.description || "",
         location: job.location || "",
-        salary_min: job.salary_min?.toString() || "",
-        salary_max: job.salary_max?.toString() || "",
+        salary_min: job.salary_min || null,
+        salary_max: job.salary_max || null,
         show_salary: job.show_salary || false,
         jobType: job.type || "full-time",
         department: job.department || "",
@@ -63,8 +76,8 @@ const JobEdit = () => {
         title: data.title,
         description: data.description,
         location: data.location,
-        salary_min: data.salary_min ? parseInt(data.salary_min) : null,
-        salary_max: data.salary_max ? parseInt(data.salary_max) : null,
+        salary_min: data.salary_min,
+        salary_max: data.salary_max,
         show_salary: data.show_salary,
         type: data.jobType,
         department: data.department,
@@ -99,11 +112,12 @@ const JobEdit = () => {
     }
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? (value === '' ? null : Number(value)) : value
+    }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -214,8 +228,14 @@ const JobEdit = () => {
                       id="salary_min"
                       name="salary_min"
                       type="number"
-                      value={formData.salary_min}
-                      onChange={handleChange}
+                      value={formData.salary_min === null ? '' : formData.salary_min}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Only allow non-negative integers
+                        if (value === '' || /^\d+$/.test(value)) {
+                          handleChange(e);
+                        }
+                      }}
                       placeholder="e.g. 60000"
                       disabled={!formData.show_salary}
                     />
@@ -227,8 +247,14 @@ const JobEdit = () => {
                       id="salary_max"
                       name="salary_max"
                       type="number"
-                      value={formData.salary_max}
-                      onChange={handleChange}
+                      value={formData.salary_max === null ? '' : formData.salary_max}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Only allow non-negative integers
+                        if (value === '' || /^\d+$/.test(value)) {
+                          handleChange(e);
+                        }
+                      }}
                       placeholder="e.g. 80000"
                       disabled={!formData.show_salary}
                     />

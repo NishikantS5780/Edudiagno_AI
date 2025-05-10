@@ -13,7 +13,9 @@ import { MatchResultsStage } from "./MatchResultsStage";
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
-  phone: z.string().min(10, { message: "Please enter a valid phone number" }),
+  phone: z.string()
+    .min(10, { message: "Please enter a valid phone number" })
+    .regex(/^\d+$/, { message: "Phone number must contain only digits" }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -358,14 +360,18 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
                 <Input
                   value={candidateData.phone || ""}
                   onChange={(e) => {
+                    // Only allow numbers
+                    const value = e.target.value.replace(/\D/g, '');
                     if (candidateData) {
                       setCandidateData({
                         ...candidateData,
-                        phone: e.target.value
+                        phone: value
                       });
                     }
                   }}
-                  placeholder="(123) 456-7890"
+                  type="tel"
+                  pattern="[0-9]*"
+                  placeholder="1234567890"
                   disabled={isSubmitting || isCompleted}
                 />
                 {formErrors.phone && <p className="text-sm text-destructive mt-1">{formErrors.phone}</p>}

@@ -176,6 +176,9 @@ export default function VideoInterview() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editedResponse, setEditedResponse] = useState("");
   const [currentStage, setCurrentStage] = useState<string>("");
+  const [editTimer, setEditTimer] = useState(30);
+  const editTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   // Add ref to track processing state
   const isProcessingRef = useRef(false);
@@ -465,28 +468,76 @@ export default function VideoInterview() {
     }
   };
 
+  const startEditTimer = () => {
+    setEditTimer(30);
+    editTimerRef.current = setInterval(() => {
+      setEditTimer((prev) => {
+        if (prev <= 1) {
+          if (editTimerRef.current) {
+            clearInterval(editTimerRef.current);
+          }
+          // Submit either the edited response or the original transcribed response
+          const responseToSubmit = editedResponse || currentResponse;
+          if (responseToSubmit) {
+            // Set states first
+            addUserMessage(responseToSubmit);
+            setHasRecordedCurrentQuestion(true);
+            setCurrentResponse(responseToSubmit);
+            setShowEditDialog(false);
+            
+            // Then submit to backend
+            interviewAPI.submitTextResponse(currentQuestionIndex, responseToSubmit)
+              .then(() => {
+                console.log("Response submitted successfully");
+              })
+              .catch(error => {
+                console.error("Failed to submit answer:", error);
+                toast.error("Failed to submit answer");
+              });
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const handleResponseRecorded = async (transcript: string) => {
     setCurrentResponse(transcript);
     setEditedResponse(transcript);
     setShowEditDialog(true);
+    startEditTimer();
   };
 
   const handleSubmitEditedResponse = async () => {
-    try {
-      // Submit the answer to the backend
-      await interviewAPI.submitTextResponse(currentQuestionIndex, editedResponse);
-
-      // Update local state
-      setHasRecordedCurrentQuestion(true);
-      addUserMessage(editedResponse);
-      setConversationHistory((prev) => {
-        const newHistory = [...prev, { role: "user", content: editedResponse }];
-        return newHistory;
-      });
+    if (editTimerRef.current) {
+      clearInterval(editTimerRef.current);
+    }
+    if (isSubmittingEdit) return;
+    
+    // Use currentResponse as fallback if editedResponse is empty
+    const responseToSubmit = editedResponse?.trim() || currentResponse?.trim();
+    
+    // Check if the response is empty
+    if (!responseToSubmit) {
+      toast.error("Please provide a response before submitting");
+      return;
+    }
+    
+    setIsSubmittingEdit(true);
       setShowEditDialog(false);
+    try {
+      // Add user message to conversation
+      addUserMessage(responseToSubmit);
+      setHasRecordedCurrentQuestion(true);
+      setCurrentResponse(responseToSubmit);
+      // Submit to backend
+      await interviewAPI.submitTextResponse(currentQuestionIndex, responseToSubmit);
+      // Optionally, you can call processResponse here if needed
     } catch (error) {
-      console.error("Error submitting answer:", error);
       toast.error("Failed to submit answer");
+    } finally {
+      setIsSubmittingEdit(false);
     }
   };
 
@@ -897,6 +948,15 @@ export default function VideoInterview() {
       ...data
     } as JobData));
   };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (editTimerRef.current) {
+        clearInterval(editTimerRef.current);
+      }
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -1315,24 +1375,49 @@ export default function VideoInterview() {
             <DialogDescription>
               Please review and edit your response if needed. The AI has
               transcribed your answer, but you can make corrections if anything
-              was misinterpreted.
+              was misinterpreted. You have {editTimer} seconds to edit.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Textarea
               value={editedResponse}
-              onChange={(e) => setEditedResponse(e.target.value)}
+              onChange={(e) => {
+                // Prevent pasting
+                if (e.nativeEvent instanceof InputEvent && e.nativeEvent.inputType === 'insertFromPaste') {
+                  e.preventDefault();
+                  return;
+                }
+                // Only allow one character at a time
+                const newValue = e.target.value;
+                if (newValue.length > editedResponse.length + 1) {
+                  e.preventDefault();
+                  return;
+                }
+                setEditedResponse(newValue);
+              }}
+              onPaste={(e) => e.preventDefault()}
               className="min-h-[200px]"
               placeholder="Your transcribed response will appear here..."
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Time remaining: {editTimer}s</span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => {
+                if (editTimerRef.current) {
+                  clearInterval(editTimerRef.current);
+                }
+                setShowEditDialog(false);
+              }}>
               Cancel
             </Button>
             <Button onClick={handleSubmitEditedResponse}>
               Confirm & Submit
             </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
