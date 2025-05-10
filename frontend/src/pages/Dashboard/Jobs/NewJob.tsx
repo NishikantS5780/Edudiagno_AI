@@ -39,12 +39,12 @@ const jobFormSchema = z.object({
   city: z.string().nonempty({ message: "Please select a city" }),
   location: z.string().nonempty({ message: "Please select a location type" }),
   type: z.string().nonempty({ message: "Please select a job type" }),
-  min_experience: z.number().min(0, { message: "Minimum experience must be 0 or greater" }),
-  max_experience: z.number().min(0, { message: "Maximum experience must be 0 or greater" }),
-  duration_months: z.number().min(1, { message: "Duration must be at least 1 month" }),
+  min_experience: z.number().min(0, { message: "Minimum experience must be 0 or greater" }).int({ message: "Experience must be a whole number" }),
+  max_experience: z.number().min(0, { message: "Maximum experience must be 0 or greater" }).int({ message: "Experience must be a whole number" }),
+  duration_months: z.number().min(1, { message: "Duration must be at least 1 month" }).int({ message: "Duration must be a whole number" }),
   key_qualification: z.string().nonempty({ message: "Please select a key qualification" }),
-  salary_min: z.number().min(0, { message: "Minimum salary must be 0 or greater" }),
-  salary_max: z.number().min(0, { message: "Maximum salary must be 0 or greater" }),
+  salary_min: z.number().min(0, { message: "Minimum salary must be 0 or greater" }).int({ message: "Salary must be a whole number" }).nullable(),
+  salary_max: z.number().min(0, { message: "Maximum salary must be 0 or greater" }).int({ message: "Salary must be a whole number" }).nullable(),
   show_salary: z.boolean().default(true),
   description: z
     .string()
@@ -89,6 +89,7 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
         description: question.title,
         job_id: jobId,
         type: question.question_type,
+        category: question.category || 'technical',
         time_seconds: question.time_seconds
       }, {
         headers: {
@@ -851,22 +852,28 @@ const NewJob = () => {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>
-                      Job Duration (Months) <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={jobData.duration_months}
-                      onChange={(e) =>
-                        handleChange("duration_months", parseInt(e.target.value) || 0)
-                      }
-                    />
-                    {errors.duration_months && (
-                      <p className="text-sm text-destructive">{errors.duration_months}</p>
-                    )}
-                  </div>
+                  {(jobData.type === "internship" || jobData.type === "contract" || jobData.type === "temporary") && (
+                    <div className="space-y-2">
+                      <Label>
+                        Job Duration (Months) <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={jobData.duration_months}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Only allow positive integers
+                          if (value === '' || /^\d+$/.test(value)) {
+                            handleChange("duration_months", value === '' ? 0 : parseInt(value));
+                          }
+                        }}
+                      />
+                      {errors.duration_months && (
+                        <p className="text-sm text-destructive">{errors.duration_months}</p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label>
@@ -890,15 +897,29 @@ const NewJob = () => {
                       <div className="flex-1 grid grid-cols-2 gap-2">
                         <Input
                           type="number"
+                          min="0"
                           placeholder="Min salary"
                           value={jobData.salary_min || ""}
-                          onChange={(e) => handleChange("salary_min", e.target.value ? Number(e.target.value) : null)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Only allow non-negative integers
+                            if (value === '' || /^\d+$/.test(value)) {
+                              handleChange("salary_min", value === '' ? null : Number(value));
+                            }
+                          }}
                         />
                         <Input
                           type="number"
+                          min="0"
                           placeholder="Max salary"
                           value={jobData.salary_max || ""}
-                          onChange={(e) => handleChange("salary_max", e.target.value ? Number(e.target.value) : null)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Only allow non-negative integers
+                            if (value === '' || /^\d+$/.test(value)) {
+                              handleChange("salary_max", value === '' ? null : Number(value));
+                            }
+                          }}
                         />
                       </div>
                     </div>
@@ -939,6 +960,9 @@ const NewJob = () => {
                         department={jobData.department}
                         location={jobData.location}
                         jobType={jobData.type}
+                        keyQualification={jobData.key_qualification}
+                        minExperience={jobData.min_experience.toString()}
+                        maxExperience={jobData.max_experience.toString()}
                         onGenerated={(content) => handleChange("description", content)}
                       />
                     </div>
@@ -965,6 +989,9 @@ const NewJob = () => {
                         department={jobData.department}
                         location={jobData.location}
                         jobType={jobData.type}
+                        keyQualification={jobData.key_qualification}
+                        minExperience={jobData.min_experience.toString()}
+                        maxExperience={jobData.max_experience.toString()}
                         onGenerated={(content) => handleChange("requirements", content)}
                       />
                     </div>

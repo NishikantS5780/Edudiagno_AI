@@ -71,7 +71,7 @@ class CreateJob(BaseModel):
     city: str
     location: str
     type: str
-    duration_months: int
+    duration_months: Optional[int] = None
     min_experience: int
     max_experience: int
     currency: str
@@ -114,7 +114,7 @@ class Job(BaseModel):
     department: str
     location: str
     type: str
-    duration_months: int
+    duration_months: Optional[int] = None
     min_experience: int
     max_experience: int
     currency: str

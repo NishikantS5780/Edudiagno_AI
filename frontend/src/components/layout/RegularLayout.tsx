@@ -18,9 +18,10 @@ interface NavLink {
 const navLinks: NavLink[] = [
   { label: "Features", href: "/features" },
   { label: "How It Works", href: "/how-it-works" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "Case Studies", href: "/case-studies" },
-  { label: "About", href: "/about" },
+  // Case Studies, About, and Pricing pages temporarily hidden
+  // { label: "Pricing", href: "/pricing" },
+  // { label: "Case Studies", href: "/case-studies" },
+  // { label: "About", href: "/about" },
 ];
 
 const RegularLayout: React.FC<{ children: React.ReactNode }> = ({

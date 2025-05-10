@@ -525,7 +525,7 @@ export default function VideoInterview() {
     }
     
     setIsSubmittingEdit(true);
-    setShowEditDialog(false);
+      setShowEditDialog(false);
     try {
       // Add user message to conversation
       addUserMessage(responseToSubmit);
@@ -1412,11 +1412,11 @@ export default function VideoInterview() {
                 }
                 setShowEditDialog(false);
               }}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmitEditedResponse}>
-                Confirm & Submit
-              </Button>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitEditedResponse}>
+              Confirm & Submit
+            </Button>
             </div>
           </DialogFooter>
         </DialogContent>

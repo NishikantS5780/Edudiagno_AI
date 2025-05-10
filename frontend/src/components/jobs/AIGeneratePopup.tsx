@@ -30,6 +30,9 @@ interface AIGeneratePopupProps {
   department: string;
   location: string;
   jobType: string;
+  keyQualification: string;
+  minExperience: string;
+  maxExperience: string;
   onGenerated: (content: string) => void;
   buttonText?: string;
   buttonVariant?: "default" | "outline" | "secondary" | "ghost" | "link";
@@ -43,6 +46,9 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
   department,
   location,
   jobType,
+  keyQualification,
+  minExperience,
+  maxExperience,
   onGenerated,
   buttonText = "Generate with AI",
   buttonVariant = "outline",
@@ -79,7 +85,17 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
     }
 
     if (!location) {
-      toast.error("Please select department first");
+      toast.error("Please select location first");
+      return;
+    }
+
+    if (!keyQualification) {
+      toast.error("Please enter key qualification first");
+      return;
+    }
+
+    if (!minExperience || !maxExperience) {
+      toast.error("Please enter experience range first");
       return;
     }
 
@@ -102,7 +118,10 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
         const response = await jobAPI.generateDescription(
           jobTitle,
           department,
-          location
+          location,
+          keyQualification,
+          minExperience,
+          maxExperience
         );
         content = response.data.description;
       } else if (fieldLabel === "Requirements") {
@@ -110,6 +129,9 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
           jobTitle,
           department,
           location,
+          keyQualification,
+          minExperience,
+          maxExperience,
           keywords
         );
         content = response.data.requirements;
