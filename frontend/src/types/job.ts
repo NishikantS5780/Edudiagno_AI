@@ -32,7 +32,7 @@ export interface JobData {
   mcq_questions?: Array<{
     title: string;
     type: "single" | "multiple" | "true_false";
-    question_type: "technical" | "aptitude";
+    category: "technical" | "aptitude";
     options: string[];
     correct_options: number[];
   }>;

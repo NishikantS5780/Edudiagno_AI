@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/common/PageHeader";
@@ -23,12 +23,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import AIGeneratePopup from "@/components/jobs/AIGeneratePopup";
 import { useNotifications } from "@/context/NotificationContext";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 import QuestionEditor from "@/pages/DsaLab/QuestionEditor";
+import ExcelImport from '@/components/jobs/ExcelImport';
 
 const jobFormSchema = z.object({
   title: z
@@ -72,7 +73,7 @@ const jobFormSchema = z.object({
   mcq_questions: z.array(z.object({
     title: z.string().nonempty({ message: "MCQ question title is required" }),
     type: z.enum(["single", "multiple", "true_false"]),
-    question_type: z.enum(["technical", "aptitude"]),
+    category: z.enum(["technical", "aptitude"]),
     time_seconds: z.number().min(30, { message: "Time limit must be at least 30 seconds" }).max(180, { message: "Time limit cannot exceed 3 minutes" }),
     options: z.array(z.string().nonempty({ message: "Option text is required" })),
     correct_options: z.array(z.number())
@@ -88,8 +89,8 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
       const questionResponse = await api.post('/quiz-question', {
         description: question.title,
         job_id: jobId,
-        type: question.question_type,
-        category: question.category || 'technical',
+        type: question.type,
+        category: question.category,
         time_seconds: question.time_seconds
       }, {
         headers: {
@@ -146,8 +147,13 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
         }
       }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving MCQ questions:', error);
+    if (error.response?.data?.detail) {
+      throw new Error(Array.isArray(error.response.data.detail) 
+        ? error.response.data.detail.map((err: any) => err.msg).join(', ')
+        : error.response.data.detail);
+    }
     throw error;
   }
 };
@@ -155,39 +161,71 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
 const NewJob = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDsa, setIsSavingDsa] = useState(false);
   const [activeTab, setActiveTab] = useState("job-details");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [jobData, setJobData] = useState<JobData>({
-    id: 0,
-    title: "",
-    description: "",
-    department: "",
-    city: "",
-    location: "",
-    type: "full-time",
-    min_experience: 0,
-    max_experience: 0,
-    duration_months: 12,
-    key_qualification: "bachelors",
-    salary_min: null,
-    salary_max: null,
-    currency: "INR",
-    show_salary: true,
-    requirements: "",
-    benefits: "",
-    status: "active",
-    createdAt: new Date().toISOString(),
-    requires_dsa: false,
-    requires_mcq: false,
-    dsa_questions: [],
-    mcq_questions: []
+  const [jobData, setJobData] = useState<JobData>(() => {
+    // Try to load saved job data from localStorage
+    const savedJobData = localStorage.getItem('draftJobData');
+    if (savedJobData) {
+      try {
+        const parsed = JSON.parse(savedJobData);
+        return {
+          ...parsed,
+          createdAt: parsed.createdAt || new Date().toISOString()
+        };
+      } catch (e) {
+        console.error('Error parsing saved job data:', e);
+      }
+    }
+    // Return default state if no saved data
+    return {
+      id: 0,
+      title: "",
+      description: "",
+      department: "",
+      city: "",
+      location: "",
+      type: "full-time",
+      min_experience: 0,
+      max_experience: 0,
+      duration_months: 12,
+      key_qualification: "bachelors",
+      salary_min: null,
+      salary_max: null,
+      currency: "INR",
+      show_salary: true,
+      requirements: "",
+      benefits: "",
+      status: "active",
+      createdAt: new Date().toISOString(),
+      requires_dsa: false,
+      requires_mcq: false,
+      dsa_questions: [],
+      mcq_questions: []
+    };
   });
   const { addNotification } = useNotifications();
+
+  // Save job data to localStorage whenever it changes
+  useEffect(() => {
+    if (jobData.id) { // Only save if we have a job ID (after initial save)
+      localStorage.setItem('draftJobData', JSON.stringify(jobData));
+    }
+  }, [jobData]);
+
+  // Clear saved job data when component unmounts or job is created
+  useEffect(() => {
+    return () => {
+      localStorage.removeItem('draftJobData');
+    };
+  }, []);
 
   interface MCQQuestion {
     title: string;
     type: "single" | "multiple" | "true_false";
-    question_type: "technical" | "aptitude";
+    category: "technical" | "aptitude";
     time_seconds: number;
     options: string[];
     correct_options: number[];
@@ -302,6 +340,8 @@ const NewJob = () => {
             }${jobData.requires_mcq ? ' MCQ questions have been added.' : ''}`
         });
         toast.success("Job created successfully");
+        // Clear saved job data after successful creation
+        localStorage.removeItem('draftJobData');
         navigate("/dashboard/jobs");
       } else {
         throw new Error("Failed to create job");
@@ -397,7 +437,7 @@ const NewJob = () => {
     const newQuestion: MCQQuestion = {
       title: "",
       type: "single",
-      question_type: "technical",
+      category: "technical",
       time_seconds: 60, // Default to 60 seconds
       options: ["", "", "", ""],
       correct_options: [0]
@@ -433,10 +473,12 @@ const NewJob = () => {
         ...updatedQuestions[index],
         correct_options: value
       };
-    } else if (field === "question_type") {
+    } else if (field === "category") {
       updatedQuestions[index] = {
         ...updatedQuestions[index],
-        question_type: value
+        category: value,
+        // Ensure exactly 4 options when changing question type
+        options: ["", "", "", ""]
       };
     } else if (field === "time_seconds") {
       updatedQuestions[index] = {
@@ -470,8 +512,8 @@ const NewJob = () => {
               <div className="space-y-2">
                 <Label>Question Type</Label>
                 <Select
-                  value={question.question_type}
-                  onValueChange={(value) => handleMcqQuestionUpdate(index, "question_type", value)}
+                  value={question.category}
+                  onValueChange={(value) => handleMcqQuestionUpdate(index, "category", value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select question type" />
@@ -592,7 +634,7 @@ const NewJob = () => {
             ))
           )}
         </div>
-        {question.type === "single" && (
+        {question.type !== "true_false" && question.options.length < 4 && (
           <Button
             variant="outline"
             size="sm"
@@ -607,6 +649,140 @@ const NewJob = () => {
         )}
       </div>
     );
+  };
+
+  const handleSaveJobDetails = async () => {
+    setIsSaving(true);
+    try {
+      // Validate job details fields
+      const jobDetailsFields = [
+        'title', 'department', 'city', 'location', 'type',
+        'min_experience', 'max_experience', 'duration_months',
+        'key_qualification', 'salary_min', 'salary_max',
+        'show_salary', 'description', 'requirements', 'benefits'
+      ];
+
+      const validationResult = jobFormSchema.pick(
+        Object.fromEntries(jobDetailsFields.map(field => [field, true])) as any
+      ).safeParse(jobData);
+
+      if (!validationResult.success) {
+        const newErrors: Record<string, string> = {};
+        validationResult.error.errors.forEach(error => {
+          newErrors[error.path[0]] = error.message;
+        });
+        setErrors(newErrors);
+        
+        toast.error("Please fill in all required fields");
+        
+        const firstErrorField = Object.keys(newErrors)[0];
+        const element = document.getElementById(firstErrorField);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        setIsSaving(false);
+        return;
+      }
+
+      // Create job with only job details
+      const response = await jobAPI.createJob({
+        ...jobData,
+        status: 'draft' // Set status as draft when saving job details
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        toast.success("Job details saved successfully");
+        // Update the job ID in the state
+        setJobData(prev => ({ ...prev, id: response.data.id }));
+      } else {
+        throw new Error("Failed to save job details");
+      }
+    } catch (error: any) {
+      console.error("Error saving job details:", error);
+      let errorMessage = "Failed to save job details";
+
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveDsaQuestions = async () => {
+    if (!jobData.id) {
+      toast.error("Please save job details first");
+      return;
+    }
+
+    setIsSavingDsa(true);
+    try {
+      // Validate DSA questions
+      if (!jobData.dsa_questions || jobData.dsa_questions.length === 0) {
+        toast.error("Please add at least one DSA question");
+        setIsSavingDsa(false);
+        return;
+      }
+
+      const validationResult = jobFormSchema.shape.dsa_questions.safeParse(jobData.dsa_questions);
+      if (!validationResult.success) {
+        const newErrors: Record<string, string> = {};
+        validationResult.error.errors.forEach(error => {
+          newErrors[error.path[0]] = error.message;
+        });
+        setErrors(newErrors);
+        toast.error("Please fill in all required fields for DSA questions");
+        setIsSavingDsa(false);
+        return;
+      }
+
+      // Update job with DSA questions
+      const response = await jobAPI.updateJob(jobData.id.toString(), {
+        ...jobData,
+        dsa_questions: jobData.dsa_questions
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        toast.success("DSA questions saved successfully");
+      } else {
+        throw new Error("Failed to save DSA questions");
+      }
+    } catch (error: any) {
+      console.error("Error saving DSA questions:", error);
+      let errorMessage = "Failed to save DSA questions";
+
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsSavingDsa(false);
+    }
+  };
+
+  const handleExcelImport = (importedQuestions: any[]) => {
+    setJobData({
+      ...jobData,
+      mcq_questions: [
+        ...(jobData.mcq_questions || []),
+        ...importedQuestions.map(q => ({
+          title: q.title,
+          type: q.type,
+          category: q.category,
+          time_seconds: q.time_seconds,
+          options: q.options,
+          correct_options: q.correct_options
+        }))
+      ]
+    });
   };
 
   return (
@@ -1039,6 +1215,27 @@ const NewJob = () => {
                     />
                     <Label>Requires MCQ Assessment</Label>
                   </div>
+
+                  <div className="flex justify-end mt-6">
+                    <Button
+                      type="button"
+                      onClick={handleSaveJobDetails}
+                      disabled={isSaving}
+                      variant="outline"
+                    >
+                      {isSaving ? (
+                        <>
+                          <LoadingSpinner size="sm" className="mr-2" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Job Details
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1149,7 +1346,7 @@ const NewJob = () => {
                                         handleTestCaseUpdate(questionIndex, testCaseIndex, "input", e.target.value)
                                       }
                                       placeholder="Input"
-                                      className="min-h-[100px] font-mono whitespace-pre"
+                                      className="min-h-[100px] font-mono whitespace-pre-wrap"
                                       rows={4}
                                     />
                                   </div>
@@ -1161,7 +1358,7 @@ const NewJob = () => {
                                         handleTestCaseUpdate(questionIndex, testCaseIndex, "expected_output", e.target.value)
                                       }
                                       placeholder="Expected Output"
-                                      className="min-h-[100px] font-mono whitespace-pre"
+                                      className="min-h-[100px] font-mono whitespace-pre-wrap"
                                       rows={4}
                                     />
                                   </div>
@@ -1205,6 +1402,27 @@ const NewJob = () => {
                           Add DSA Question
                         </Button>
                       </div>
+
+                      <div className="flex justify-end mt-4">
+                        <Button
+                          type="button"
+                          onClick={handleSaveDsaQuestions}
+                          disabled={isSavingDsa}
+                          variant="outline"
+                        >
+                          {isSavingDsa ? (
+                            <>
+                              <LoadingSpinner size="sm" className="mr-2" />
+                              Saving DSA Questions...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Save DSA Questions
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </>
                   )}
                 </CardContent>
@@ -1225,15 +1443,25 @@ const NewJob = () => {
                     </div>
                   ) : (
                     <>
-                      {jobData.mcq_questions?.map((question, index) => renderMcqQuestion(question, index))}
-                      
-                      <div className="flex justify-end mt-6">
-                        <Button
-                          type="button"
-                          onClick={handleMcqQuestionAdd}
-                        >
-                          Add MCQ Question
-                        </Button>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <div className="space-y-1">
+                            <h3 className="text-lg font-medium">MCQ Questions</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Total Questions: {jobData.mcq_questions?.length || 0}
+                            </p>
+                          </div>
+                          <div className="flex gap-4">
+                            <ExcelImport onImport={handleExcelImport} />
+                            <Button onClick={handleMcqQuestionAdd}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Question
+                            </Button>
+                          </div>
+                        </div>
+                        {jobData.mcq_questions?.map((question, index) => (
+                          renderMcqQuestion(question, index)
+                        ))}
                       </div>
                     </>
                   )}

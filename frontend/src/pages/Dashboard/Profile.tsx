@@ -454,7 +454,9 @@ const Profile = () => {
                           className="text-base"
                         />
                       ) : (
-                        <span className="block text-lg font-semibold">{profileData.website}</span>
+                        <span className="block text-lg font-semibold truncate max-w-full" title={profileData.website}>
+                          {profileData.website}
+                        </span>
                       )}
                     </div>
                       <div className="space-y-2">

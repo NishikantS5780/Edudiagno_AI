@@ -74,6 +74,22 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
     const updatedQuestions = [...questions];
     if (field === "options") {
       updatedQuestions[index].options = value;
+    } else if (field === "type") {
+      // Reset correct options when type changes
+      updatedQuestions[index] = {
+        ...updatedQuestions[index],
+        type: value,
+        // For true/false questions, automatically set up True and False options
+        options: value === "true_false" ? [
+          { id: -1, label: "True", correct: false },
+          { id: -2, label: "False", correct: false }
+        ] : [
+          { id: -1, label: "", correct: false },
+          { id: -2, label: "", correct: false },
+          { id: -3, label: "", correct: false },
+          { id: -4, label: "", correct: false }
+        ]
+      };
     } else {
       updatedQuestions[index] = { ...updatedQuestions[index], [field]: value };
     }
@@ -121,6 +137,17 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
   const handleAddOption = async (questionIndex: number) => {
     try {
       const question = questions[questionIndex];
+      
+      // Don't allow adding options for true/false questions
+      if (question.type === "true_false") {
+        return;
+      }
+      
+      // Check if already has 4 options
+      if (question.options.length >= 4) {
+        toast.error("Maximum 4 options allowed per question");
+        return;
+      }
       
       // Create the new option in the backend
       const response = await api.post('/quiz-option', {
@@ -274,6 +301,24 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
     }
   };
 
+  const handleExcelImport = (importedQuestions: any[]) => {
+    setQuestions([
+      ...questions,
+      ...importedQuestions.map(q => ({
+        id: -Date.now() - Math.random(), // Generate unique negative IDs
+        description: q.title,
+        type: q.type,
+        category: q.category,
+        time_seconds: q.time_seconds,
+        options: q.options.map((opt: string, idx: number) => ({
+          id: -idx - 1,
+          label: opt,
+          correct: q.correct_options.includes(idx)
+        }))
+      }))
+    ]);
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -287,7 +332,7 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
             Total Questions: {questions.length}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <Button
             variant={isEditMode ? "default" : "outline"}
             onClick={() => setIsEditMode(!isEditMode)}
@@ -348,13 +393,6 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                           value={question.type}
                           onValueChange={(value) => {
                             handleUpdateQuestion(index, "type", value);
-                            // Only reset options for true/false type
-                            if (value === "true_false") {
-                              handleUpdateQuestion(index, "options", [
-                                { id: 1, label: "True", correct: false },
-                                { id: 2, label: "False", correct: false }
-                              ]);
-                            }
                           }}
                         >
                           <SelectTrigger>
@@ -465,7 +503,7 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                           )}
                         </div>
                       ))}
-                      {isEditMode && (
+                      {isEditMode && question.type !== "true_false" && question.options.length < 4 && (
                         <Button
                           variant="outline"
                           size="sm"
