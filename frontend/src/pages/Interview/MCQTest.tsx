@@ -81,8 +81,8 @@ const MCQTest = () => {
         const processedQuestions = response.data.map((question: any) => {
           // Use the type directly from the API
           const answerType = question.type;
-          // Set default category if null
-          const category = question.category || 'technical';
+          // Set default category if null and normalize to lowercase
+          const category = (question.category).toLowerCase();
           // Set default time if null
           const time_seconds = question.time_seconds || 60;
           
@@ -100,15 +100,16 @@ const MCQTest = () => {
           };
         });
 
-        // Separate questions by category
-        const technicalQuestions = processedQuestions.filter((q: QuizQuestion) => q.category === 'technical');
-        const aptitudeQuestions = processedQuestions.filter((q: QuizQuestion) => q.category === 'aptitude');
+        // Separate questions by category (case-insensitive comparison)
+        const technicalQuestions = processedQuestions.filter((q: QuizQuestion) => q.category.toLowerCase() === 'technical');
+        const aptitudeQuestions = processedQuestions.filter((q: QuizQuestion) => q.category.toLowerCase() === 'aptitude');
         
         console.log('Processed questions:', {
           technical: technicalQuestions,
           aptitude: aptitudeQuestions
         });
         
+        // Set questions in state
         setQuestions({
           technical: technicalQuestions,
           aptitude: aptitudeQuestions

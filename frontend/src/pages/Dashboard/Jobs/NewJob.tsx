@@ -23,12 +23,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import AIGeneratePopup from "@/components/jobs/AIGeneratePopup";
 import { useNotifications } from "@/context/NotificationContext";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 import QuestionEditor from "@/pages/DsaLab/QuestionEditor";
+import ExcelImport from '@/components/jobs/ExcelImport';
 
 const jobFormSchema = z.object({
   title: z
@@ -72,7 +73,7 @@ const jobFormSchema = z.object({
   mcq_questions: z.array(z.object({
     title: z.string().nonempty({ message: "MCQ question title is required" }),
     type: z.enum(["single", "multiple", "true_false"]),
-    question_type: z.enum(["technical", "aptitude"]),
+    category: z.enum(["technical", "aptitude"]),
     time_seconds: z.number().min(30, { message: "Time limit must be at least 30 seconds" }).max(180, { message: "Time limit cannot exceed 3 minutes" }),
     options: z.array(z.string().nonempty({ message: "Option text is required" })),
     correct_options: z.array(z.number())
@@ -88,8 +89,8 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
       const questionResponse = await api.post('/quiz-question', {
         description: question.title,
         job_id: jobId,
-        type: question.question_type,
-        category: question.category || 'technical',
+        type: question.type,
+        category: question.category,
         time_seconds: question.time_seconds
       }, {
         headers: {
@@ -146,8 +147,13 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
         }
       }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving MCQ questions:', error);
+    if (error.response?.data?.detail) {
+      throw new Error(Array.isArray(error.response.data.detail) 
+        ? error.response.data.detail.map((err: any) => err.msg).join(', ')
+        : error.response.data.detail);
+    }
     throw error;
   }
 };
@@ -219,7 +225,7 @@ const NewJob = () => {
   interface MCQQuestion {
     title: string;
     type: "single" | "multiple" | "true_false";
-    question_type: "technical" | "aptitude";
+    category: "technical" | "aptitude";
     time_seconds: number;
     options: string[];
     correct_options: number[];
@@ -431,7 +437,7 @@ const NewJob = () => {
     const newQuestion: MCQQuestion = {
       title: "",
       type: "single",
-      question_type: "technical",
+      category: "technical",
       time_seconds: 60, // Default to 60 seconds
       options: ["", "", "", ""],
       correct_options: [0]
@@ -467,10 +473,10 @@ const NewJob = () => {
         ...updatedQuestions[index],
         correct_options: value
       };
-    } else if (field === "question_type") {
+    } else if (field === "category") {
       updatedQuestions[index] = {
         ...updatedQuestions[index],
-        question_type: value,
+        category: value,
         // Ensure exactly 4 options when changing question type
         options: ["", "", "", ""]
       };
@@ -506,8 +512,8 @@ const NewJob = () => {
               <div className="space-y-2">
                 <Label>Question Type</Label>
                 <Select
-                  value={question.question_type}
-                  onValueChange={(value) => handleMcqQuestionUpdate(index, "question_type", value)}
+                  value={question.category}
+                  onValueChange={(value) => handleMcqQuestionUpdate(index, "category", value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select question type" />
@@ -760,6 +766,23 @@ const NewJob = () => {
     } finally {
       setIsSavingDsa(false);
     }
+  };
+
+  const handleExcelImport = (importedQuestions: any[]) => {
+    setJobData({
+      ...jobData,
+      mcq_questions: [
+        ...(jobData.mcq_questions || []),
+        ...importedQuestions.map(q => ({
+          title: q.title,
+          type: q.type,
+          category: q.category,
+          time_seconds: q.time_seconds,
+          options: q.options,
+          correct_options: q.correct_options
+        }))
+      ]
+    });
   };
 
   return (
@@ -1420,15 +1443,25 @@ const NewJob = () => {
                     </div>
                   ) : (
                     <>
-                      {jobData.mcq_questions?.map((question, index) => renderMcqQuestion(question, index))}
-                      
-                      <div className="flex justify-end mt-6">
-                        <Button
-                          type="button"
-                          onClick={handleMcqQuestionAdd}
-                        >
-                          Add MCQ Question
-                        </Button>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <div className="space-y-1">
+                            <h3 className="text-lg font-medium">MCQ Questions</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Total Questions: {jobData.mcq_questions?.length || 0}
+                            </p>
+                          </div>
+                          <div className="flex gap-4">
+                            <ExcelImport onImport={handleExcelImport} />
+                            <Button onClick={handleMcqQuestionAdd}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Question
+                            </Button>
+                          </div>
+                        </div>
+                        {jobData.mcq_questions?.map((question, index) => (
+                          renderMcqQuestion(question, index)
+                        ))}
                       </div>
                     </>
                   )}

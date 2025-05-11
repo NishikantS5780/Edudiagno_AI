@@ -2,7 +2,7 @@ export interface QuizQuestion {
   id: number;
   title: string;
   type: "single" | "multiple" | "true_false";
-  question_type: "technical" | "aptitude";
+  category: "technical" | "aptitude";
   options: Array<{
     id: number;
     label: string;

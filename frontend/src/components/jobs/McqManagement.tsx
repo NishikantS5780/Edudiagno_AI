@@ -301,6 +301,24 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
     }
   };
 
+  const handleExcelImport = (importedQuestions: any[]) => {
+    setQuestions([
+      ...questions,
+      ...importedQuestions.map(q => ({
+        id: -Date.now() - Math.random(), // Generate unique negative IDs
+        description: q.title,
+        type: q.type,
+        category: q.category,
+        time_seconds: q.time_seconds,
+        options: q.options.map((opt: string, idx: number) => ({
+          id: -idx - 1,
+          label: opt,
+          correct: q.correct_options.includes(idx)
+        }))
+      }))
+    ]);
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -314,7 +332,7 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
             Total Questions: {questions.length}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <Button
             variant={isEditMode ? "default" : "outline"}
             onClick={() => setIsEditMode(!isEditMode)}
