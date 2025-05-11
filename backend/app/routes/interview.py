@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import shutil
+import subprocess
 from fastapi import (
     APIRouter,
     Depends,
@@ -13,10 +14,11 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse
+import ffmpeg
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, delete, select, update
 
-from app import database, schemas
+from app import config, database, schemas
 from app.configs import openai
 from app.lib.errors import CustomException
 from app.models import Interview, InterviewQuestionAndResponse, Job, Recruiter
@@ -137,7 +139,11 @@ async def get_interview_recruiter_view(
     )
 
     result = db.execute(stmt)
-    interview = result.mappings().one()
+    interview = dict(result.mappings().one())
+    if os.path.exists(f"uploads/interview_video/{int(interview_id)}/video.m3u8"):
+        interview["video_url"] = (
+            f"{config.settings.URL}/uploads/interview_video/{int(interview_id)}/video.m3u8"
+        )
     return interview
 
 
@@ -516,6 +522,42 @@ async def generate_feedback(
         "suggestions": interview_data["suggestions"],
         "keywords": interview_data["keywords"],
     }
+
+
+@router.post("/record")
+async def record_interview(
+    request: Request, finished: str = "false", interview_id=Depends(authorize_candidate)
+):
+    if finished == "true":
+        ffmpeg_command = [
+            "ffmpeg",
+            "-i",
+            os.path.join("uploads", "interview_video", str(interview_id), "video.webm"),
+            "-hls_time",
+            "10",
+            "-hls_list_size",
+            "0",
+            "-f",
+            "hls",
+            os.path.join("uploads", "interview_video", str(interview_id), "video.m3u8"),
+        ]
+        process = subprocess.Popen(
+            ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        output, err = process.communicate()
+        print(output.decode(), err.decode())
+        return
+    data = await request.body()
+    os.makedirs(
+        os.path.join("uploads", "interview_video", str(interview_id)), exist_ok=True
+    )
+    file_path = os.path.join(
+        "uploads", "interview_video", str(interview_id), "video.webm"
+    )
+
+    with open(file_path, "ab") as buffer:
+        buffer.write(data)
+    return {}
 
 
 @router.delete("", status_code=204)
