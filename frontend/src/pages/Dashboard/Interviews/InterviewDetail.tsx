@@ -205,7 +205,7 @@ const InterviewDetail = () => {
           return;
         }
 
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
         console.log('Base API URL:', baseUrl);
         console.log('Interview ID:', id);
         console.log('Token:', token.substring(0, 10) + '...');
@@ -385,7 +385,7 @@ const InterviewDetail = () => {
     }
 
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
       const apiUrl = `${baseUrl}/api/interview/resume?interview_id=${interview.id}`;
       
       const response = await fetch(apiUrl, {
