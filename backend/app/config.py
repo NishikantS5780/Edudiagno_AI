@@ -19,5 +19,7 @@ class Settings:
     MAIL_SENDER_NAME: str = os.getenv("MAIL_SENDER_NAME")
     MAIL_SENDER_EMAIL: str = os.getenv("MAIL_SENDER_EMAIL")
 
+    OTP_EXPIRY_DURATION_SECONDS: int = int(os.getenv("OTP_EXPIRY_DURATION_SECONDS"))
+
 
 settings = Settings()

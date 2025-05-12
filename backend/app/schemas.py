@@ -159,6 +159,10 @@ class UpdateInterview(BaseModel):
     feedback: Optional[str] = None
 
 
+class VerifyOtpCandidate(BaseModel):
+    otp: str = None
+
+
 class TextToSpeech(BaseModel):
     text: str
 
