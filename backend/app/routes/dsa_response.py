@@ -199,7 +199,9 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
         await interview_connection_manager.send_data(
             data["interview_id"],
             {
-                "input": input,
+                "input": base64.urlsafe_b64decode(
+                    input + ((4 - (len(input) % 4)) * "=")
+                ).decode(),
                 "event": "execution_result",
                 "status": "failed",
                 "failed_test_case": {
