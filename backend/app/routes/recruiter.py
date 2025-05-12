@@ -150,27 +150,24 @@ async def verify_recruiter_access_token(
 async def send_otp(
     send_otp_data: schemas.RecruiterSendEmailOtp, db: Session = Depends(database.get_db)
 ):
-    try:
-        otp = int(random.random() * 1000000)
+    otp = int(random.random() * 1000000)
 
-        brevo.send_otp_email(send_otp_data.email, otp, "1 min")
-        stmt = (
-            update(Recruiter)
-            .values(
-                email_otp=otp,
-                email_otp_expiry=datetime.datetime.now()
-                .astimezone()
-                .astimezone(tz=datetime.timezone.utc)
-                .replace(tzinfo=None)
-                + datetime.timedelta(seconds=60),
-            )
-            .where(Recruiter.email == send_otp_data.email)
+    brevo.send_otp_email(send_otp_data.email, otp, "1 min")
+    stmt = (
+        update(Recruiter)
+        .values(
+            email_otp=otp,
+            email_otp_expiry=datetime.datetime.now()
+            .astimezone()
+            .astimezone(tz=datetime.timezone.utc)
+            .replace(tzinfo=None)
+            + datetime.timedelta(seconds=60),
         )
-        db.execute(stmt)
-        db.commit()
-        return {"message": "successfully sent otp"}
-    except CustomException as e:
-        raise HTTPException(status_code=400, detail=e.args[0])
+        .where(Recruiter.email == send_otp_data.email)
+    )
+    db.execute(stmt)
+    db.commit()
+    return {"message": "successfully sent otp"}
 
 
 @router.post("/verify-otp")
@@ -182,7 +179,7 @@ async def verify_otp(
     stmt = select(Recruiter.email_otp, Recruiter.email_otp_expiry).where(
         Recruiter.email == verify_otp_data.email
     )
-    recruiter = db.execute(stmt).all()[0]._mapping
+    recruiter = db.execute(stmt).mappings().one()
 
     if recruiter["email_otp_expiry"] < datetime.datetime.now().astimezone().astimezone(
         tz=datetime.timezone.utc

@@ -156,6 +156,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     taskUID = data["taskUniqueId"]
     runStatus = data["runResult"]["runStatus"]
     output = data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
+    input = data["runConfig"]["stdinStringAsBase64UrlEncoded"]
 
     stmt = (
         update(DSATestCaseResponse)
@@ -176,15 +177,16 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 DSATestCase.expected_output,
                 DSATestCase.input,
             )
-            .join(DSAResponse, DSAResponse.interview_id == Interview.id)
+            .select_from(DSATestCaseResponse)
+            .join(DSAResponse, DSAResponse.id == DSATestCaseResponse.dsa_response_id)
             .join(
-                DSATestCaseResponse,
-                DSATestCaseResponse.dsa_response_id == DSAResponse.id,
+                Interview,
+                Interview.id == DSAResponse.interview_id,
             )
             .join(DSATestCase, DSATestCase.id == DSATestCaseResponse.dsa_test_case_id)
             .where(DSATestCaseResponse.task_id == taskUID)
         )
-        data = dict(db.execute(stmt).all()[0]._mapping)
+        data = db.execute(stmt).mappings().one()
         output: str
 
         stmt = (
@@ -198,6 +200,10 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
         await interview_connection_manager.send_data(
             data["interview_id"],
             {
+                "taskUID": taskUID,
+                "input": base64.urlsafe_b64decode(
+                    input + ((4 - (len(input) % 4)) * "=")
+                ).decode(),
                 "event": "execution_result",
                 "status": "failed",
                 "failed_test_case": {

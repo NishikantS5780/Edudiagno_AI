@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import random
 import shutil
 import subprocess
 from fastapi import (
@@ -22,6 +23,7 @@ from app import config, database, schemas
 from app.configs import openai
 from app.lib.errors import CustomException
 from app.models import Interview, InterviewQuestionAndResponse, Job, Recruiter
+from app.services import brevo
 from app.utils import jwt
 from app.dependencies.authorization import authorize_candidate, authorize_recruiter
 
@@ -222,6 +224,72 @@ async def upload_resume(
             Interview.feedback,
             Interview.job_id,
         )
+    )
+    result = db.execute(stmt)
+    db.commit()
+    interview = result.scalars().all()[0]
+
+    return interview
+
+
+@router.post("/send-otp")
+async def send_otp(
+    interview_id=Depends(authorize_candidate), db: Session = Depends(database.get_db)
+):
+    stmt = select(Interview.email).where(Interview.id == interview_id)
+    interview = db.execute(stmt).mappings().one()
+
+    otp = int(random.random() * 1000000)
+
+    brevo.send_otp_email(
+        interview["email"],
+        otp,
+        str(config.settings.OTP_EXPIRY_DURATION_SECONDS) + " seconds",
+    )
+    stmt = (
+        update(Interview)
+        .values(
+            email_otp=str(otp),
+            email_otp_expiry=datetime.datetime.now()
+            .astimezone()
+            .astimezone(tz=datetime.timezone.utc)
+            .replace(tzinfo=None)
+            + datetime.timedelta(seconds=config.settings.OTP_EXPIRY_DURATION_SECONDS),
+        )
+        .where(Interview.id == interview_id)
+    )
+    db.execute(stmt)
+    db.commit()
+    return {"message": "successfully sent otp"}
+
+
+@router.post("/verify-otp")
+async def verify_email(
+    response: Response,
+    verify_otp_data: schemas.VerifyOtpCandidate,
+    interview_id=Depends(authorize_candidate),
+    db: Session = Depends(database.get_db),
+):
+    stmt = select(Interview.email_otp, Interview.email_otp_expiry).where(
+        Interview.id == interview_id
+    )
+    interview = db.execute(stmt).mappings().one()
+
+    if interview["email_otp_expiry"] < datetime.datetime.now().astimezone().astimezone(
+        tz=datetime.timezone.utc
+    ).replace(tzinfo=None):
+        response.status_code = 400
+        return {"message": "otp expired"}
+
+    if interview["email_otp"] != verify_otp_data.otp:
+        response.status_code = 400
+        return {"message": "invalid otp"}
+
+    stmt = (
+        update(Interview)
+        .values(email_verified=True)
+        .where(Interview.id == interview_id)
+        .returning(Interview)
     )
     result = db.execute(stmt)
     db.commit()
