@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -67,43 +68,31 @@ import {
 import { jobAPI } from "@/lib/api";
 
 const InterviewsPage = () => {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
   const [scoreFilter, setScoreFilter] = useState("all");
-  const [interviewsData, setInterviewsData] = useState<InterviewData[]>();
-  const [jobTitles, setJobTitles] = useState<Record<number, string>>({});
-  const [interviewToDelete, setInterviewToDelete] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [interviewToDelete, setInterviewToDelete] = useState<number | null>(null);
   const itemsPerPage = 10;
 
-  const getInterviewData = async () => {
-    try {
-      console.log('Fetching interviews...');
+  const { data: interviewsData, isLoading } = useQuery({
+    queryKey: ['interviews', currentPage, itemsPerPage],
+    queryFn: async () => {
       const res = await interviewAPI.getInterviews({
         start: (currentPage - 1) * itemsPerPage,
         limit: itemsPerPage
       });
-      console.log('Raw API response:', res);
-      console.log('Interviews data:', res.data);
       
-      if (!res.data || res.data.length === 0) {
-        console.log('No interviews data received from API');
-        return;
-      }
-
       // Fetch job titles for all interviews
       const jobIds = res.data.map((interview: any) => interview.job_id) as number[];
-      console.log('Job IDs from interviews:', jobIds);
-      
       const uniqueJobIds = Array.from(new Set(jobIds));
-      console.log('Unique Job IDs:', uniqueJobIds);
       
       const jobTitlePromises = uniqueJobIds.map(async (jobId) => {
         try {
           const jobRes = await jobAPI.recruiterGetJob(jobId.toString());
-          console.log(`Job ${jobId} title:`, jobRes.data.title);
           return { jobId, title: jobRes.data.title };
         } catch (error) {
           console.error(`Error fetching job ${jobId}:`, error);
@@ -112,16 +101,16 @@ const InterviewsPage = () => {
       });
 
       const jobTitleResults = await Promise.all(jobTitlePromises);
-      console.log('Job Title Results:', jobTitleResults);
       const jobTitlesMap = jobTitleResults.reduce((acc, { jobId, title }) => {
         acc[jobId] = title;
         return acc;
       }, {} as Record<number, string>);
 
-      setJobTitles(jobTitlesMap);
+      const totalCount = res.headers['x-total-count'] || res.data.length;
+      setTotalPages(Math.ceil(totalCount / itemsPerPage));
 
-      const formattedInterviews = res.data.map((interview: any) => {
-        const formatted = {
+      return {
+        interviews: res.data.map((interview: any) => ({
           id: interview.id,
           status: interview.status,
           firstName: interview.first_name,
@@ -141,37 +130,31 @@ const InterviewsPage = () => {
           feedback: interview.feedback,
           createdAt: interview.created_at,
           jobId: interview.job_id,
-        };
-        console.log('Formatted interview:', formatted);
-        return formatted;
-      });
-      
-      console.log('All formatted interviews:', formattedInterviews);
-      setInterviewsData(formattedInterviews);
-      
-      // Calculate total pages based on total count from API
-      const totalCount = res.headers['x-total-count'] || res.data.length;
-      console.log('Total Count:', totalCount);
-      setTotalPages(Math.ceil(totalCount / itemsPerPage));
-    } catch (error) {
-      console.error("Error fetching interviews:", error);
-      toast.error("Failed to fetch interviews");
+        })),
+        jobTitles: jobTitlesMap
+      };
     }
-  };
+  });
 
-  useEffect(() => {
-    getInterviewData();
-  }, [currentPage]);
-
-  const handleDeleteInterview = async (id: number) => {
-    try {
-      await interviewAPI.deleteInterview(id);
+  const deleteInterviewMutation = useMutation({
+    mutationFn: (id: number) => interviewAPI.deleteInterview(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
       toast.success("Interview deleted successfully");
-      getInterviewData(); // Refresh the list
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Error deleting interview:", error);
       toast.error("Failed to delete interview");
-    } finally {
+    }
+  });
+
+  const handleDeleteInterview = (id: number) => {
+    setInterviewToDelete(id);
+  };
+
+  const confirmDelete = () => {
+    if (interviewToDelete) {
+      deleteInterviewMutation.mutate(interviewToDelete);
       setInterviewToDelete(null);
     }
   };
@@ -296,8 +279,8 @@ const InterviewsPage = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {interviewsData && interviewsData.length > 0 ? (
-              interviewsData
+            {interviewsData && interviewsData.interviews.length > 0 ? (
+              interviewsData.interviews
                 .filter((interview: InterviewData) => {
                   console.log('Filtering interview:', interview);
                   // Filter by score
@@ -329,7 +312,7 @@ const InterviewsPage = () => {
                   console.log('Interview passed all filters');
                   return true;
                 })
-                .map((interview) => (
+                .map((interview: InterviewData) => (
                   <TableRow key={interview.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -358,7 +341,7 @@ const InterviewsPage = () => {
                           to={`/dashboard/jobs/${interview.jobId}`}
                           className="text-sm hover:underline"
                         >
-                          {jobTitles[interview.jobId] || "Loading..."}
+                          {interviewsData.jobTitles[interview.jobId] || "Loading..."}
                         </Link>
                       ) : (
                         <span className="text-sm text-muted-foreground">-</span>
@@ -407,7 +390,7 @@ const InterviewsPage = () => {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-red-600"
-                              onClick={() => setInterviewToDelete(interview.id!)}
+                              onClick={() => handleDeleteInterview(interview.id!)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete Interview
@@ -478,16 +461,16 @@ const InterviewsPage = () => {
       <AlertDialog open={interviewToDelete !== null} onOpenChange={() => setInterviewToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Interview</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the interview and all associated data.
+              Are you sure you want to delete this interview? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               className="bg-red-600 hover:bg-red-700"
-              onClick={() => interviewToDelete && handleDeleteInterview(interviewToDelete)}
+              onClick={confirmDelete}
             >
               Delete
             </AlertDialogAction>
