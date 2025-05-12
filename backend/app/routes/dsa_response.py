@@ -178,7 +178,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 DSATestCase.input,
             )
             .select_from(DSATestCaseResponse)
-            .join(DSAResponse, DSAResponse.id == dsa_response_id)
+            .join(DSAResponse, DSAResponse.id == DSATestCaseResponse.dsa_response_id)
             .join(
                 Interview,
                 Interview.id == DSAResponse.interview_id,
@@ -186,7 +186,6 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
             .join(DSATestCase, DSATestCase.id == DSATestCaseResponse.dsa_test_case_id)
             .where(DSATestCaseResponse.task_id == taskUID)
         )
-        # data = dict(db.execute(stmt).all()[0]._mapping)
         data = db.execute(stmt).mappings().one()
         output: str
 
