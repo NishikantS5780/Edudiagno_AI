@@ -32,8 +32,10 @@ def upgrade() -> None:
     with open("alembic/countries.json", encoding="utf-8") as f:
         data = json.load(f)
 
-    countries = [Country(**item) for item in data]
-    session.add_all(countries)
+    # countries = [Country(**item) for item in data]
+    # session.add_all(countries)
+    stmt = sa.insert(Country)
+    session.execute(stmt, data)
 
     with open("alembic/states.json", encoding="utf-8") as f:
         data = json.load(f)
