@@ -177,6 +177,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 DSATestCase.expected_output,
                 DSATestCase.input,
             )
+            .select_from(DSATestCaseResponse)
             .join(DSAResponse, DSAResponse.id == dsa_response_id)
             .join(
                 Interview,
