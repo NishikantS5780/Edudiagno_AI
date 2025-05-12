@@ -759,7 +759,7 @@ const ExcelImport: React.FC<ExcelImportProps> = ({ onImport }) => {
         <Button
           variant="outline"
           onClick={downloadTemplate}
-          className="mt-6 hidden"
+          className="mt-6"
         >
           <Download className="w-4 h-4 mr-2" />
           Download Template
