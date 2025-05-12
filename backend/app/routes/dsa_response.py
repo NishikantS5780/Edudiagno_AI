@@ -156,6 +156,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     taskUID = data["taskUniqueId"]
     runStatus = data["runResult"]["runStatus"]
     output = data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
+    input = data["runConfig"]["stdinStringAsBase64UrlEncoded"]
 
     stmt = (
         update(DSATestCaseResponse)
@@ -198,6 +199,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
         await interview_connection_manager.send_data(
             data["interview_id"],
             {
+                "input": input,
                 "event": "execution_result",
                 "status": "failed",
                 "failed_test_case": {
