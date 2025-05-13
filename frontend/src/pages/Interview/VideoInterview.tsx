@@ -179,6 +179,10 @@ export default function VideoInterview() {
   const [editTimer, setEditTimer] = useState(30);
   const editTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [isFullInterviewRecording, setIsFullInterviewRecording] = useState(false);
+  const fullInterviewRecorderRef = useRef<MediaRecorder | null>(null);
+  const fullInterviewChunksRef = useRef<Blob[]>([]);
+  const [isConvertingVideo, setIsConvertingVideo] = useState(false);
 
   // Add ref to track processing state
   const isProcessingRef = useRef(false);
@@ -795,6 +799,12 @@ export default function VideoInterview() {
       mediaRecorderRef.current = videoRecorder;
       audioRecorderRef.current = audioRecorder;
 
+      // Set up full interview recorder
+      const fullInterviewRecorder = new MediaRecorder(videoStream, {
+        mimeType: "video/webm;codecs=vp9,opus",
+      });
+      fullInterviewRecorderRef.current = fullInterviewRecorder;
+
       // Set up video data handler
       videoRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -806,6 +816,13 @@ export default function VideoInterview() {
       audioRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data);
+        }
+      };
+
+      // Set up full interview data handler
+      fullInterviewRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          fullInterviewChunksRef.current.push(e.data);
         }
       };
 
@@ -839,7 +856,52 @@ export default function VideoInterview() {
         }
       };
 
-      // Set up error handler
+      // Set up stop handler for full interview recorder
+      fullInterviewRecorder.onstop = async () => {
+        const fullInterviewBlob = new Blob(fullInterviewChunksRef.current, {
+          type: "video/webm",
+        });
+        
+        if (fullInterviewBlob.size > 0) {
+          // Create FormData and append the video blob
+          const formData = new FormData();
+          formData.append('video', fullInterviewBlob, 'interview.webm');
+          
+          // Send the video to the backend
+          try {
+            console.log('Starting video upload...');
+            const startTime = performance.now();
+            
+            // First send the video data
+            await api.post('/interview/record', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                'Authorization': `Bearer ${localStorage.getItem('i_token')}`
+              }
+            });
+
+            console.log('Video uploaded, starting conversion...');
+            setIsConvertingVideo(true);
+            
+            // Then send finished=true to trigger HLS conversion
+            await api.post('/interview/record', null, {
+              params: { finished: 'true' },
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('i_token')}`
+              }
+            });
+
+            const endTime = performance.now();
+            console.log(`Video conversion completed in ${(endTime - startTime) / 1000} seconds`);
+            setIsConvertingVideo(false);
+          } catch (error) {
+            console.error('Failed to upload full interview video:', error);
+            setIsConvertingVideo(false);
+          }
+        }
+      };
+
+      // Set up error handlers
       videoRecorder.onerror = (error) => {
         toast.error("Recording error occurred");
         setIsRecording(false);
@@ -849,6 +911,14 @@ export default function VideoInterview() {
         toast.error("Recording error occurred");
         setIsRecording(false);
       };
+
+      fullInterviewRecorder.onerror = (error) => {
+        console.error("Full interview recording error:", error);
+      };
+
+      // Start full interview recording
+      fullInterviewRecorder.start(1000);
+      setIsFullInterviewRecording(true);
 
       setIsDevicesInitialized(true);
       toast.success("Camera and microphone initialized successfully");
@@ -916,11 +986,19 @@ export default function VideoInterview() {
         audioRecorderRef.current.stop();
       }
       
+      // Stop full interview recording
+      if (fullInterviewRecorderRef.current && isFullInterviewRecording) {
+        fullInterviewRecorderRef.current.stop();
+        setIsFullInterviewRecording(false);
+      }
+      
       // Stop camera
       stopCamera();
       
-      // Navigate to completion page
-      navigate(`/interview/complete?i_id=${i_id}&company=${company}`);
+      // Only navigate if not converting
+      if (!isConvertingVideo) {
+        navigate(`/interview/complete?i_id=${i_id}&company=${company}`);
+      }
     }
   };
 
@@ -950,6 +1028,21 @@ export default function VideoInterview() {
       }
     };
   }, []);
+
+  // Add loading overlay for video conversion
+  if (isConvertingVideo) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-background/80">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-brand mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Processing Interview Video</h1>
+          <p className="text-muted-foreground">
+            Please wait while we process your interview recording...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
