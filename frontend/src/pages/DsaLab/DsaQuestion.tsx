@@ -111,10 +111,10 @@ function DsaQuestion({
             {testCases.map((testCase, index) => (
               <tr key={index}>
                 <td className="border border-gray-600 p-2">
-                  <code>{testCase.input}</code>
+                  <pre className="whitespace-pre-wrap font-mono text-sm">{testCase.input}</pre>
                 </td>
                 <td className="border border-gray-600 p-2">
-                  <code>{testCase.expectedOutput}</code>
+                  <pre className="whitespace-pre-wrap font-mono text-sm">{testCase.expectedOutput}</pre>
                 </td>
               </tr>
             ))}
