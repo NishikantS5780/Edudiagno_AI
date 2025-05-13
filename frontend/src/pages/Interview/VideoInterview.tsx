@@ -200,36 +200,67 @@ export default function VideoInterview() {
   const recordingStartTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    if (speech) {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.currentTime = 0;
-      }
-      const newAudio = new Audio("data:audio/mpeg;base64," + speech);
-
-      // Add event listeners for audio playback
-      newAudio.onplay = () => {
-        setIsAiSpeaking(true);
-      };
-
-      newAudio.onended = () => {
-        setIsAiSpeaking(false);
-      };
-
-      newAudio.play();
-      currentAudioRef.current = newAudio;
-    }
-  }, [speech]);
-
-  useEffect(() => {
     if (currentQuestion.length) {
+      // Show typing animation immediately
+      setIsAiTyping(true);
+      
+      // Start text-to-speech conversion
       const text_to_speech = async () => {
-        const response = await textAPI.textToSpeech(currentQuestion);
-        setSpeech(response.data.audio_base64);
+        try {
+          const response = await textAPI.textToSpeech(currentQuestion);
+          // Create and prepare audio element before setting speech state
+          const newAudio = new Audio("data:audio/mpeg;base64," + response.data.audio_base64);
+          
+          // Add event listeners for audio playback
+          newAudio.onplay = () => {
+            setIsAiSpeaking(true);
+            setIsAiTyping(false);
+          };
+
+          newAudio.onended = () => {
+            setIsAiSpeaking(false);
+          };
+
+          // Store the audio element
+          currentAudioRef.current = newAudio;
+          
+          // Start loading the audio
+          newAudio.load();
+          
+          // Play as soon as it's ready
+          newAudio.play().catch(error => {
+            console.error("Error playing audio:", error);
+            setIsAiTyping(false);
+          });
+          
+          // Set speech state after audio is prepared
+          setSpeech(response.data.audio_base64);
+        } catch (error) {
+          console.error("Error in text-to-speech:", error);
+          setIsAiTyping(false);
+        }
       };
       text_to_speech();
     }
   }, [currentQuestion]);
+
+  useEffect(() => {
+    if (speech && !currentAudioRef.current) {
+      const newAudio = new Audio("data:audio/mpeg;base64," + speech);
+      newAudio.onplay = () => {
+        setIsAiSpeaking(true);
+        setIsAiTyping(false);
+      };
+      newAudio.onended = () => {
+        setIsAiSpeaking(false);
+      };
+      newAudio.play().catch(error => {
+        console.error("Error playing audio:", error);
+        setIsAiTyping(false);
+      });
+      currentAudioRef.current = newAudio;
+    }
+  }, [speech]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -622,40 +653,19 @@ export default function VideoInterview() {
   const handleNextQuestion = () => {
     if (currentQuestionIndex < interviewFlow.length - 1) {
       const nextIndex = currentQuestionIndex + 1;
-
-      // Update the current question index
       setCurrentQuestionIndex(nextIndex);
-
-      // Get the next question
       const nextQuestion = interviewFlow[nextIndex].question;
-
-      // Update the current question
       setCurrentQuestion(nextQuestion);
-
-      // Add the AI's question to the conversation
       addAssistantMessage(nextQuestion);
-
-      // Update conversation history
       setConversationHistory((prev) => [
         ...prev,
         { role: "assistant", content: nextQuestion },
       ]);
-
-      // Reset recording state
       setHasRecordedCurrentQuestion(false);
       setCurrentResponse(null);
-
-      // Clear recorded chunks for the next recording
       recordedChunksRef.current = [];
       audioChunksRef.current = [];
-
-      // Show typing animation first
       setIsAiTyping(true);
-      setTimeout(() => {
-        setIsAiTyping(false);
-        setIsAiSpeaking(true);
-        setTimeout(() => setIsAiSpeaking(false), 3000);
-      }, 2000);
     } else {
       if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
       if (audioRecorderRef.current) audioRecorderRef.current.stop();
@@ -700,37 +710,20 @@ export default function VideoInterview() {
       }
 
       const interviewFlow = questions;
-
-      // Log the interview flow for debugging
-      console.log("Interview Flow:", interviewFlow);
-      console.log("Generated Questions:", questions);
-
       setCurrentQuestion(interviewFlow[0].question);
-
       setConversationHistory([
         { role: "assistant", content: interviewFlow[0].question },
       ]);
-
-      // Store the interview flow
       setInterviewFlow(interviewFlow);
 
-      // Show AI preparation animation for 3 seconds
-      setTimeout(async () => {
-        setIsPreparing(false);
-        setIsAiTyping(true);
-        addAssistantMessage(interviewFlow[0].question);
+      // Show AI preparation animation
+      setIsPreparing(false);
+      setIsAiTyping(true);
+      addAssistantMessage(interviewFlow[0].question);
 
-        // Initialize camera and microphone 0.1 seconds after buffer
-        setTimeout(async () => {
-          await initializeDevices();
-        }, 100);
+      // Initialize camera and microphone
+      await initializeDevices();
 
-        setTimeout(() => {
-          setIsAiTyping(false);
-          setIsAiSpeaking(true);
-          setTimeout(() => setIsAiSpeaking(false), 3000);
-        }, 2000);
-      }, 3000);
     } catch (error) {
       console.error("Error starting interview:", error);
       toast.error("Failed to start interview");
@@ -1186,6 +1179,7 @@ export default function VideoInterview() {
                         disabled={
                           !isInterviewActive ||
                           isAiSpeaking ||
+                          isAiTyping ||
                           hasRecordedCurrentQuestion ||
                           isProcessingResponse
                         }
