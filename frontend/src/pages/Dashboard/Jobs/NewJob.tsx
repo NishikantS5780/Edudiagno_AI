@@ -822,11 +822,8 @@ const NewJob = () => {
   // Get currency based on country
   const getCountryCurrency = async (countryName: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/country?keyword=${encodeURIComponent(countryName)}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch country data');
-      }
-      const data = await response.json();
+      const response = await api.get(`country?keyword=${encodeURIComponent(countryName)}`);
+      const data = response.data;
       
       // Find the exact country match
       const country = data.find((c: any) => c.name.toLowerCase() === countryName.toLowerCase());

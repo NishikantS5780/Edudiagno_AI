@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { interviewAPI, jobAPI } from "@/lib/api";
+import { interviewAPI, jobAPI, api } from "@/lib/api";
 import { InterviewData } from "@/types/interview";
 import { JobData } from "@/types/job";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -396,20 +396,14 @@ const InterviewDetail = () => {
     }
 
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-      const apiUrl = `${baseUrl}/api/interview/resume?interview_id=${interview.id}`;
-      
-      const response = await fetch(apiUrl, {
+      const response = await api.get(`interview/resume?interview_id=${interview.id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`
-        }
+        },
+        responseType: 'blob'
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch resume');
-      }
-
-      const blob = await response.blob();
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
