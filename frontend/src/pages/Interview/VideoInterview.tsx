@@ -114,6 +114,7 @@ interface ThankYouStageProps {
   }>;
   companyName?: string;
   jobTitle?: string;
+  jobId?: string;
 }
 
 export default function VideoInterview() {
@@ -1068,6 +1069,7 @@ export default function VideoInterview() {
         }))}
         companyName={interviewData.company_name}
         jobTitle={interviewData.job_title}
+        jobId={interviewData.id}
         feedback={
           feedback?.feedback || "Thank you for completing the interview."
         }

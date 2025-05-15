@@ -71,6 +71,10 @@ export function ThankYouStage({
   };
 
   const handleShare = () => {
+    if (!jobId) {
+      toast.error("Unable to share interview: Job ID not found");
+      return;
+    }
     const interviewLink = `${window.location.origin}/interview?job_id=${jobId}`;
     navigator.clipboard.writeText(interviewLink);
     toast.success("Interview link copied to clipboard", {
