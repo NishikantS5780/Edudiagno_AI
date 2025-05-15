@@ -843,7 +843,7 @@ const NewJob = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[200px] overflow-y-auto">
                         <SelectItem value="engineering">Engineering</SelectItem>
                         <SelectItem value="product">Product</SelectItem>
                         <SelectItem value="design">Design</SelectItem>
