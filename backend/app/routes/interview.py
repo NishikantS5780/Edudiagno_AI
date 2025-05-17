@@ -630,15 +630,17 @@ async def record_interview(
 
 
 @router.post("/screenshot")
-async def record_interview(request: Request, interview_id=Depends(authorize_candidate)):
+async def save_screenshot(request: Request, interview_id=Depends(authorize_candidate)):
     try:
         data = await request.body()
         if not data:
             raise HTTPException(status_code=400, detail="No screenshot data provided")
 
         # Create directory if it doesn't exist
-        os.makedirs(os.path.join("uploads", "screenshot", str(interview_id)), exist_ok=True)
-        
+        os.makedirs(
+            os.path.join("uploads", "screenshot", str(interview_id)), exist_ok=True
+        )
+
         # Generate filename with timestamp
         timestamp = int(time.time())
         file_path = os.path.join(
@@ -651,7 +653,9 @@ async def record_interview(request: Request, interview_id=Depends(authorize_cand
 
         return {"message": "Screenshot saved successfully", "timestamp": timestamp}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save screenshot: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to save screenshot: {str(e)}"
+        )
 
 
 @router.delete("", status_code=204)
