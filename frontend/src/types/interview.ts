@@ -23,8 +23,9 @@ export interface InterviewData {
   communication_skills_score: number;
   problem_solving_skills_score: number;
   cultural_fit_score: number;
+  videoUrl: string;
 }
 
 export interface GetInterviewsParams {
   job_id?: string;
-} 
+}
