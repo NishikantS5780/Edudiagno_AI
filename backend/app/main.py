@@ -51,7 +51,7 @@ app.add_middleware(
 )
 
 
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.exception_handler(SQLAlchemyError)
