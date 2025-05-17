@@ -37,6 +37,13 @@ async def get_quiz_response_recruiter_view(
     recruiter_id=Depends(authorize_recruiter),
     db: Session = Depends(database.get_db),
 ):
-    stmt = select(QuizResponse).where(QuizResponse.interview_id == interview_id)
-    responses = [response._mapping for response in db.execute(stmt).all()]
-    return responses
+    stmt = select(QuizResponse).where(QuizResponse.interview_id == int(interview_id))
+    responses = db.execute(stmt).scalars().all()
+    return [
+        {
+            "question_id": response.question_id,
+            "option_id": response.option_id,
+            "interview_id": response.interview_id
+        }
+        for response in responses
+    ]

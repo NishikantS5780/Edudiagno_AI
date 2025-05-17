@@ -30,6 +30,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 import QuestionEditor from "@/pages/DsaLab/QuestionEditor";
 import ExcelImport from '@/components/jobs/ExcelImport';
+import { useUser } from "@/context/UserContext";
+import { RecruiterData } from "@/types/recruiter";
+import { recruiterAPI } from "@/lib/api";
 
 const jobFormSchema = z.object({
   title: z
@@ -160,6 +163,7 @@ const saveMcqQuestions = async (jobId: number, questions: any[]) => {
 
 const NewJob = () => {
   const navigate = useNavigate();
+  const { recruiter, setRecruiter } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingDsa, setIsSavingDsa] = useState(false);
@@ -207,6 +211,25 @@ const NewJob = () => {
     };
   });
   const { addNotification } = useNotifications();
+
+  // Fetch recruiter data when component mounts
+  useEffect(() => {
+    const fetchRecruiterData = async () => {
+      try {
+        const recruiterData = await recruiterAPI.verifyLogin();
+        if (setRecruiter && recruiter) {
+          setRecruiter({
+            ...recruiter,
+            ...recruiterData.data
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch recruiter details:", error);
+      }
+    };
+
+    fetchRecruiterData();
+  }, []);
 
   // Save job data to localStorage whenever it changes
   useEffect(() => {
@@ -785,6 +808,86 @@ const NewJob = () => {
     });
   };
 
+  interface Currency {
+    value: string;
+    label: string;
+  }
+
+  // State for available currencies
+  const [availableCurrencies, setAvailableCurrencies] = useState<Currency[]>([
+    { value: 'USD', label: '$ USD' },
+    { value: 'INR', label: '₹ INR' }
+  ]);
+
+  // Get currency based on country
+  const getCountryCurrency = async (countryName: string) => {
+    try {
+      const response = await api.get(`country?keyword=${encodeURIComponent(countryName)}`);
+      const data = response.data;
+      
+      // Find the exact country match
+      const country = data.find((c: any) => c.name.toLowerCase() === countryName.toLowerCase());
+      
+      if (!country) {
+        return 'USD';
+      }
+      
+      return country.currency || 'USD';
+    } catch (error) {
+      return 'USD';
+    }
+  };
+
+  // Get available currencies
+  const getAvailableCurrencies = async (): Promise<Currency[]> => {
+    const currencies: Currency[] = [
+      { value: 'USD', label: '$ USD' },
+      { value: 'INR', label: '₹ INR' }
+    ];
+
+    try {
+      // Add user's country currency if it's different from USD and INR
+      if (recruiter?.country) {
+        const userCountryCurrency = await getCountryCurrency(recruiter.country);
+        
+        if (userCountryCurrency && userCountryCurrency !== 'USD' && userCountryCurrency !== 'INR') {
+          const currencySymbols: Record<string, string> = {
+            'GBP': '£',
+            'EUR': '€',
+            'CNY': '¥',
+            'JPY': '¥',
+            'AUD': 'A$',
+            'CAD': 'C$',
+            'SGD': 'S$',
+            'CHF': 'Fr',
+            'AED': 'د.إ',
+            'SAR': '﷼'
+          };
+          const symbol = currencySymbols[userCountryCurrency] || '';
+          currencies.push({ value: userCountryCurrency, label: `${symbol} ${userCountryCurrency}` });
+        }
+      }
+    } catch (error) {
+      // Handle error silently
+    }
+
+    return currencies;
+  };
+
+  // Fetch available currencies when component mounts or recruiter data changes
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      const currencies = await getAvailableCurrencies();
+      setAvailableCurrencies(currencies);
+    };
+    fetchCurrencies();
+  }, [recruiter?.country]);
+
+  // Add logger for currency selection
+  const handleCurrencyChange = (value: string) => {
+    handleChange("currency", value);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -843,7 +946,7 @@ const NewJob = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[200px] overflow-y-auto">
                         <SelectItem value="engineering">Engineering</SelectItem>
                         <SelectItem value="product">Product</SelectItem>
                         <SelectItem value="design">Design</SelectItem>
@@ -1057,17 +1160,18 @@ const NewJob = () => {
                     </Label>
                     <div className="flex gap-2">
                       <Select
-                        onValueChange={(val) => handleChange("currency", val)}
+                        onValueChange={handleCurrencyChange}
                         value={jobData.currency}
                       >
                         <SelectTrigger className="w-[100px]">
                           <SelectValue placeholder="Currency" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="INR">₹ INR</SelectItem>
-                          <SelectItem value="USD">$ USD</SelectItem>
-                          <SelectItem value="EUR">€ EUR</SelectItem>
-                          <SelectItem value="GBP">£ GBP</SelectItem>
+                          {availableCurrencies.map((currency) => (
+                            <SelectItem key={currency.value} value={currency.value}>
+                              {currency.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <div className="flex-1 grid grid-cols-2 gap-2">

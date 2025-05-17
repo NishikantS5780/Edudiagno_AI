@@ -106,8 +106,8 @@ async def get_interview(
 
 @router.get("/recruiter-view")
 async def get_interview_recruiter_view(
+    id: str,
     db: Session = Depends(database.get_db),
-    interview_id=str,
     recruiter_id=Depends(authorize_recruiter),
 ):
     stmt = (
@@ -134,17 +134,18 @@ async def get_interview_recruiter_view(
             Interview.problem_solving_skills_score,
             Interview.cultural_fit_score,
             Interview.feedback,
+            Interview.job_id,
         )
         .join(Job, Interview.job_id == Job.id)
         .join(Recruiter, Recruiter.id == Job.company_id)
-        .where(and_(Interview.id == int(interview_id), Recruiter.id == recruiter_id))
+        .where(and_(Interview.id == int(id), Recruiter.id == recruiter_id))
     )
 
     result = db.execute(stmt)
     interview = dict(result.mappings().one())
-    if os.path.exists(f"uploads/interview_video/{int(interview_id)}/video.m3u8"):
+    if os.path.exists(f"uploads/interview_video/{int(id)}/video.m3u8"):
         interview["video_url"] = (
-            f"{config.settings.URL}/uploads/interview_video/{int(interview_id)}/video.m3u8"
+            f"{config.settings.URL}/uploads/interview_video/{int(id)}/video.m3u8"
         )
     return interview
 

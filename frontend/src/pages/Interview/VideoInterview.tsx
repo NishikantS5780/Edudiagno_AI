@@ -114,6 +114,7 @@ interface ThankYouStageProps {
   }>;
   companyName?: string;
   jobTitle?: string;
+  jobId?: string;
 }
 
 export default function VideoInterview() {
@@ -179,6 +180,10 @@ export default function VideoInterview() {
   const [editTimer, setEditTimer] = useState(30);
   const editTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [isFullInterviewRecording, setIsFullInterviewRecording] = useState(false);
+  const fullInterviewRecorderRef = useRef<MediaRecorder | null>(null);
+  const fullInterviewChunksRef = useRef<Blob[]>([]);
+  const [isConvertingVideo, setIsConvertingVideo] = useState(false);
 
   // Add ref to track processing state
   const isProcessingRef = useRef(false);
@@ -200,36 +205,67 @@ export default function VideoInterview() {
   const recordingStartTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    if (speech) {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.currentTime = 0;
-      }
-      const newAudio = new Audio("data:audio/mpeg;base64," + speech);
-
-      // Add event listeners for audio playback
-      newAudio.onplay = () => {
-        setIsAiSpeaking(true);
-      };
-
-      newAudio.onended = () => {
-        setIsAiSpeaking(false);
-      };
-
-      newAudio.play();
-      currentAudioRef.current = newAudio;
-    }
-  }, [speech]);
-
-  useEffect(() => {
     if (currentQuestion.length) {
+      // Show typing animation immediately
+      setIsAiTyping(true);
+      
+      // Start text-to-speech conversion
       const text_to_speech = async () => {
-        const response = await textAPI.textToSpeech(currentQuestion);
-        setSpeech(response.data.audio_base64);
+        try {
+          const response = await textAPI.textToSpeech(currentQuestion);
+          // Create and prepare audio element before setting speech state
+          const newAudio = new Audio("data:audio/mpeg;base64," + response.data.audio_base64);
+          
+          // Add event listeners for audio playback
+          newAudio.onplay = () => {
+            setIsAiSpeaking(true);
+            setIsAiTyping(false);
+          };
+
+          newAudio.onended = () => {
+            setIsAiSpeaking(false);
+          };
+
+          // Store the audio element
+          currentAudioRef.current = newAudio;
+          
+          // Start loading the audio
+          newAudio.load();
+          
+          // Play as soon as it's ready
+          newAudio.play().catch(error => {
+            console.error("Error playing audio:", error);
+            setIsAiTyping(false);
+          });
+          
+          // Set speech state after audio is prepared
+          setSpeech(response.data.audio_base64);
+        } catch (error) {
+          console.error("Error in text-to-speech:", error);
+          setIsAiTyping(false);
+        }
       };
       text_to_speech();
     }
   }, [currentQuestion]);
+
+  useEffect(() => {
+    if (speech && !currentAudioRef.current) {
+      const newAudio = new Audio("data:audio/mpeg;base64," + speech);
+      newAudio.onplay = () => {
+        setIsAiSpeaking(true);
+        setIsAiTyping(false);
+      };
+      newAudio.onended = () => {
+        setIsAiSpeaking(false);
+      };
+      newAudio.play().catch(error => {
+        console.error("Error playing audio:", error);
+        setIsAiTyping(false);
+      });
+      currentAudioRef.current = newAudio;
+    }
+  }, [speech]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -622,40 +658,19 @@ export default function VideoInterview() {
   const handleNextQuestion = () => {
     if (currentQuestionIndex < interviewFlow.length - 1) {
       const nextIndex = currentQuestionIndex + 1;
-
-      // Update the current question index
       setCurrentQuestionIndex(nextIndex);
-
-      // Get the next question
       const nextQuestion = interviewFlow[nextIndex].question;
-
-      // Update the current question
       setCurrentQuestion(nextQuestion);
-
-      // Add the AI's question to the conversation
       addAssistantMessage(nextQuestion);
-
-      // Update conversation history
       setConversationHistory((prev) => [
         ...prev,
         { role: "assistant", content: nextQuestion },
       ]);
-
-      // Reset recording state
       setHasRecordedCurrentQuestion(false);
       setCurrentResponse(null);
-
-      // Clear recorded chunks for the next recording
       recordedChunksRef.current = [];
       audioChunksRef.current = [];
-
-      // Show typing animation first
       setIsAiTyping(true);
-      setTimeout(() => {
-        setIsAiTyping(false);
-        setIsAiSpeaking(true);
-        setTimeout(() => setIsAiSpeaking(false), 3000);
-      }, 2000);
     } else {
       if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
       if (audioRecorderRef.current) audioRecorderRef.current.stop();
@@ -700,37 +715,20 @@ export default function VideoInterview() {
       }
 
       const interviewFlow = questions;
-
-      // Log the interview flow for debugging
-      console.log("Interview Flow:", interviewFlow);
-      console.log("Generated Questions:", questions);
-
       setCurrentQuestion(interviewFlow[0].question);
-
       setConversationHistory([
         { role: "assistant", content: interviewFlow[0].question },
       ]);
-
-      // Store the interview flow
       setInterviewFlow(interviewFlow);
 
-      // Show AI preparation animation for 3 seconds
-      setTimeout(async () => {
-        setIsPreparing(false);
-        setIsAiTyping(true);
-        addAssistantMessage(interviewFlow[0].question);
+      // Show AI preparation animation
+      setIsPreparing(false);
+      setIsAiTyping(true);
+      addAssistantMessage(interviewFlow[0].question);
 
-        // Initialize camera and microphone 0.1 seconds after buffer
-        setTimeout(async () => {
-          await initializeDevices();
-        }, 100);
+      // Initialize camera and microphone
+      await initializeDevices();
 
-        setTimeout(() => {
-          setIsAiTyping(false);
-          setIsAiSpeaking(true);
-          setTimeout(() => setIsAiSpeaking(false), 3000);
-        }, 2000);
-      }, 3000);
     } catch (error) {
       console.error("Error starting interview:", error);
       toast.error("Failed to start interview");
@@ -802,6 +800,12 @@ export default function VideoInterview() {
       mediaRecorderRef.current = videoRecorder;
       audioRecorderRef.current = audioRecorder;
 
+      // Set up full interview recorder
+      const fullInterviewRecorder = new MediaRecorder(videoStream, {
+        mimeType: "video/webm;codecs=vp9,opus",
+      });
+      fullInterviewRecorderRef.current = fullInterviewRecorder;
+
       // Set up video data handler
       videoRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -813,6 +817,13 @@ export default function VideoInterview() {
       audioRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data);
+        }
+      };
+
+      // Set up full interview data handler
+      fullInterviewRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          fullInterviewChunksRef.current.push(e.data);
         }
       };
 
@@ -846,7 +857,52 @@ export default function VideoInterview() {
         }
       };
 
-      // Set up error handler
+      // Set up stop handler for full interview recorder
+      fullInterviewRecorder.onstop = async () => {
+        const fullInterviewBlob = new Blob(fullInterviewChunksRef.current, {
+          type: "video/webm",
+        });
+        
+        if (fullInterviewBlob.size > 0) {
+          // Create FormData and append the video blob
+          const formData = new FormData();
+          formData.append('video', fullInterviewBlob, 'interview.webm');
+          
+          // Send the video to the backend
+          try {
+            console.log('Starting video upload...');
+            const startTime = performance.now();
+            
+            // First send the video data
+            await api.post('/interview/record', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                'Authorization': `Bearer ${localStorage.getItem('i_token')}`
+              }
+            });
+
+            console.log('Video uploaded, starting conversion...');
+            setIsConvertingVideo(true);
+            
+            // Then send finished=true to trigger HLS conversion
+            await api.post('/interview/record', null, {
+              params: { finished: 'true' },
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('i_token')}`
+              }
+            });
+
+            const endTime = performance.now();
+            console.log(`Video conversion completed in ${(endTime - startTime) / 1000} seconds`);
+            setIsConvertingVideo(false);
+          } catch (error) {
+            console.error('Failed to upload full interview video:', error);
+            setIsConvertingVideo(false);
+          }
+        }
+      };
+
+      // Set up error handlers
       videoRecorder.onerror = (error) => {
         toast.error("Recording error occurred");
         setIsRecording(false);
@@ -856,6 +912,14 @@ export default function VideoInterview() {
         toast.error("Recording error occurred");
         setIsRecording(false);
       };
+
+      fullInterviewRecorder.onerror = (error) => {
+        console.error("Full interview recording error:", error);
+      };
+
+      // Start full interview recording
+      fullInterviewRecorder.start(1000);
+      setIsFullInterviewRecording(true);
 
       setIsDevicesInitialized(true);
       toast.success("Camera and microphone initialized successfully");
@@ -923,11 +987,19 @@ export default function VideoInterview() {
         audioRecorderRef.current.stop();
       }
       
+      // Stop full interview recording
+      if (fullInterviewRecorderRef.current && isFullInterviewRecording) {
+        fullInterviewRecorderRef.current.stop();
+        setIsFullInterviewRecording(false);
+      }
+      
       // Stop camera
       stopCamera();
       
-      // Navigate to completion page
-      navigate(`/interview/complete?i_id=${i_id}&company=${company}`);
+      // Only navigate if not converting
+      if (!isConvertingVideo) {
+        navigate(`/interview/complete?i_id=${i_id}&company=${company}`);
+      }
     }
   };
 
@@ -958,6 +1030,21 @@ export default function VideoInterview() {
     };
   }, []);
 
+  // Add loading overlay for video conversion
+  if (isConvertingVideo) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-background/80">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-brand mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Processing Interview Video</h1>
+          <p className="text-muted-foreground">
+            Please wait while we process your interview recording...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-background/80">
@@ -982,6 +1069,7 @@ export default function VideoInterview() {
         }))}
         companyName={interviewData.company_name}
         jobTitle={interviewData.job_title}
+        jobId={interviewData.id}
         feedback={
           feedback?.feedback || "Thank you for completing the interview."
         }
@@ -1186,6 +1274,7 @@ export default function VideoInterview() {
                         disabled={
                           !isInterviewActive ||
                           isAiSpeaking ||
+                          isAiTyping ||
                           hasRecordedCurrentQuestion ||
                           isProcessingResponse
                         }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { interviewAPI, jobAPI } from "@/lib/api";
+import { interviewAPI, jobAPI, api } from "@/lib/api";
 import { InterviewData } from "@/types/interview";
 import { JobData } from "@/types/job";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -205,19 +205,11 @@ const InterviewDetail = () => {
           return;
         }
 
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        console.log('Base API URL:', baseUrl);
-        console.log('Interview ID:', id);
-        console.log('Token:', token.substring(0, 10) + '...');
-
-        // Get quiz responses
-        const responsesUrl = `${baseUrl}/api/quiz-response/recruiter-view?interview_id=${id}`;
-        console.log('Fetching responses from:', responsesUrl);
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
         
-        const responsesRes = await fetch(responsesUrl, {
+        // First get the job_id from the interview
+        const interviewResponse = await fetch(`${baseUrl}/interview/recruiter-view?id=${id}`, {
           method: 'GET',
-          mode: 'cors',
-          credentials: 'include',
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -225,27 +217,34 @@ const InterviewDetail = () => {
           }
         });
 
-        console.log('Responses status:', responsesRes.status);
-        if (!responsesRes.ok) {
-          const errorText = await responsesRes.text();
-          console.error('Quiz responses error:', errorText);
-          throw new Error(`HTTP error! status: ${responsesRes.status}`);
+        if (!interviewResponse.ok) {
+          throw new Error(`Failed to fetch interview: ${interviewResponse.status}`);
         }
 
-        const quizResponses = await responsesRes.json();
-        console.log('Raw Quiz Responses:', JSON.stringify(quizResponses, null, 2));
-        // Extract the nested QuizResponse objects
-        const extractedResponses = quizResponses.map((item: any) => item.QuizResponse);
-        setQuizResponses(extractedResponses);
+        const interviewData = await interviewResponse.json();
+        console.log('Raw interview response:', interviewResponse);
+        console.log('Interview data:', interviewData);
+        console.log('Interview data type:', typeof interviewData);
+        console.log('Interview data keys:', Object.keys(interviewData));
+        
+        // Try to get job_id from different possible locations
+        const jobId = interviewData.job_id || interviewData.jobId || (interviewData.job && interviewData.job.id);
+        
+        if (!jobId) {
+          console.error('No job_id found in interview data. Full response:', interviewData);
+          setQuizQuestions([]);
+          setQuizResponses([]);
+          return;
+        }
 
-        // Get quiz questions
-        const questionsUrl = `${baseUrl}/api/quiz-question?interview_id=${id}`;
+        console.log('Using job_id:', jobId);
+
+        // Get quiz questions using job_id
+        const questionsUrl = `${baseUrl}/quiz-question?job_id=${jobId}`;
         console.log('Fetching questions from:', questionsUrl);
         
         const questionsRes = await fetch(questionsUrl, {
           method: 'GET',
-          mode: 'cors',
-          credentials: 'include',
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -253,10 +252,13 @@ const InterviewDetail = () => {
           }
         });
 
-        console.log('Questions status:', questionsRes.status);
         if (!questionsRes.ok) {
-          const errorText = await questionsRes.text();
-          console.error('Quiz questions error:', errorText);
+          if (questionsRes.status === 404) {
+            console.log('No quiz questions found for this job');
+            setQuizQuestions([]);
+            setQuizResponses([]);
+            return;
+          }
           throw new Error(`HTTP error! status: ${questionsRes.status}`);
         }
 
@@ -264,30 +266,38 @@ const InterviewDetail = () => {
         console.log('Raw Quiz Questions:', JSON.stringify(quizQuestions, null, 2));
         setQuizQuestions(quizQuestions);
 
-        // Log the formatted quiz responses with labels
-        console.log('\nFormatted Quiz Responses:');
-        extractedResponses.forEach((response: QuizResponse) => {
-          const question = quizQuestions.find((q: QuizQuestion) => q.id === response.question_id);
-          if (question) {
-            const chosenOption = question.options.find((opt: QuizOption) => opt.id === response.option_id);
-            console.log({
-              question: question.description,
-              chosenAnswer: chosenOption ? chosenOption.label : 'No answer selected',
-              isCorrect: chosenOption ? chosenOption.correct : false,
-              allOptions: question.options.map((opt: QuizOption) => ({
-                label: opt.label,
-                correct: opt.correct,
-                chosen: opt.id === response.option_id
-              }))
-            });
+        // Get quiz responses
+        const responsesUrl = `${baseUrl}/quiz-response/recruiter-view?interview_id=${id}`;
+        console.log('Fetching responses from:', responsesUrl);
+        
+        const responsesRes = await fetch(responsesUrl, {
+          method: 'GET',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
           }
         });
+
+        if (!responsesRes.ok) {
+          if (responsesRes.status === 404) {
+            console.log('No quiz responses found for this interview');
+            setQuizResponses([]);
+            return;
+          }
+          throw new Error(`HTTP error! status: ${responsesRes.status}`);
+        }
+
+        const quizResponses = await responsesRes.json();
+        console.log('Raw Quiz Responses:', JSON.stringify(quizResponses, null, 2));
+        setQuizResponses(quizResponses);
+
       } catch (error) {
         console.error('Error fetching quiz data:', error);
         if (error instanceof Error) {
-          toast.error(`Failed to load quiz responses: ${error.message}`);
+          toast.error(`Failed to load quiz data: ${error.message}`);
         } else {
-          toast.error('Failed to load quiz responses');
+          toast.error('Failed to load quiz data');
         }
       }
     };
@@ -385,20 +395,14 @@ const InterviewDetail = () => {
     }
 
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const apiUrl = `${baseUrl}/api/interview/resume?interview_id=${interview.id}`;
-      
-      const response = await fetch(apiUrl, {
+      const response = await api.get(`interview/resume?interview_id=${interview.id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`
-        }
+        },
+        responseType: 'blob'
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch resume');
-      }
-
-      const blob = await response.blob();
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

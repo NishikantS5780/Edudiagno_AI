@@ -28,6 +28,13 @@ interface QuizQuestion {
   time_seconds: number;
 }
 
+interface QuestionTimer {
+  questionId: number;
+  timeLeft: number;
+  isActive: boolean;
+  isExpired: boolean;
+}
+
 const MCQTest = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,7 +52,7 @@ const MCQTest = () => {
     technical: (number | number[])[];
     aptitude: (number | number[])[];
   }>({ technical: [], aptitude: [] });
-  const [timeLeft, setTimeLeft] = useState(0);
+  const [questionTimers, setQuestionTimers] = useState<QuestionTimer[]>([]);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [countdown, setCountdown] = useState(3);
@@ -57,18 +64,6 @@ const MCQTest = () => {
     aptitude: boolean[];
   }>({ technical: [], aptitude: [] });
 
-  // Calculate total time based on questions' time_seconds
-  const calculateTotalTime = (questions: QuizQuestion[]) => {
-    console.log('Calculating total time for all questions:', questions);
-    const totalTime = questions.reduce((total, question) => {
-      const questionTime = question.time_seconds || 60;
-      console.log(`Question ${question.id}: ${questionTime} seconds`);
-      return total + questionTime;
-    }, 0);
-    console.log('Total time calculated:', totalTime, 'seconds');
-    return totalTime;
-  };
-
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
@@ -77,20 +72,10 @@ const MCQTest = () => {
         console.log('Raw quiz questions response:', response);
         console.log('Quiz questions data:', response.data);
         
-        // Process questions to determine their type
         const processedQuestions = response.data.map((question: any) => {
-          // Use the type directly from the API
           const answerType = question.type;
-          // Set default category if null and normalize to lowercase
           const category = (question.category).toLowerCase();
-          // Set default time if null
           const time_seconds = question.time_seconds || 60;
-          
-          console.log(`Processing question ${question.id}:`, {
-            category,
-            time_seconds,
-            answerType
-          });
           
           return {
             ...question,
@@ -100,32 +85,33 @@ const MCQTest = () => {
           };
         });
 
-        // Separate questions by category (case-insensitive comparison)
         const technicalQuestions = processedQuestions.filter((q: QuizQuestion) => q.category.toLowerCase() === 'technical');
         const aptitudeQuestions = processedQuestions.filter((q: QuizQuestion) => q.category.toLowerCase() === 'aptitude');
         
-        console.log('Processed questions:', {
-          technical: technicalQuestions,
-          aptitude: aptitudeQuestions
-        });
-        
-        // Set questions in state
         setQuestions({
           technical: technicalQuestions,
           aptitude: aptitudeQuestions
         });
 
-        // Initialize answers arrays
         setAnswers({
           technical: technicalQuestions.map((q: QuizQuestion) => q.answerType === 'multiple' ? [] : -1),
           aptitude: aptitudeQuestions.map((q: QuizQuestion) => q.answerType === 'multiple' ? [] : -1)
         });
 
-        // Initialize markedForLater arrays
         setMarkedForLater({
           technical: new Array(technicalQuestions.length).fill(false),
           aptitude: new Array(aptitudeQuestions.length).fill(false)
         });
+
+        // Initialize question timers
+        const allQuestions = [...technicalQuestions, ...aptitudeQuestions];
+        const timers = allQuestions.map(q => ({
+          questionId: q.id,
+          timeLeft: q.time_seconds,
+          isActive: false,
+          isExpired: false
+        }));
+        setQuestionTimers(timers);
 
         setIsLoading(false);
       } catch (error) {
@@ -143,23 +129,31 @@ const MCQTest = () => {
   useEffect(() => {
     let timer: NodeJS.Timeout;
     
-    if (isTestStarted && timeLeft > 0) {
+    if (isTestStarted) {
       timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          const newTime = prev - 1;
-          
-          // Show warning when 1 minute is left
-          if (newTime === 60 && !warningShown) {
-            toast.warning("1 minute remaining!");
-            setWarningShown(true);
-          }
-          
-          return newTime;
+        setQuestionTimers(prevTimers => {
+          return prevTimers.map(timer => {
+            if (timer.isActive && !timer.isExpired && timer.timeLeft > 0) {
+              const newTimeLeft = timer.timeLeft - 1;
+              
+              // Show warning when 10 seconds are left
+              if (newTimeLeft === 10 && !warningShown) {
+                toast.warning("10 seconds remaining for this question!");
+                setWarningShown(true);
+              }
+              
+              // If time runs out
+              if (newTimeLeft === 0) {
+                toast.error("Time's up for this question!");
+                return { ...timer, timeLeft: 0, isExpired: true };
+              }
+              
+              return { ...timer, timeLeft: newTimeLeft };
+            }
+            return timer;
+          });
         });
       }, 1000);
-    } else if (isTestStarted && timeLeft === 0) {
-      // Time's up, submit the test
-      handleSubmit();
     }
 
     return () => {
@@ -167,7 +161,7 @@ const MCQTest = () => {
         clearInterval(timer);
       }
     };
-  }, [timeLeft, isTestStarted, warningShown]);
+  }, [isTestStarted, warningShown]);
 
   useEffect(() => {
     let countdownTimer: NodeJS.Timeout;
@@ -179,12 +173,14 @@ const MCQTest = () => {
     } else if (isCountingDown && countdown === 0) {
       setIsCountingDown(false);
       setIsTestStarted(true);
-      // Calculate total time for all questions
-      const allQuestions = [...questions.technical, ...questions.aptitude];
-      console.log('Starting test with all questions:', allQuestions);
-      const totalTime = calculateTotalTime(allQuestions);
-      console.log('Setting total time for entire test:', totalTime, 'seconds');
-      setTimeLeft(totalTime);
+      // Activate timer for first question
+      setQuestionTimers(prevTimers => {
+        const firstQuestion = questions[currentSection][0];
+        return prevTimers.map(timer => ({
+          ...timer,
+          isActive: timer.questionId === firstQuestion.id
+        }));
+      });
     }
 
     return () => {
@@ -192,7 +188,7 @@ const MCQTest = () => {
         clearInterval(countdownTimer);
       }
     };
-  }, [countdown, isCountingDown, questions]);
+  }, [countdown, isCountingDown, questions, currentSection]);
 
   const handleAnswerSelect = (questionIndex: number, optionId: number) => {
     const currentQuestions = questions[currentSection];
@@ -213,9 +209,6 @@ const MCQTest = () => {
     
     newAnswers[currentSection] = sectionAnswers;
     setAnswers(newAnswers);
-    
-    // Force a re-render of the number pad
-    setCurrentQuestionIndex(prev => prev);
   };
 
   const handleSubmit = async () => {
@@ -233,6 +226,14 @@ const MCQTest = () => {
       // Move to technical section
       setCurrentSection('technical');
       setCurrentQuestionIndex(0);
+      // Activate timer for first technical question
+      setQuestionTimers(prevTimers => {
+        const firstQuestion = questions.technical[0];
+        return prevTimers.map(timer => ({
+          ...timer,
+          isActive: timer.questionId === firstQuestion.id
+        }));
+      });
       return;
     }
 
@@ -295,13 +296,10 @@ const MCQTest = () => {
     const company = urlParams.get('company');
     
     if (i_id && company) {
-      // First get the job_id from the interview
       api.get(`/interview?id=${i_id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
       }).then(interviewResponse => {
         const jobId = interviewResponse.data.job_id;
-        
-        // Then fetch the job data
         return jobAPI.candidateGetJob(jobId);
       }).then(response => {
         const jobData = response.data;
@@ -319,13 +317,33 @@ const MCQTest = () => {
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+      const newIndex = currentQuestionIndex - 1;
+      setCurrentQuestionIndex(newIndex);
+      const question = questions[currentSection][newIndex];
+      
+      // Update timers
+      setQuestionTimers(prevTimers => {
+        return prevTimers.map(timer => ({
+          ...timer,
+          isActive: timer.questionId === question.id
+        }));
+      });
     }
   };
 
   const handleNext = () => {
     if (currentQuestionIndex < questions[currentSection].length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      const newIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(newIndex);
+      const question = questions[currentSection][newIndex];
+      
+      // Update timers
+      setQuestionTimers(prevTimers => {
+        return prevTimers.map(timer => ({
+          ...timer,
+          isActive: timer.questionId === question.id
+        }));
+      });
     }
   };
 
@@ -338,41 +356,41 @@ const MCQTest = () => {
     }));
   };
 
-  const scrollToQuestion = (index: number) => {
-    const questionElement = document.getElementById(`question-${index}`);
-    if (questionElement) {
-      questionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+  const getCurrentQuestionTimer = () => {
+    const currentQuestion = questions[currentSection][currentQuestionIndex];
+    return questionTimers.find(timer => timer.questionId === currentQuestion.id);
   };
 
   const renderQuestionOptions = (question: QuizQuestion, questionIndex: number) => {
-    if (question.answerType === 'true_false') {
+    const timer = questionTimers.find(t => t.questionId === question.id);
+    const isExpired = timer?.isExpired;
+
+    if (question.answerType === 'single' || question.answerType === 'true_false') {
       return (
-        <div className="space-y-4">
-          <RadioGroup
-            value={answers[currentSection][questionIndex]?.toString()}
-            onValueChange={(value) => handleAnswerSelect(questionIndex, parseInt(value))}
-            name={`question-${currentSection}-${question.id}`}
-          >
-            {question.options.map((option) => (
-              <div key={option.id} className="flex items-center space-x-2">
-                <RadioGroupItem 
-                  value={option.id.toString()} 
-                  id={`option-${currentSection}-${question.id}-${option.id}`}
-                />
-                <Label htmlFor={`option-${currentSection}-${question.id}-${option.id}`} className="text-lg">
-                  {option.label}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </div>
+        <RadioGroup
+          value={answers[currentSection][questionIndex]?.toString()}
+          onValueChange={(value) => handleAnswerSelect(questionIndex, parseInt(value))}
+          name={`question-${currentSection}-${question.id}`}
+          className="space-y-2"
+          disabled={isExpired}
+        >
+          {question.options.map((option) => (
+            <div key={option.id} className="flex items-center space-x-2">
+              <RadioGroupItem 
+                value={option.id.toString()} 
+                id={`option-${currentSection}-${question.id}-${option.id}`}
+                disabled={isExpired}
+              />
+              <Label htmlFor={`option-${currentSection}-${question.id}-${option.id}`}>{option.label}</Label>
+            </div>
+          ))}
+        </RadioGroup>
       );
     }
 
     if (question.answerType === 'multiple') {
       return (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {question.options.map((option) => (
             <div key={option.id} className="flex items-center space-x-2">
               <Checkbox
@@ -381,34 +399,12 @@ const MCQTest = () => {
                   ? (answers[currentSection][questionIndex] as number[]).includes(option.id)
                   : false}
                 onCheckedChange={() => handleAnswerSelect(questionIndex, option.id)}
-              />
-              <Label htmlFor={`option-${currentSection}-${question.id}-${option.id}`} className="text-lg">
-                {option.label}
-              </Label>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (question.answerType === 'single') {
-      return (
-        <RadioGroup
-          value={answers[currentSection][questionIndex]?.toString()}
-          onValueChange={(value) => handleAnswerSelect(questionIndex, parseInt(value))}
-          name={`question-${currentSection}-${question.id}`}
-          className="space-y-2"
-        >
-          {question.options.map((option) => (
-            <div key={option.id} className="flex items-center space-x-2">
-              <RadioGroupItem 
-                value={option.id.toString()} 
-                id={`option-${currentSection}-${question.id}-${option.id}`}
+                disabled={isExpired}
               />
               <Label htmlFor={`option-${currentSection}-${question.id}-${option.id}`}>{option.label}</Label>
             </div>
           ))}
-        </RadioGroup>
+        </div>
       );
     }
 
@@ -455,7 +451,7 @@ const MCQTest = () => {
                   <Timer className="h-5 w-5 text-primary" />
                   <div>
                     <p className="font-medium">Time Limit</p>
-                    <p className="text-sm text-muted-foreground">10 minutes</p>
+                    <p className="text-sm text-muted-foreground">Individual timers per question</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 p-4 rounded-lg border">
@@ -521,7 +517,7 @@ const MCQTest = () => {
             </div>
             <div className="flex items-center gap-2">
               <Timer className="h-5 w-5 text-destructive" />
-              <span className="font-medium">{formatTime(timeLeft)}</span>
+              <span className="font-medium">{formatTime(getCurrentQuestionTimer()?.timeLeft || 0)}</span>
             </div>
           </div>
 
@@ -546,6 +542,8 @@ const MCQTest = () => {
                           const isAnswered = answers.aptitude[index] !== -1 && 
                             (Array.isArray(answers.aptitude[index]) ? answers.aptitude[index].length > 0 : true);
                           const isMarked = markedForLater.aptitude[index];
+                          const timer = questionTimers.find(t => t.questionId === questions.aptitude[index].id);
+                          const isExpired = timer?.isExpired;
                           
                           return (
                             <Button
@@ -557,11 +555,20 @@ const MCQTest = () => {
                                   ? "bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100 border-2 border-amber-400"
                                   : isAnswered
                                     ? "bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 border-2 border-emerald-400"
-                                    : "hover:bg-accent"
+                                    : isExpired
+                                      ? "bg-red-100 hover:bg-red-200 dark:bg-red-900/20 text-red-900 dark:text-red-100 border-2 border-red-400"
+                                      : "hover:bg-accent"
                               }`}
                               onClick={() => {
                                 setCurrentSection('aptitude');
-                                scrollToQuestion(index);
+                                setCurrentQuestionIndex(index);
+                                const question = questions.aptitude[index];
+                                setQuestionTimers(prevTimers => {
+                                  return prevTimers.map(timer => ({
+                                    ...timer,
+                                    isActive: timer.questionId === question.id
+                                  }));
+                                });
                               }}
                             >
                               {index + 1}
@@ -578,6 +585,8 @@ const MCQTest = () => {
                             const isAnswered = answers.technical[index] !== -1 && 
                               (Array.isArray(answers.technical[index]) ? answers.technical[index].length > 0 : true);
                             const isMarked = markedForLater.technical[index];
+                            const timer = questionTimers.find(t => t.questionId === questions.technical[index].id);
+                            const isExpired = timer?.isExpired;
                             
                             return (
                               <Button
@@ -589,11 +598,20 @@ const MCQTest = () => {
                                     ? "bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100 border-2 border-amber-400"
                                     : isAnswered
                                       ? "bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 border-2 border-emerald-400"
-                                      : "hover:bg-accent"
+                                      : isExpired
+                                        ? "bg-red-100 hover:bg-red-200 dark:bg-red-900/20 text-red-900 dark:text-red-100 border-2 border-red-400"
+                                        : "hover:bg-accent"
                                 }`}
                                 onClick={() => {
                                   setCurrentSection('technical');
-                                  scrollToQuestion(index);
+                                  setCurrentQuestionIndex(index);
+                                  const question = questions.technical[index];
+                                  setQuestionTimers(prevTimers => {
+                                    return prevTimers.map(timer => ({
+                                      ...timer,
+                                      isActive: timer.questionId === question.id
+                                    }));
+                                  });
                                 }}
                               >
                                 {index + 1}
@@ -617,62 +635,92 @@ const MCQTest = () => {
                       <div>
                         <CardTitle>MCQ Test - {currentSection === 'aptitude' ? 'Aptitude' : 'Technical'} Section</CardTitle>
                         <CardDescription>
-                          Time Remaining: {formatTime(timeLeft)}
+                          Question {currentQuestionIndex + 1} of {questions[currentSection].length}
                         </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Timer className="h-5 w-5 text-destructive" />
+                        <span className="font-medium">{formatTime(getCurrentQuestionTimer()?.timeLeft || 0)}</span>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {questions[currentSection].map((question, index) => (
-                    <div 
-                      key={question.id} 
-                      id={`question-${index}`}
-                      className="p-6 rounded-lg border border-border"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                          <h3 className="text-lg font-semibold">Question {index + 1}</h3>
-                          <Badge variant="outline">
-                            {question.answerType === 'true_false' ? 'True/False' : 
-                             question.answerType === 'multiple' ? 'Multiple Choice' : 
-                             'Single Choice'}
-                          </Badge>
+                  {(() => {
+                    const question = questions[currentSection][currentQuestionIndex];
+                    const timer = questionTimers.find(t => t.questionId === question.id);
+                    const isExpired = timer?.isExpired;
+
+                    return (
+                      <div className="p-6 rounded-lg border border-border">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-4">
+                            <h3 className="text-lg font-semibold">Question {currentQuestionIndex + 1}</h3>
+                            <Badge variant="outline">
+                              {question.answerType === 'true_false' ? 'True/False' : 
+                               question.answerType === 'multiple' ? 'Multiple Choice' : 
+                               'Single Choice'}
+                            </Badge>
+                          </div>
+                          <Button
+                            variant={markedForLater[currentSection][currentQuestionIndex] ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => handleMarkForLater(currentQuestionIndex)}
+                            className={`${
+                              markedForLater[currentSection][currentQuestionIndex] 
+                                ? "bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/20 text-yellow-900 dark:text-yellow-100" 
+                                : "hover:bg-yellow-50 dark:hover:bg-yellow-900/10"
+                            }`}
+                          >
+                            {markedForLater[currentSection][currentQuestionIndex] ? "Marked for Later" : "Mark for Later"}
+                          </Button>
                         </div>
-                        <Button
-                          variant={markedForLater[currentSection][index] ? "secondary" : "outline"}
-                          size="sm"
-                          onClick={() => handleMarkForLater(index)}
-                          className={`${
-                            markedForLater[currentSection][index] 
-                              ? "bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/20 text-yellow-900 dark:text-yellow-100" 
-                              : "hover:bg-yellow-50 dark:hover:bg-yellow-900/10"
-                          }`}
-                        >
-                          {markedForLater[currentSection][index] ? "Marked for Later" : "Mark for Later"}
-                        </Button>
+                        <p className="text-base mb-4">{question.description}</p>
+                        {renderQuestionOptions(question, currentQuestionIndex)}
+                        {isExpired && (
+                          <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100 rounded-lg">
+                            <p className="flex items-center gap-2">
+                              <AlertCircle className="h-5 w-5" />
+                              Time's up for this question!
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-base mb-4">{question.description}</p>
-                      {renderQuestionOptions(question, index)}
-                    </div>
-                  ))}
+                    );
+                  })()}
                 </CardContent>
-                <CardFooter className="flex justify-end border-t pt-6">
-                  {currentSection === 'aptitude' && questions.technical.length > 0 ? (
-                    <Button onClick={() => setCurrentSection('technical')}>
-                      Next Section
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={handleSubmit}
-                      disabled={
-                        answers.aptitude.some(a => a === -1 || (Array.isArray(a) && a.length === 0)) ||
-                        answers.technical.some(a => a === -1 || (Array.isArray(a) && a.length === 0))
-                      }
-                    >
-                      Submit Test
-                    </Button>
-                  )}
+                <CardFooter className="flex justify-between border-t pt-6">
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevious}
+                    disabled={currentQuestionIndex === 0}
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex gap-2">
+                    {currentSection === 'aptitude' && questions.technical.length > 0 ? (
+                      <Button onClick={() => setCurrentSection('technical')}>
+                        Next Section
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={handleSubmit}
+                        disabled={
+                          answers.aptitude.some(a => a === -1 || (Array.isArray(a) && a.length === 0)) ||
+                          answers.technical.some(a => a === -1 || (Array.isArray(a) && a.length === 0))
+                        }
+                      >
+                        Submit Test
+                      </Button>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleNext}
+                    disabled={currentQuestionIndex === questions[currentSection].length - 1}
+                  >
+                    Next
+                  </Button>
                 </CardFooter>
               </Card>
             </div>
@@ -686,7 +734,7 @@ const MCQTest = () => {
             <CardHeader>
               <CardTitle>Start Test?</CardTitle>
               <CardDescription>
-                Once you start, you will have 10 minutes to complete the test. Are you ready?
+                Each question has its own timer. Once you start, you cannot pause the test. Are you ready?
               </CardDescription>
             </CardHeader>
             <CardFooter className="flex justify-end space-x-2">
