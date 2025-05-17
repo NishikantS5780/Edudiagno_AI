@@ -126,7 +126,9 @@ export default function VideoInterview() {
     company_name: "",
     job_title: "",
   });
-  const [companyData, setCompanyData] = useState<RecruiterData | undefined>(undefined);
+  const [companyData, setCompanyData] = useState<RecruiterData | undefined>(
+    undefined
+  );
   const [jobData, setJobData] = useState<JobData | undefined>(undefined);
   const navigate = useNavigate();
   const [isInterviewActive, setIsInterviewActive] = useState(false);
@@ -180,7 +182,8 @@ export default function VideoInterview() {
   const [editTimer, setEditTimer] = useState(30);
   const editTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
-  const [isFullInterviewRecording, setIsFullInterviewRecording] = useState(false);
+  const [isFullInterviewRecording, setIsFullInterviewRecording] =
+    useState(false);
   const fullInterviewRecorderRef = useRef<MediaRecorder | null>(null);
   const fullInterviewChunksRef = useRef<Blob[]>([]);
   const [isConvertingVideo, setIsConvertingVideo] = useState(false);
@@ -208,14 +211,16 @@ export default function VideoInterview() {
     if (currentQuestion.length) {
       // Show typing animation immediately
       setIsAiTyping(true);
-      
+
       // Start text-to-speech conversion
       const text_to_speech = async () => {
         try {
           const response = await textAPI.textToSpeech(currentQuestion);
           // Create and prepare audio element before setting speech state
-          const newAudio = new Audio("data:audio/mpeg;base64," + response.data.audio_base64);
-          
+          const newAudio = new Audio(
+            "data:audio/mpeg;base64," + response.data.audio_base64
+          );
+
           // Add event listeners for audio playback
           newAudio.onplay = () => {
             setIsAiSpeaking(true);
@@ -228,16 +233,16 @@ export default function VideoInterview() {
 
           // Store the audio element
           currentAudioRef.current = newAudio;
-          
+
           // Start loading the audio
           newAudio.load();
-          
+
           // Play as soon as it's ready
-          newAudio.play().catch(error => {
+          newAudio.play().catch((error) => {
             console.error("Error playing audio:", error);
             setIsAiTyping(false);
           });
-          
+
           // Set speech state after audio is prepared
           setSpeech(response.data.audio_base64);
         } catch (error) {
@@ -259,7 +264,7 @@ export default function VideoInterview() {
       newAudio.onended = () => {
         setIsAiSpeaking(false);
       };
-      newAudio.play().catch(error => {
+      newAudio.play().catch((error) => {
         console.error("Error playing audio:", error);
         setIsAiTyping(false);
       });
@@ -307,25 +312,25 @@ export default function VideoInterview() {
       } as InterviewData);
       setCompanyData({ name: data.company_name });
       setJobData({
-        id: data.id || '',
-        title: data.title || '',
-        description: data.description || '',
-        department: data.department || '',
-        city: data.city || '',
+        id: data.id || "",
+        title: data.title || "",
+        description: data.description || "",
+        department: data.department || "",
+        city: data.city || "",
         min_experience: data.min_experience || 0,
         max_experience: data.max_experience || 0,
         salary_min: data.salary_min || 0,
         salary_max: data.salary_max || 0,
-        requirements: data.requirements || '',
-        responsibilities: data.responsibilities || '',
-        skills: data.skills || '',
-        benefits: data.benefits || '',
-        type: data.type || '',
-        location: data.location || '',
+        requirements: data.requirements || "",
+        responsibilities: data.responsibilities || "",
+        skills: data.skills || "",
+        benefits: data.benefits || "",
+        type: data.type || "",
+        location: data.location || "",
         remote: data.remote || false,
-        company_id: data.company_id || '',
-        created_at: data.created_at || '',
-        updated_at: data.updated_at || ''
+        company_id: data.company_id || "",
+        created_at: data.created_at || "",
+        updated_at: data.updated_at || "",
       } as unknown as JobData);
     };
     getCandidateData();
@@ -520,13 +525,14 @@ export default function VideoInterview() {
             setHasRecordedCurrentQuestion(true);
             setCurrentResponse(responseToSubmit);
             setShowEditDialog(false);
-            
+
             // Then submit to backend
-            interviewAPI.submitTextResponse(currentQuestionIndex, responseToSubmit)
+            interviewAPI
+              .submitTextResponse(currentQuestionIndex, responseToSubmit)
               .then(() => {
                 console.log("Response submitted successfully");
               })
-              .catch(error => {
+              .catch((error) => {
                 console.error("Failed to submit answer:", error);
                 toast.error("Failed to submit answer");
               });
@@ -550,25 +556,28 @@ export default function VideoInterview() {
       clearInterval(editTimerRef.current);
     }
     if (isSubmittingEdit) return;
-    
+
     // Use currentResponse as fallback if editedResponse is empty
     const responseToSubmit = editedResponse?.trim() || currentResponse?.trim();
-    
+
     // Check if the response is empty
     if (!responseToSubmit) {
       toast.error("Please provide a response before submitting");
       return;
     }
-    
+
     setIsSubmittingEdit(true);
-      setShowEditDialog(false);
+    setShowEditDialog(false);
     try {
       // Add user message to conversation
       addUserMessage(responseToSubmit);
       setHasRecordedCurrentQuestion(true);
       setCurrentResponse(responseToSubmit);
       // Submit to backend
-      await interviewAPI.submitTextResponse(currentQuestionIndex, responseToSubmit);
+      await interviewAPI.submitTextResponse(
+        currentQuestionIndex,
+        responseToSubmit
+      );
       // Optionally, you can call processResponse here if needed
     } catch (error) {
       toast.error("Failed to submit answer");
@@ -584,14 +593,14 @@ export default function VideoInterview() {
       });
       streamRef.current = null;
     }
-    
+
     if (audioStreamRef.current) {
-      audioStreamRef.current.getTracks().forEach(track => {
+      audioStreamRef.current.getTracks().forEach((track) => {
         track.stop();
       });
       audioStreamRef.current = null;
     }
-    
+
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
@@ -728,7 +737,6 @@ export default function VideoInterview() {
 
       // Initialize camera and microphone
       await initializeDevices();
-
     } catch (error) {
       console.error("Error starting interview:", error);
       toast.error("Failed to start interview");
@@ -820,13 +828,6 @@ export default function VideoInterview() {
         }
       };
 
-      // Set up full interview data handler
-      fullInterviewRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          fullInterviewChunksRef.current.push(e.data);
-        }
-      };
-
       // Set up stop handler for video recorder
       videoRecorder.onstop = () => {
         const videoBlob = new Blob(recordedChunksRef.current, {
@@ -848,7 +849,7 @@ export default function VideoInterview() {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: "audio/webm",
         });
-        
+
         if (audioBlob.size > 0) {
           const transcript = await transcribeAudio(audioBlob);
           if (transcript) {
@@ -857,48 +858,46 @@ export default function VideoInterview() {
         }
       };
 
-      // Set up stop handler for full interview recorder
-      fullInterviewRecorder.onstop = async () => {
-        const fullInterviewBlob = new Blob(fullInterviewChunksRef.current, {
-          type: "video/webm",
-        });
-        
-        if (fullInterviewBlob.size > 0) {
-          // Create FormData and append the video blob
-          const formData = new FormData();
-          formData.append('video', fullInterviewBlob, 'interview.webm');
-          
+      // Set up full interview data handler
+      fullInterviewRecorder.ondataavailable = async (e) => {
+        if (e.data.size > 0) {
           // Send the video to the backend
           try {
-            console.log('Starting video upload...');
+            console.log("Starting video upload...");
             const startTime = performance.now();
-            
+
             // First send the video data
-            await api.post('/interview/record', formData, {
+            await api.post("/interview/record", await e.data.arrayBuffer(), {
               headers: {
-                'Content-Type': 'multipart/form-data',
-                'Authorization': `Bearer ${localStorage.getItem('i_token')}`
-              }
+                "Content-Type": "multipart/form-data",
+                Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+              },
             });
-
-            console.log('Video uploaded, starting conversion...');
-            setIsConvertingVideo(true);
-            
-            // Then send finished=true to trigger HLS conversion
-            await api.post('/interview/record', null, {
-              params: { finished: 'true' },
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('i_token')}`
-              }
-            });
-
-            const endTime = performance.now();
-            console.log(`Video conversion completed in ${(endTime - startTime) / 1000} seconds`);
-            setIsConvertingVideo(false);
           } catch (error) {
-            console.error('Failed to upload full interview video:', error);
-            setIsConvertingVideo(false);
+            console.error("Failed to upload interview clip:", error);
           }
+        }
+      };
+
+      // Set up stop handler for full interview recorder
+      fullInterviewRecorder.onstop = async () => {
+        try {
+          console.log("Video uploaded, starting conversion...");
+          setIsConvertingVideo(true);
+
+          // Then send finished=true to trigger HLS conversion
+          await api.post("/interview/record", null, {
+            params: { finished: "true" },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+            },
+          });
+
+          const endTime = performance.now();
+          setIsConvertingVideo(false);
+        } catch (error) {
+          console.error("Failed to upload full interview video:", error);
+          setIsConvertingVideo(false);
         }
       };
 
@@ -975,9 +974,9 @@ export default function VideoInterview() {
 
   const handleInterviewComplete = () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const i_id = urlParams.get('i_id');
-    const company = urlParams.get('company');
-    
+    const i_id = urlParams.get("i_id");
+    const company = urlParams.get("company");
+
     if (i_id && company) {
       // Stop recording if active
       if (mediaRecorderRef.current && isRecording) {
@@ -986,16 +985,16 @@ export default function VideoInterview() {
       if (audioRecorderRef.current && isRecording) {
         audioRecorderRef.current.stop();
       }
-      
+
       // Stop full interview recording
       if (fullInterviewRecorderRef.current && isFullInterviewRecording) {
         fullInterviewRecorderRef.current.stop();
         setIsFullInterviewRecording(false);
       }
-      
+
       // Stop camera
       stopCamera();
-      
+
       // Only navigate if not converting
       if (!isConvertingVideo) {
         navigate(`/interview/complete?i_id=${i_id}&company=${company}`);
@@ -1015,10 +1014,13 @@ export default function VideoInterview() {
 
   // Update job data with proper type
   const updateJobData = (data: Partial<JobData>) => {
-    setJobData(prev => ({
-      ...prev,
-      ...data
-    } as JobData));
+    setJobData(
+      (prev) =>
+        ({
+          ...prev,
+          ...data,
+        } as JobData)
+    );
   };
 
   // Cleanup timer on unmount
@@ -1036,7 +1038,9 @@ export default function VideoInterview() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-background/80">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-brand mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Processing Interview Video</h1>
+          <h1 className="text-2xl font-bold mb-2">
+            Processing Interview Video
+          </h1>
           <p className="text-muted-foreground">
             Please wait while we process your interview recording...
           </p>
@@ -1288,7 +1292,9 @@ export default function VideoInterview() {
                             disabled={isRecording || isProcessingResponse}
                             className=""
                           >
-                            {currentQuestionIndex === interviewFlow.length - 1 ? "End Interview" : "Next Question"}
+                            {currentQuestionIndex === interviewFlow.length - 1
+                              ? "End Interview"
+                              : "Next Question"}
                           </Button>
                         )}
                     </div>
@@ -1323,9 +1329,10 @@ export default function VideoInterview() {
                         Hi, I'm Arya!
                       </h3>
                       <p className="text-muted-foreground">
-                        I'll be your interviewer for the {jobData?.title || 'this position'}{" "}
-                        position at {companyData?.name || 'the company'}. Take a deep breath and
-                        relax - I'll help you showcase your skills and
+                        I'll be your interviewer for the{" "}
+                        {jobData?.title || "this position"} position at{" "}
+                        {companyData?.name || "the company"}. Take a deep breath
+                        and relax - I'll help you showcase your skills and
                         experience. When you're ready, click the button below to
                         begin.
                       </p>
@@ -1472,7 +1479,10 @@ export default function VideoInterview() {
               value={editedResponse}
               onChange={(e) => {
                 // Prevent pasting
-                if (e.nativeEvent instanceof InputEvent && e.nativeEvent.inputType === 'insertFromPaste') {
+                if (
+                  e.nativeEvent instanceof InputEvent &&
+                  e.nativeEvent.inputType === "insertFromPaste"
+                ) {
                   e.preventDefault();
                   return;
                 }
@@ -1495,17 +1505,20 @@ export default function VideoInterview() {
               <span>Time remaining: {editTimer}s</span>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => {
-                if (editTimerRef.current) {
-                  clearInterval(editTimerRef.current);
-                }
-                setShowEditDialog(false);
-              }}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmitEditedResponse}>
-              Confirm & Submit
-            </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (editTimerRef.current) {
+                    clearInterval(editTimerRef.current);
+                  }
+                  setShowEditDialog(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitEditedResponse}>
+                Confirm & Submit
+              </Button>
             </div>
           </DialogFooter>
         </DialogContent>

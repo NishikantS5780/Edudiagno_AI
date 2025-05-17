@@ -100,7 +100,7 @@ async def get_interview(
         .where(Interview.id == interview_id)
     )
     result = db.execute(stmt)
-    interview = result.all()[0]._mapping
+    interview = result.mappings().one()
     return interview
 
 

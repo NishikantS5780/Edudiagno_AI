@@ -20,7 +20,7 @@ const API_BASE_URL =
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -40,17 +40,17 @@ api.interceptors.response.use(undefined, async (err) => {
   if (!config || !(config as CustomAxiosRequestConfig).retry) {
     return Promise.reject(err);
   }
-  
+
   const customConfig = config as CustomAxiosRequestConfig;
   customConfig.retryCount = customConfig.retryCount || 0;
-  
+
   if (customConfig.retryCount >= MAX_RETRIES) {
     return Promise.reject(err);
   }
-  
+
   customConfig.retryCount += 1;
   await sleep(RETRY_DELAY * customConfig.retryCount);
-  
+
   return api(config);
 });
 
@@ -90,6 +90,25 @@ export const recruiterAPI = {
 };
 
 export const interviewAPI = {
+  getInterviewRecruiterView: async (id: string) => {
+    const token = localStorage.getItem("token");
+    const interviewResponse = await api.get(
+      `/interview/recruiter-view?id=${id}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      }
+    );
+
+    if (interviewResponse.status != 200) {
+      throw new Error(`Failed to fetch interview: ${interviewResponse.status}`);
+    }
+    return interviewResponse.data;
+  },
   getInterviews: async (params?: {
     limit?: number;
     start?: number;
@@ -118,22 +137,26 @@ export const interviewAPI = {
   },
   createInterview: async (data: InterviewData, jobId: number) => {
     const token = localStorage.getItem("token");
-    const res = await api.post("/interview", {
-      first_name: data.firstName,
-      last_name: data.lastName,
-      email: data.email,
-      phone: data.phone,
-      work_experience: data.workExperience,
-      education: data.education,
-      skills: data.skills,
-      location: data.location,
-      linkedin_url: data.linkedinUrl,
-      portfolio_url: data.portfolioUrl,
-      resume_text: data.resumeText,
-      job_id: jobId,
-    }, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await api.post(
+      "/interview",
+      {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        work_experience: data.workExperience,
+        education: data.education,
+        skills: data.skills,
+        location: data.location,
+        linkedin_url: data.linkedinUrl,
+        portfolio_url: data.portfolioUrl,
+        resume_text: data.resumeText,
+        job_id: jobId,
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     return res;
   },
   deleteInterview: async (id: number) => {
@@ -376,16 +399,20 @@ export const jobAPI = {
     minExperience: string,
     maxExperience: string
   ) => {
-    const res = await api.post("/job/generate-description", {
-      title: jobTitle,
-      department: department,
-      location: location,
-      key_qualification: keyQualification,
-      min_experience: minExperience,
-      max_experience: maxExperience
-    }, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-    });
+    const res = await api.post(
+      "/job/generate-description",
+      {
+        title: jobTitle,
+        department: department,
+        location: location,
+        key_qualification: keyQualification,
+        min_experience: minExperience,
+        max_experience: maxExperience,
+      },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
     return res;
   },
   generateRequirements: async (
@@ -397,17 +424,21 @@ export const jobAPI = {
     maxExperience: string,
     keywords: string
   ) => {
-    const res = await api.post("/job/generate-requirements", {
-      title: jobTitle,
-      department: department,
-      location: location,
-      key_qualification: keyQualification,
-      min_experience: minExperience,
-      max_experience: maxExperience,
-      keywords: keywords,
-    }, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-    });
+    const res = await api.post(
+      "/job/generate-requirements",
+      {
+        title: jobTitle,
+        department: department,
+        location: location,
+        key_qualification: keyQualification,
+        min_experience: minExperience,
+        max_experience: maxExperience,
+        keywords: keywords,
+      },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
     return res;
   },
   getMcqQuestions: async (jobId: string) => {
