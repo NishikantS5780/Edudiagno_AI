@@ -144,7 +144,7 @@ async def get_interview_recruiter_view(
 
     result = db.execute(stmt)
     interview = dict(result.mappings().one())
-    if os.path.exists(f"/uploads/interview_video/{int(id)}/video.m3u8"):
+    if os.path.exists(f"uploads/interview_video/{int(id)}/video.m3u8"):
         interview["video_url"] = (
             f"{config.settings.URL}/api/uploads/interview_video/{int(id)}/video.m3u8"
         )
