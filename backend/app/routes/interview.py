@@ -4,6 +4,7 @@ import os
 import random
 import shutil
 import subprocess
+import time
 from fastapi import (
     APIRouter,
     Depends,
@@ -15,7 +16,6 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse
-import ffmpeg
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, delete, select, update
 
@@ -625,7 +625,20 @@ async def record_interview(
 
     with open(file_path, "ab") as buffer:
         buffer.write(data)
-    return {}
+    return
+
+
+@router.post("/screenshot")
+async def record_interview(request: Request, interview_id=Depends(authorize_candidate)):
+    data = await request.body()
+    os.makedirs(os.path.join("uploads", "screenshot", str(interview_id)), exist_ok=True)
+    file_path = os.path.join(
+        "uploads", "screenshot", str(interview_id), str(time.time()) + ".png"
+    )
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(data)
+    return
 
 
 @router.delete("", status_code=204)

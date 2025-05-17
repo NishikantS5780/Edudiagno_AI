@@ -51,7 +51,7 @@ async def login_recruiter(
     db: Session = Depends(database.get_db),
 ):
     stmt = select(Recruiter).where(Recruiter.email == login_data.email)
-    recruiter = db.execute(stmt).scalars().all()[0]
+    recruiter = db.execute(stmt).scalars().one()
 
     password_match = security.verify_password(
         login_data.password, recruiter.password_hash
