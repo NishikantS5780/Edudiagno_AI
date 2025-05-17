@@ -37,6 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import html2canvas from 'html2canvas';
 
 interface InterviewFeedback {
   feedback: string;
@@ -203,6 +204,9 @@ export default function VideoInterview() {
   const streamRef = useRef<MediaStream | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
   const recordingStartTimeRef = useRef<number>(0);
+
+  // Add new state for screenshot interval
+  const screenshotIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (currentQuestion.length) {
@@ -579,6 +583,7 @@ export default function VideoInterview() {
 
   const stopCamera = () => {
     if (streamRef.current) {
+      console.log('[Screenshot] Stopping video stream');
       streamRef.current.getTracks().forEach((track) => {
         track.stop();
       });
@@ -586,6 +591,7 @@ export default function VideoInterview() {
     }
     
     if (audioStreamRef.current) {
+      console.log('[Screenshot] Stopping audio stream');
       audioStreamRef.current.getTracks().forEach(track => {
         track.stop();
       });
@@ -595,7 +601,25 @@ export default function VideoInterview() {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+
+    // Clear screenshot interval
+    if (screenshotIntervalRef.current) {
+      console.log('[Screenshot] Clearing screenshot interval');
+      clearInterval(screenshotIntervalRef.current);
+      screenshotIntervalRef.current = null;
+    }
   };
+
+  // Add logging to cleanup effect
+  useEffect(() => {
+    return () => {
+      console.log('[Screenshot] Component unmounting, cleaning up...');
+      stopCamera();
+      if (screenshotIntervalRef.current) {
+        clearInterval(screenshotIntervalRef.current);
+      }
+    };
+  }, []);
 
   const analyzeInterview = async () => {
     try {
@@ -760,6 +784,54 @@ export default function VideoInterview() {
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
   };
 
+  // Add screenshot capture function
+  const captureAndSendScreenshot = async () => {
+    try {
+      if (!videoRef.current) {
+        console.warn('[Screenshot] Video element not found');
+        return;
+      }
+      
+      console.log('[Screenshot] Starting capture process...');
+      const startTime = performance.now();
+      
+      const canvas = await html2canvas(videoRef.current);
+      console.log('[Screenshot] Canvas created successfully');
+      
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/png');
+      });
+      
+      if (!blob) {
+        console.error('[Screenshot] Failed to create blob from canvas');
+        return;
+      }
+      
+      console.log(`[Screenshot] Blob created successfully (${(blob.size / 1024).toFixed(2)} KB)`);
+
+      console.log('[Screenshot] Sending to backend...');
+      const response = await fetch("http://localhost:8000/api/interview/screenshot", {
+        method: "POST",
+        body: blob,
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem('i_token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const endTime = performance.now();
+      console.log(`[Screenshot] Successfully saved (${((endTime - startTime) / 1000).toFixed(2)}s)`, result);
+    } catch (err) {
+      console.error("[Screenshot] Error during capture/upload:", err);
+      toast.error("Failed to capture screenshot");
+    }
+  };
+
+  // Modify initializeDevices to add logging for screenshot interval
   const initializeDevices = async () => {
     try {
       // Stop any existing stream first
@@ -921,21 +993,23 @@ export default function VideoInterview() {
       fullInterviewRecorder.start(1000);
       setIsFullInterviewRecording(true);
 
+      // Start screenshot capture after devices are initialized
+      if (screenshotIntervalRef.current) {
+        console.log('[Screenshot] Clearing existing interval');
+        clearInterval(screenshotIntervalRef.current);
+      }
+      console.log('[Screenshot] Starting screenshot interval (30s)');
+      screenshotIntervalRef.current = setInterval(captureAndSendScreenshot, 30000);
+
       setIsDevicesInitialized(true);
       toast.success("Camera and microphone initialized successfully");
     } catch (error) {
+      console.error("[Screenshot] Failed to initialize devices:", error);
       toast.error(
         "Failed to initialize camera and microphone. Please check your permissions."
       );
     }
   };
-
-  // Add cleanup effect
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
 
   const handleDownloadTranscript = () => {
     if (conversation.length === 0) return;

@@ -135,13 +135,13 @@ const MCQTest = () => {
           return prevTimers.map(timer => {
             if (timer.isActive && !timer.isExpired && timer.timeLeft > 0) {
               const newTimeLeft = timer.timeLeft - 1;
-              
+          
               // Show warning when 10 seconds are left
               if (newTimeLeft === 10 && !warningShown) {
                 toast.warning("10 seconds remaining for this question!");
-                setWarningShown(true);
-              }
-              
+            setWarningShown(true);
+          }
+          
               // If time runs out
               if (newTimeLeft === 0) {
                 toast.error("Time's up for this question!");
@@ -367,24 +367,24 @@ const MCQTest = () => {
 
     if (question.answerType === 'single' || question.answerType === 'true_false') {
       return (
-        <RadioGroup
-          value={answers[currentSection][questionIndex]?.toString()}
-          onValueChange={(value) => handleAnswerSelect(questionIndex, parseInt(value))}
-          name={`question-${currentSection}-${question.id}`}
+          <RadioGroup
+            value={answers[currentSection][questionIndex]?.toString()}
+            onValueChange={(value) => handleAnswerSelect(questionIndex, parseInt(value))}
+            name={`question-${currentSection}-${question.id}`}
           className="space-y-2"
           disabled={isExpired}
-        >
-          {question.options.map((option) => (
-            <div key={option.id} className="flex items-center space-x-2">
-              <RadioGroupItem 
-                value={option.id.toString()} 
-                id={`option-${currentSection}-${question.id}-${option.id}`}
+          >
+            {question.options.map((option) => (
+              <div key={option.id} className="flex items-center space-x-2">
+                <RadioGroupItem 
+                  value={option.id.toString()} 
+                  id={`option-${currentSection}-${question.id}-${option.id}`}
                 disabled={isExpired}
-              />
+                />
               <Label htmlFor={`option-${currentSection}-${question.id}-${option.id}`}>{option.label}</Label>
-            </div>
-          ))}
-        </RadioGroup>
+              </div>
+            ))}
+          </RadioGroup>
       );
     }
 
@@ -557,7 +557,7 @@ const MCQTest = () => {
                                     ? "bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 border-2 border-emerald-400"
                                     : isExpired
                                       ? "bg-red-100 hover:bg-red-200 dark:bg-red-900/20 text-red-900 dark:text-red-100 border-2 border-red-400"
-                                      : "hover:bg-accent"
+                                    : "hover:bg-accent"
                               }`}
                               onClick={() => {
                                 setCurrentSection('aptitude');
@@ -600,7 +600,7 @@ const MCQTest = () => {
                                       ? "bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 border-2 border-emerald-400"
                                       : isExpired
                                         ? "bg-red-100 hover:bg-red-200 dark:bg-red-900/20 text-red-900 dark:text-red-100 border-2 border-red-400"
-                                        : "hover:bg-accent"
+                                      : "hover:bg-accent"
                                 }`}
                                 onClick={() => {
                                   setCurrentSection('technical');
@@ -653,29 +653,29 @@ const MCQTest = () => {
 
                     return (
                       <div className="p-6 rounded-lg border border-border">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-4">
                             <h3 className="text-lg font-semibold">Question {currentQuestionIndex + 1}</h3>
-                            <Badge variant="outline">
-                              {question.answerType === 'true_false' ? 'True/False' : 
-                               question.answerType === 'multiple' ? 'Multiple Choice' : 
-                               'Single Choice'}
-                            </Badge>
-                          </div>
-                          <Button
-                            variant={markedForLater[currentSection][currentQuestionIndex] ? "secondary" : "outline"}
-                            size="sm"
-                            onClick={() => handleMarkForLater(currentQuestionIndex)}
-                            className={`${
-                              markedForLater[currentSection][currentQuestionIndex] 
-                                ? "bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/20 text-yellow-900 dark:text-yellow-100" 
-                                : "hover:bg-yellow-50 dark:hover:bg-yellow-900/10"
-                            }`}
-                          >
-                            {markedForLater[currentSection][currentQuestionIndex] ? "Marked for Later" : "Mark for Later"}
-                          </Button>
+                          <Badge variant="outline">
+                            {question.answerType === 'true_false' ? 'True/False' : 
+                             question.answerType === 'multiple' ? 'Multiple Choice' : 
+                             'Single Choice'}
+                          </Badge>
                         </div>
-                        <p className="text-base mb-4">{question.description}</p>
+                        <Button
+                            variant={markedForLater[currentSection][currentQuestionIndex] ? "secondary" : "outline"}
+                          size="sm"
+                            onClick={() => handleMarkForLater(currentQuestionIndex)}
+                          className={`${
+                              markedForLater[currentSection][currentQuestionIndex] 
+                              ? "bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/20 text-yellow-900 dark:text-yellow-100" 
+                              : "hover:bg-yellow-50 dark:hover:bg-yellow-900/10"
+                          }`}
+                        >
+                            {markedForLater[currentSection][currentQuestionIndex] ? "Marked for Later" : "Mark for Later"}
+                        </Button>
+                      </div>
+                      <p className="text-base mb-4">{question.description}</p>
                         {renderQuestionOptions(question, currentQuestionIndex)}
                         {isExpired && (
                           <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100 rounded-lg">
@@ -685,7 +685,7 @@ const MCQTest = () => {
                             </p>
                           </div>
                         )}
-                      </div>
+                    </div>
                     );
                   })()}
                 </CardContent>
@@ -698,21 +698,21 @@ const MCQTest = () => {
                     Previous
                   </Button>
                   <div className="flex gap-2">
-                    {currentSection === 'aptitude' && questions.technical.length > 0 ? (
-                      <Button onClick={() => setCurrentSection('technical')}>
-                        Next Section
-                      </Button>
-                    ) : (
-                      <Button 
-                        onClick={handleSubmit}
-                        disabled={
-                          answers.aptitude.some(a => a === -1 || (Array.isArray(a) && a.length === 0)) ||
-                          answers.technical.some(a => a === -1 || (Array.isArray(a) && a.length === 0))
-                        }
-                      >
-                        Submit Test
-                      </Button>
-                    )}
+                  {currentSection === 'aptitude' && questions.technical.length > 0 ? (
+                    <Button onClick={() => setCurrentSection('technical')}>
+                      Next Section
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={handleSubmit}
+                      disabled={
+                        answers.aptitude.some(a => a === -1 || (Array.isArray(a) && a.length === 0)) ||
+                        answers.technical.some(a => a === -1 || (Array.isArray(a) && a.length === 0))
+                      }
+                    >
+                      Submit Test
+                    </Button>
+                  )}
                   </div>
                   <Button
                     variant="outline"
