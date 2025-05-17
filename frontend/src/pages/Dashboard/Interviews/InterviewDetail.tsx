@@ -290,8 +290,7 @@ const InterviewDetail = () => {
 
         const quizResponses = await responsesRes.json();
         console.log('Raw Quiz Responses:', JSON.stringify(quizResponses, null, 2));
-        const extractedResponses = quizResponses.map((item: any) => item.QuizResponse);
-        setQuizResponses(extractedResponses);
+        setQuizResponses(quizResponses);
 
       } catch (error) {
         console.error('Error fetching quiz data:', error);
