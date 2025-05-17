@@ -7,6 +7,7 @@ import subprocess
 import time
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     HTTPException,
@@ -595,7 +596,10 @@ async def generate_feedback(
 
 @router.post("/record")
 async def record_interview(
-    request: Request, finished: str = "false", interview_id=Depends(authorize_candidate)
+    request: Request,
+    background_tasks: BackgroundTasks,
+    finished: str = "false",
+    interview_id=Depends(authorize_candidate),
 ):
     if finished == "true":
         ffmpeg_command = [
@@ -610,11 +614,7 @@ async def record_interview(
             "hls",
             os.path.join("uploads", "interview_video", str(interview_id), "video.m3u8"),
         ]
-        process = subprocess.Popen(
-            ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        output, err = process.communicate()
-        print(output.decode(), err.decode())
+        background_tasks.add_task(subprocess.Popen(ffmpeg_command))
         return
     data = await request.body()
     os.makedirs(
