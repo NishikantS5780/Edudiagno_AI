@@ -1,11 +1,11 @@
 export interface InterviewData {
-  id: number;
+  id: string;
   status: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
-  workExperience: number;
+  workExperience: string;
   education: string;
   skills: string;
   location: string;
@@ -16,14 +16,14 @@ export interface InterviewData {
   resumeMatchScore: number;
   resumeMatchFeedback: string;
   overallScore: number;
+  technicalSkillsScore: number;
+  communicationSkillsScore: number;
+  problemSolvingSkillsScore: number;
+  culturalFitScore: number;
   feedback: string;
-  createdAt: string;
-  jobId: number;
-  technical_skills_score: number;
-  communication_skills_score: number;
-  problem_solving_skills_score: number;
-  cultural_fit_score: number;
-  videoUrl: string;
+  jobId: string;
+  videoUrl?: string;
+  screenshot_urls?: string[];
 }
 
 export interface GetInterviewsParams {
