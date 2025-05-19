@@ -33,6 +33,11 @@ import ExcelImport from '@/components/jobs/ExcelImport';
 import { useUser } from "@/context/UserContext";
 import { RecruiterData } from "@/types/recruiter";
 import { recruiterAPI } from "@/lib/api";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 
 const jobFormSchema = z.object({
   title: z
@@ -211,6 +216,9 @@ const NewJob = () => {
     };
   });
   const { addNotification } = useNotifications();
+  const [cities, setCities] = useState<Array<{ id: number; name: string }>>([]);
+  const [citySearchTerm, setCitySearchTerm] = useState("");
+  const [cityPopupOpen, setCityPopupOpen] = useState(false);
 
   // Fetch recruiter data when component mounts
   useEffect(() => {
@@ -244,6 +252,24 @@ const NewJob = () => {
       localStorage.removeItem('draftJobData');
     };
   }, []);
+
+  // Fetch cities when search term changes
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const response = await api.get(`/city?keyword=${encodeURIComponent(citySearchTerm)}`);
+        setCities(response.data || []);
+      } catch (error) {
+        console.error('Error fetching cities:', error);
+        toast.error('Failed to fetch cities');
+        setCities([]);
+      }
+    };
+
+    if (citySearchTerm) {
+      fetchCities();
+    }
+  }, [citySearchTerm]);
 
   interface MCQQuestion {
     title: string;
@@ -1005,37 +1031,53 @@ const NewJob = () => {
                     <Label>
                       City <span className="text-destructive">*</span>
                     </Label>
-                    <Select
-                      onValueChange={(val) => handleChange("city", val)}
-                      defaultValue={jobData.city}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select city" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mumbai">Mumbai</SelectItem>
-                        <SelectItem value="delhi">Delhi</SelectItem>
-                        <SelectItem value="bengaluru">Bengaluru</SelectItem>
-                        <SelectItem value="hyderabad">Hyderabad</SelectItem>
-                        <SelectItem value="chennai">Chennai</SelectItem>
-                        <SelectItem value="kolkata">Kolkata</SelectItem>
-                        <SelectItem value="pune">Pune</SelectItem>
-                        <SelectItem value="ahmedabad">Ahmedabad</SelectItem>
-                        <SelectItem value="jaipur">Jaipur</SelectItem>
-                        <SelectItem value="lucknow">Lucknow</SelectItem>
-                        <SelectItem value="kochi">Kochi</SelectItem>
-                        <SelectItem value="indore">Indore</SelectItem>
-                        <SelectItem value="bhopal">Bhopal</SelectItem>
-                        <SelectItem value="chandigarh">Chandigarh</SelectItem>
-                        <SelectItem value="nagpur">Nagpur</SelectItem>
-                        <SelectItem value="visakhapatnam">Visakhapatnam</SelectItem>
-                        <SelectItem value="patna">Patna</SelectItem>
-                        <SelectItem value="bhubaneswar">Bhubaneswar</SelectItem>
-                        <SelectItem value="coimbatore">Coimbatore</SelectItem>
-                        <SelectItem value="guwahati">Guwahati</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Popover open={cityPopupOpen} onOpenChange={setCityPopupOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "w-full justify-between",
+                            !jobData.city && "text-muted-foreground"
+                          )}
+                        >
+                          {jobData.city || "Select a city"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search city..."
+                            value={citySearchTerm}
+                            onValueChange={setCitySearchTerm}
+                          />
+                          <CommandList>
+                            <CommandEmpty>No city found.</CommandEmpty>
+                            <CommandGroup className="max-h-[300px] overflow-auto">
+                              {cities.map((city) => (
+                                <CommandItem
+                                  key={city.id}
+                                  value={city.name}
+                                  onSelect={() => {
+                                    handleChange("city", city.name);
+                                    setCityPopupOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      jobData.city === city.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {city.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     {errors.city && (
                       <p className="text-sm text-destructive">{errors.city}</p>
                     )}
