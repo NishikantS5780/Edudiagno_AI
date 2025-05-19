@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+import os
+from typing import Annotated
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
+from os import path
 
-from app import database, schemas
+from app import config, database, schemas
 from app.dependencies.authorization import (
     authorize_candidate,
     authorize_recruiter,
@@ -14,20 +17,43 @@ router = APIRouter()
 
 @router.post("")
 async def create_quiz_question(
-    quiz_data: schemas.CreateQuizQuestion,
+    description: str = Form(...),
+    type: str = Form(...),
+    category: str = Form(...),
+    job_id: int = Form(...),
+    time_seconds: int = Form(),
+    image: UploadFile = File(...),
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
     quiz_question = QuizQuestion(
-        description=quiz_data.description,
-        type=quiz_data.type,
-        category=quiz_data.category,
-        job_id=quiz_data.job_id,
-        time_seconds=quiz_data.time_seconds,
+        description=description,
+        type=type,
+        category=category,
+        job_id=job_id,
+        time_seconds=time_seconds,
     )
     db.add(quiz_question)
     db.commit()
     db.refresh(quiz_question)
+
+    if not path.exists(path.join("uploads", "image")):
+        os.makedirs(path.join("uploads", "image"))
+
+    if image:
+        with open(
+            path.join("uploads", "image", f"quiz_{quiz_question.id}.png"), "wb"
+        ) as f:
+            for chunk in image.file:
+                f.write(chunk)
+
+    quiz_question.image_url = (
+        f"{config.settings.URL}/uploads/image/quiz_{quiz_question.id}.png"
+    )
+
+    db.commit()
+    db.refresh(quiz_question)
+
     return quiz_question
 
 
@@ -46,6 +72,7 @@ async def get_quiz_questions_for_interview(
                 QuizQuestion.type,
                 QuizQuestion.category,
                 QuizQuestion.time_seconds,
+                QuizQuestion.image_url,
             )
             .join(Job, QuizQuestion.job_id == Job.id)
             .join(Interview, Interview.job_id == Job.id)
@@ -57,9 +84,9 @@ async def get_quiz_questions_for_interview(
             QuizQuestion.description,
             QuizQuestion.type,
             QuizQuestion.category,
+            QuizQuestion.image_url,
         ).where(QuizQuestion.job_id == int(job_id))
     else:
-        # stmt = select(QuizQuestion.id, QuizQuestion.description, QuizQuestion.type)
         response.status_code = 400
         return {"msg": "interview id is required"}
 
@@ -79,17 +106,34 @@ async def get_quiz_questions_for_interview(
 
 @router.put("")
 async def update_quiz_question(
-    quiz_data: schemas.UpdateQuizQuestion,
+    description: str = Form(),
+    type: str = Form(),
+    category: str = Form(),
+    time_seconds: int = Form(),
+    id: int = Form(),
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    quiz_data = quiz_data.model_dump(exclude_unset=True)
-    question_id = quiz_data.pop("id", None)
+    quiz_data = {}
+    if description:
+        quiz_data["description"] = description
+    if type:
+        quiz_data["type"] = type
+    if category:
+        quiz_data["category"] = category
+    if time_seconds:
+        quiz_data["time_seconds"] = time_seconds
+
     stmt = (
         update(QuizQuestion)
         .values(quiz_data)
-        .where(QuizQuestion.id == question_id)
-        .returning(QuizQuestion.description, QuizQuestion.type, QuizQuestion.category)
+        .where(QuizQuestion.id == id)
+        .returning(
+            QuizQuestion.description,
+            QuizQuestion.type,
+            QuizQuestion.category,
+            QuizQuestion.image_url,
+        )
     )
     result = db.execute(stmt)
     db.commit()

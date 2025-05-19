@@ -96,6 +96,7 @@ class QuizQuestion(Base):
     category = Column(String)
     time_seconds = Column(Integer)
     created_at = Column(DateTime, default=func.now())
+    image_url = Column(String)
     job_id = Column(Integer, ForeignKey("jobs.id", ondelete="CASCADE"))
 
     job = relationship("Job", back_populates="quiz_questions")

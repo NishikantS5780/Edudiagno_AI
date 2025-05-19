@@ -230,22 +230,6 @@ class UpdateDSAResponse(BaseModel):
     id: int
 
 
-class CreateQuizQuestion(BaseModel):
-    description: str
-    type: str
-    category: str
-    job_id: int
-    time_seconds: Optional[int] = None
-
-
-class UpdateQuizQuestion(BaseModel):
-    description: Optional[str] = None
-    type: Optional[str] = None
-    category: Optional[str] = None
-    time_seconds: Optional[int] = None
-    id: int
-
-
 class CreateQuizOption(BaseModel):
     label: str
     correct: bool

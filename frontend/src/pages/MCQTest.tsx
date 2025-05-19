@@ -6,7 +6,18 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Timer, Brain, Code, Award, CheckCircle2, XCircle, Flag, AlertCircle, Clock, CheckCircle } from "lucide-react";
+import {
+  Timer,
+  Brain,
+  Code,
+  Award,
+  CheckCircle2,
+  XCircle,
+  Flag,
+  AlertCircle,
+  Clock,
+  CheckCircle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 // Demo questions for SDE roles
@@ -16,25 +27,15 @@ const demoQuestions = [
     id: 1,
     category: "Technical",
     question: "What is the time complexity of binary search?",
-    options: [
-      "O(1)",
-      "O(log n)",
-      "O(n)",
-      "O(n log n)"
-    ],
-    correctAnswer: 1
+    options: ["O(1)", "O(log n)", "O(n)", "O(n log n)"],
+    correctAnswer: 1,
   },
   {
     id: 2,
     category: "Technical",
     question: "Which of the following is NOT a valid HTTP method?",
-    options: [
-      "GET",
-      "POST",
-      "FETCH",
-      "DELETE"
-    ],
-    correctAnswer: 2
+    options: ["GET", "POST", "FETCH", "DELETE"],
+    correctAnswer: 2,
   },
   {
     id: 3,
@@ -44,21 +45,16 @@ const demoQuestions = [
       "To store user data",
       "To improve website performance and availability",
       "To handle database operations",
-      "To manage user authentication"
+      "To manage user authentication",
     ],
-    correctAnswer: 1
+    correctAnswer: 1,
   },
   {
     id: 4,
     category: "Technical",
     question: "Which data structure is best for implementing a queue?",
-    options: [
-      "Array",
-      "Linked List",
-      "Stack",
-      "Tree"
-    ],
-    correctAnswer: 1
+    options: ["Array", "Linked List", "Stack", "Tree"],
+    correctAnswer: 1,
   },
   {
     id: 5,
@@ -68,76 +64,56 @@ const demoQuestions = [
       "let is for numbers, const is for strings",
       "let can be reassigned, const cannot be reassigned",
       "let is for variables, const is for functions",
-      "There is no difference"
+      "There is no difference",
     ],
-    correctAnswer: 1
+    correctAnswer: 1,
   },
   // Aptitude Questions
   {
     id: 6,
     category: "Aptitude",
-    question: "If a train travels at 60 km/h for 2.5 hours, how far does it go?",
-    options: [
-      "120 km",
-      "150 km",
-      "180 km",
-      "200 km"
-    ],
-    correctAnswer: 1
+    question:
+      "If a train travels at 60 km/h for 2.5 hours, how far does it go?",
+    options: ["120 km", "150 km", "180 km", "200 km"],
+    correctAnswer: 1,
   },
   {
     id: 7,
     category: "Aptitude",
     question: "What comes next in the sequence: 2, 4, 8, 16, ...?",
-    options: [
-      "20",
-      "24",
-      "32",
-      "36"
-    ],
-    correctAnswer: 2
+    options: ["20", "24", "32", "36"],
+    correctAnswer: 2,
   },
   {
     id: 8,
     category: "Aptitude",
     question: "If 20% of a number is 40, what is the number?",
-    options: [
-      "160",
-      "180",
-      "200",
-      "220"
-    ],
-    correctAnswer: 2
+    options: ["160", "180", "200", "220"],
+    correctAnswer: 2,
   },
   {
     id: 9,
     category: "Aptitude",
-    question: "A rectangle has a perimeter of 20 units and an area of 24 square units. What are its dimensions?",
-    options: [
-      "4 × 6",
-      "5 × 5",
-      "3 × 8",
-      "2 × 10"
-    ],
-    correctAnswer: 0
+    question:
+      "A rectangle has a perimeter of 20 units and an area of 24 square units. What are its dimensions?",
+    options: ["4 × 6", "5 × 5", "3 × 8", "2 × 10"],
+    correctAnswer: 0,
   },
   {
     id: 10,
     category: "Aptitude",
-    question: "If it takes 5 machines 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?",
-    options: [
-      "1 minute",
-      "5 minutes",
-      "20 minutes",
-      "100 minutes"
-    ],
-    correctAnswer: 1
-  }
+    question:
+      "If it takes 5 machines 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?",
+    options: ["1 minute", "5 minutes", "20 minutes", "100 minutes"],
+    correctAnswer: 1,
+  },
 ];
 
 const MCQTest = () => {
   const navigate = useNavigate();
-  const [answers, setAnswers] = useState<number[]>(Array(demoQuestions.length).fill(null));
+  const [answers, setAnswers] = useState<number[]>(
+    Array(demoQuestions.length).fill(null)
+  );
   const [isTestComplete, setIsTestComplete] = useState(false);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(demoQuestions.length * 60);
@@ -148,7 +124,7 @@ const MCQTest = () => {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    
+
     if (isTestStarted && timeLeft > 0 && !isTestComplete) {
       timer = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
@@ -166,7 +142,7 @@ const MCQTest = () => {
 
   useEffect(() => {
     let countdownTimer: NodeJS.Timeout;
-    
+
     if (isCountingDown && countdown > 0) {
       countdownTimer = setInterval(() => {
         setCountdown((prev) => prev - 1);
@@ -191,9 +167,11 @@ const MCQTest = () => {
   };
 
   const handleSubmit = () => {
-    const unanswered = answers.filter(answer => answer === null).length;
+    const unanswered = answers.filter((answer) => answer === null).length;
     if (unanswered > 0) {
-      toast.warning(`You have ${unanswered} unanswered questions. Are you sure you want to submit?`);
+      toast.warning(
+        `You have ${unanswered} unanswered questions. Are you sure you want to submit?`
+      );
       return;
     }
     calculateScore();
@@ -213,7 +191,7 @@ const MCQTest = () => {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handleStartTest = () => {
@@ -228,13 +206,15 @@ const MCQTest = () => {
 
   const handleTestComplete = () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const interviewId = urlParams.get('i_id');
-    const companyName = urlParams.get('company');
-    
+    const interviewId = urlParams.get("i_id");
+    const companyName = urlParams.get("company");
+
     if (interviewId && companyName) {
-      navigate(`/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`);
+      navigate(
+        `/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`
+      );
     } else {
-      navigate('/interview/dsa-playground');
+      navigate("/interview/dsa-playground");
     }
   };
 
@@ -249,7 +229,9 @@ const MCQTest = () => {
           >
             <Card className="border-border">
               <CardHeader className="border-b border-border">
-                <CardTitle className="text-2xl text-center">Welcome to the MCQ Test</CardTitle>
+                <CardTitle className="text-2xl text-center">
+                  Welcome to the MCQ Test
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6 py-6">
                 <div className="space-y-4">
@@ -258,8 +240,9 @@ const MCQTest = () => {
                     <div>
                       <h3 className="font-medium mb-1">Time Limit</h3>
                       <p className="text-muted-foreground">
-                        You have {demoQuestions.length} minutes to complete {demoQuestions.length} questions.
-                        The timer will start when you click "Start Test".
+                        You have {demoQuestions.length} minutes to complete{" "}
+                        {demoQuestions.length} questions. The timer will start
+                        when you click "Start Test".
                       </p>
                     </div>
                   </div>
@@ -269,8 +252,9 @@ const MCQTest = () => {
                     <div>
                       <h3 className="font-medium mb-1">Test Format</h3>
                       <p className="text-muted-foreground">
-                        The test consists of {demoQuestions.length} multiple-choice questions.
-                        Each question has 4 options, and you must select one answer.
+                        The test consists of {demoQuestions.length}{" "}
+                        multiple-choice questions. Each question has 4 options,
+                        and you must select one answer.
                       </p>
                     </div>
                   </div>
@@ -280,10 +264,17 @@ const MCQTest = () => {
                     <div>
                       <h3 className="font-medium mb-1">Important Notes</h3>
                       <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                        <li>You cannot go back to previous questions once submitted</li>
-                        <li>All questions must be answered before submission</li>
+                        <li>
+                          You cannot go back to previous questions once
+                          submitted
+                        </li>
+                        <li>
+                          All questions must be answered before submission
+                        </li>
                         <li>The test will auto-submit when time runs out</li>
-                        <li>You can navigate between questions using the sidebar</li>
+                        <li>
+                          You can navigate between questions using the sidebar
+                        </li>
                         <li>Make sure you have a stable internet connection</li>
                       </ul>
                     </div>
@@ -295,17 +286,15 @@ const MCQTest = () => {
                       <h3 className="font-medium mb-1">Question Categories</h3>
                       <p className="text-muted-foreground">
                         The test includes both Technical and Aptitude questions.
-                        Technical questions focus on programming concepts, while Aptitude questions test logical reasoning.
+                        Technical questions focus on programming concepts, while
+                        Aptitude questions test logical reasoning.
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-4">
-                  <Button
-                    className="w-full"
-                    onClick={handleStartTest}
-                  >
+                  <Button className="w-full" onClick={handleStartTest}>
                     Start Test
                   </Button>
                 </div>
@@ -340,10 +329,7 @@ const MCQTest = () => {
                 >
                   Cancel
                 </Button>
-                <Button
-                  className="flex-1"
-                  onClick={handleConfirmStart}
-                >
+                <Button className="flex-1" onClick={handleConfirmStart}>
                   Start Now
                 </Button>
               </div>
@@ -379,7 +365,9 @@ const MCQTest = () => {
           >
             <Card className="border-border">
               <CardHeader className="border-b border-border">
-                <CardTitle className="text-2xl text-center">Test Results</CardTitle>
+                <CardTitle className="text-2xl text-center">
+                  Test Results
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6 py-6">
                 <div className="text-center">
@@ -388,9 +376,13 @@ const MCQTest = () => {
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.2 }}
                   >
-                    <h2 className="text-4xl font-bold mb-2">{score}/{demoQuestions.length}</h2>
+                    <h2 className="text-4xl font-bold mb-2">
+                      {score}/{demoQuestions.length}
+                    </h2>
                     <p className="text-muted-foreground">
-                      {score === demoQuestions.length ? "Perfect score! 🎉" : "Keep practicing! 💪"}
+                      {score === demoQuestions.length
+                        ? "Perfect score! 🎉"
+                        : "Keep practicing! 💪"}
                     </p>
                   </motion.div>
                 </div>
@@ -409,7 +401,9 @@ const MCQTest = () => {
                         ) : (
                           <XCircle className="text-red-500" />
                         )}
-                        <span className="font-medium">Question {index + 1}</span>
+                        <span className="font-medium">
+                          Question {index + 1}
+                        </span>
                         <span className="text-sm text-muted-foreground ml-2">
                           ({question.category})
                         </span>
@@ -422,7 +416,8 @@ const MCQTest = () => {
                             className={`p-2 rounded transition-colors ${
                               optIndex === question.correctAnswer
                                 ? "bg-green-100 dark:bg-green-900/20"
-                                : optIndex === answers[index] && optIndex !== question.correctAnswer
+                                : optIndex === answers[index] &&
+                                  optIndex !== question.correctAnswer
                                 ? "bg-red-100 dark:bg-red-900/20"
                                 : "hover:bg-accent"
                             }`}
@@ -434,10 +429,7 @@ const MCQTest = () => {
                     </motion.div>
                   ))}
                 </div>
-                <Button
-                  className="w-full"
-                  onClick={handleTestComplete}
-                >
+                <Button className="w-full" onClick={handleTestComplete}>
                   Continue to DSA Playground
                 </Button>
               </CardContent>
@@ -463,7 +455,10 @@ const MCQTest = () => {
                     <span className="font-medium">{formatTime(timeLeft)}</span>
                   </div>
                 </div>
-                <Progress value={(timeLeft / (demoQuestions.length * 60)) * 100} className="mt-2" />
+                <Progress
+                  value={(timeLeft / (demoQuestions.length * 60)) * 100}
+                  className="mt-2"
+                />
               </CardHeader>
               <CardContent className="p-4">
                 <div className="grid grid-cols-4 gap-2">
@@ -473,7 +468,9 @@ const MCQTest = () => {
                       variant={answers[index] !== null ? "default" : "outline"}
                       className="h-8 w-8 p-0"
                       onClick={() => {
-                        const element = document.getElementById(`question-${index}`);
+                        const element = document.getElementById(
+                          `question-${index}`
+                        );
                         element?.scrollIntoView({ behavior: "smooth" });
                       }}
                     >
@@ -522,7 +519,9 @@ const MCQTest = () => {
                       className="space-y-4"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">Question {index + 1}</span>
+                        <span className="font-medium">
+                          Question {index + 1}
+                        </span>
                         <span className="text-sm text-muted-foreground">
                           ({question.category})
                         </span>
@@ -532,7 +531,9 @@ const MCQTest = () => {
                       </h2>
                       <RadioGroup
                         value={answers[index]?.toString()}
-                        onValueChange={(value) => handleAnswerSelect(index, parseInt(value))}
+                        onValueChange={(value) =>
+                          handleAnswerSelect(index, parseInt(value))
+                        }
                         className="space-y-3"
                       >
                         {question.options.map((option, optIndex) => (
@@ -543,8 +544,16 @@ const MCQTest = () => {
                             transition={{ delay: optIndex * 0.1 }}
                             className="flex items-center space-x-2 p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer"
                           >
-                            <RadioGroupItem value={optIndex.toString()} id={`option-${index}-${optIndex}`} />
-                            <Label htmlFor={`option-${index}-${optIndex}`} className="cursor-pointer">{option}</Label>
+                            <RadioGroupItem
+                              value={optIndex.toString()}
+                              id={`option-${index}-${optIndex}`}
+                            />
+                            <Label
+                              htmlFor={`option-${index}-${optIndex}`}
+                              className="cursor-pointer"
+                            >
+                              {option}
+                            </Label>
                           </motion.div>
                         ))}
                       </RadioGroup>
@@ -555,7 +564,7 @@ const MCQTest = () => {
                   <Button
                     className="w-full"
                     onClick={handleSubmit}
-                    disabled={answers.some(answer => answer === null)}
+                    disabled={answers.some((answer) => answer === null)}
                   >
                     Submit Test
                   </Button>
@@ -569,4 +578,4 @@ const MCQTest = () => {
   );
 };
 
-export default MCQTest; 
+export default MCQTest;
