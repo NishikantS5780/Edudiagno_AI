@@ -310,8 +310,9 @@ const NewJob = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+
     try {
-      // Validate all fields
+      // Validate all required fields
       const validationResult = jobFormSchema.safeParse(jobData);
       if (!validationResult.success) {
         const newErrors: Record<string, string> = {};
@@ -319,36 +320,25 @@ const NewJob = () => {
           newErrors[error.path[0]] = error.message;
         });
         setErrors(newErrors);
-        
-        // Show error toast with all missing fields
-        const missingFields = Object.keys(newErrors).map(field => {
-          const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-          return `${fieldName}: ${newErrors[field]}`;
-        });
-        
         toast.error("Please fill in all required fields");
-        
-        // Scroll to the first error
-        const firstErrorField = Object.keys(newErrors)[0];
-        const element = document.getElementById(firstErrorField);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Switch to the tab containing the error
-          if (firstErrorField.includes('dsa_questions')) {
-            setActiveTab('dsa-questions');
-          } else if (firstErrorField.includes('mcq_questions')) {
-            setActiveTab('mcq-questions');
-          } else {
-            setActiveTab('job-details');
-          }
-        }
-        
         setIsSubmitting(false);
         return;
       }
 
-      // Create job with all data
-      const response = await jobAPI.createJob(jobData);
+      let response;
+      if (jobData.id) {
+        // If job already exists (was saved as draft), update it
+        response = await jobAPI.updateJob(jobData.id.toString(), {
+          ...jobData,
+          status: "active"
+        });
+      } else {
+        // If no job exists yet, create a new one
+        response = await jobAPI.createJob({
+          ...jobData,
+          status: "active"
+        });
+      }
 
       if (response.status >= 200 && response.status < 300) {
         // If MCQ questions are enabled, save them
