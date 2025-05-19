@@ -307,9 +307,14 @@ const MCQTest = () => {
     }
 
     try {
+      // Only include answered questions in the submission
       const allResponses = [
         ...questions.aptitude.map((question, index) => {
           const answer = answers.aptitude[index];
+          // Skip unanswered questions
+          if (Array.isArray(answer) && answer.length === 0) return null;
+          if (!Array.isArray(answer) && answer === -1) return null;
+          
           if (Array.isArray(answer)) {
             return answer.map((optionId) => ({
               question_id: question.id,
@@ -325,6 +330,10 @@ const MCQTest = () => {
         }),
         ...questions.technical.map((question, index) => {
           const answer = answers.technical[index];
+          // Skip unanswered questions
+          if (Array.isArray(answer) && answer.length === 0) return null;
+          if (!Array.isArray(answer) && answer === -1) return null;
+          
           if (Array.isArray(answer)) {
             return answer.map((optionId) => ({
               question_id: question.id,
@@ -338,7 +347,9 @@ const MCQTest = () => {
             },
           ];
         }),
-      ].flat();
+      ]
+        .flat()
+        .filter(response => response !== null); // Remove null entries
 
       await quizAPI.submitQuizResponses(allResponses);
       handleTestComplete();
