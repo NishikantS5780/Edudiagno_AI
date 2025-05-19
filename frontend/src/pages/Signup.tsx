@@ -206,7 +206,15 @@ const SignUp = () => {
       toast.success("Account created successfully");
       navigate("/login");
     } catch (error: any) {
-      alert(error);
+      if (error.response?.status === 400) {
+        if (error.response?.data?.detail?.includes('duplicate key value violates unique constraint "ix_recruiters_email"')) {
+          toast.error("This email is already registered. Please use a different email or try logging in.");
+        } else {
+          toast.error(error.response?.data?.detail || "Invalid input. Please check your details and try again.");
+        }
+      } else {
+        toast.error("Failed to create account. Please try again later.");
+      }
     } finally {
       setIsLoading(false);
     }
