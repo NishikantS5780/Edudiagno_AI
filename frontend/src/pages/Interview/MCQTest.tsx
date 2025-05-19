@@ -67,7 +67,13 @@ const MCQTest = () => {
   }>({ technical: [], aptitude: [] });
   const [currentSection, setCurrentSection] = useState<
     "technical" | "aptitude"
-  >("aptitude");
+  >(() => {
+    // If only technical questions exist, start with technical section
+    if (questions.technical.length > 0 && questions.aptitude.length === 0) {
+      return "technical";
+    }
+    return "aptitude";
+  });
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<{
     technical: (number | number[])[];
@@ -618,36 +624,40 @@ const MCQTest = () => {
           {/* Section Navigation */}
           <div className="flex justify-between items-center p-4 bg-card rounded-lg border">
             <div className="flex gap-4">
-              <Button
-                variant={currentSection === "aptitude" ? "default" : "outline"}
-                onClick={() => setCurrentSection("aptitude")}
-              >
-                Aptitude Section
-                <Badge variant="secondary" className="ml-2">
-                  {
-                    answers.aptitude.filter(
-                      (a) =>
-                        a !== -1 && (Array.isArray(a) ? a.length > 0 : true)
-                    ).length
-                  }
-                  /{questions.aptitude.length}
-                </Badge>
-              </Button>
-              <Button
-                variant={currentSection === "technical" ? "default" : "outline"}
-                onClick={() => setCurrentSection("technical")}
-              >
-                Technical Section
-                <Badge variant="secondary" className="ml-2">
-                  {
-                    answers.technical.filter(
-                      (a) =>
-                        a !== -1 && (Array.isArray(a) ? a.length > 0 : true)
-                    ).length
-                  }
-                  /{questions.technical.length}
-                </Badge>
-              </Button>
+              {questions.aptitude.length > 0 && (
+                <Button
+                  variant={currentSection === "aptitude" ? "default" : "outline"}
+                  onClick={() => setCurrentSection("aptitude")}
+                >
+                  Aptitude Section
+                  <Badge variant="secondary" className="ml-2">
+                    {
+                      answers.aptitude.filter(
+                        (a) =>
+                          a !== -1 && (Array.isArray(a) ? a.length > 0 : true)
+                      ).length
+                    }
+                    /{questions.aptitude.length}
+                  </Badge>
+                </Button>
+              )}
+              {questions.technical.length > 0 && (
+                <Button
+                  variant={currentSection === "technical" ? "default" : "outline"}
+                  onClick={() => setCurrentSection("technical")}
+                >
+                  Technical Section
+                  <Badge variant="secondary" className="ml-2">
+                    {
+                      answers.technical.filter(
+                        (a) =>
+                          a !== -1 && (Array.isArray(a) ? a.length > 0 : true)
+                      ).length
+                    }
+                    /{questions.technical.length}
+                  </Badge>
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Timer className="h-5 w-5 text-destructive" />
@@ -911,14 +921,16 @@ const MCQTest = () => {
                       <Button
                         onClick={handleSubmit}
                         disabled={
-                          answers.aptitude.some(
-                            (a) =>
-                              a === -1 || (Array.isArray(a) && a.length === 0)
-                          ) ||
-                          answers.technical.some(
-                            (a) =>
-                              a === -1 || (Array.isArray(a) && a.length === 0)
-                          )
+                          (questions.aptitude.length > 0 &&
+                            answers.aptitude.some(
+                              (a) =>
+                                a === -1 || (Array.isArray(a) && a.length === 0)
+                            )) ||
+                          (questions.technical.length > 0 &&
+                            answers.technical.some(
+                              (a) =>
+                                a === -1 || (Array.isArray(a) && a.length === 0)
+                            ))
                         }
                       >
                         Submit Test
