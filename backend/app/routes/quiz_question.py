@@ -22,7 +22,7 @@ async def create_quiz_question(
     category: str = Form(...),
     job_id: int = Form(...),
     time_seconds: int = Form(),
-    image: UploadFile = File(...),
+    image: UploadFile = File(),
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):

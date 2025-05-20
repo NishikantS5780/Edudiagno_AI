@@ -36,6 +36,7 @@ async def create_job(
         requirements=job_data.requirements,
         benefits=job_data.benefits,
         status=job_data.status,
+        quiz_time_minutes=job_data.quiz_time_minutes,
         company_id=recruiter_id,
     )
     db.add(job)
