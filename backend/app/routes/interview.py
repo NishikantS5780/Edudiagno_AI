@@ -146,15 +146,14 @@ async def get_interview_recruiter_view(
     interview = dict(result.mappings().one())
     if os.path.exists(f"uploads/interview_video/{int(id)}/video.m3u8"):
         interview["video_url"] = (
-            f"{config.settings.URL}/api/uploads/interview_video/{int(id)}/video.m3u8"
+            f"{config.settings.URL}/uploads/interview_video/{int(id)}/video.m3u8"
         )
 
     interview["screenshot_urls"] = []
     if os.path.exists(f"uploads/screenshot/{int(id)}/"):
-        print("*" * 50)
         for f in os.listdir(f"uploads/screenshot/{int(id)}"):
             interview["screenshot_urls"].append(
-                f"{config.settings.URL}/api/uploads/screenshot/{int(id)}/{f}"
+                f"{config.settings.URL}/uploads/screenshot/{int(id)}/{f}"
             )
     return interview
 
@@ -614,6 +613,8 @@ async def record_interview(
             "ffmpeg",
             "-i",
             os.path.join("uploads", "interview_video", str(interview_id), "video.webm"),
+            "-r",
+            "30",
             "-hls_time",
             "10",
             "-hls_list_size",

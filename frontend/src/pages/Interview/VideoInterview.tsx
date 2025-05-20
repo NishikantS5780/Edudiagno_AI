@@ -37,7 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import html2canvas from 'html2canvas';
+import html2canvas from "html2canvas";
 
 interface InterviewFeedback {
   feedback: string;
@@ -214,21 +214,29 @@ export default function VideoInterview() {
   // Add fullscreen effect hook with other useEffect hooks
   useEffect(() => {
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && 
-          !(document as any).webkitFullscreenElement && 
-          !(document as any).msFullscreenElement) {
+      if (
+        !document.fullscreenElement &&
+        !(document as any).webkitFullscreenElement &&
+        !(document as any).msFullscreenElement
+      ) {
         toast.warning("Please stay in fullscreen mode during the interview");
       }
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("msfullscreenchange", handleFullscreenChange);
 
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange
+      );
+      document.removeEventListener(
+        "msfullscreenchange",
+        handleFullscreenChange
+      );
     };
   }, []);
 
@@ -613,7 +621,7 @@ export default function VideoInterview() {
 
   const stopCamera = () => {
     if (streamRef.current) {
-      console.log('[Screenshot] Stopping video stream');
+      console.log("[Screenshot] Stopping video stream");
       streamRef.current.getTracks().forEach((track) => {
         track.stop();
       });
@@ -621,8 +629,8 @@ export default function VideoInterview() {
     }
 
     if (audioStreamRef.current) {
-      console.log('[Screenshot] Stopping audio stream');
-      audioStreamRef.current.getTracks().forEach(track => {
+      console.log("[Screenshot] Stopping audio stream");
+      audioStreamRef.current.getTracks().forEach((track) => {
         track.stop();
       });
       audioStreamRef.current = null;
@@ -634,7 +642,7 @@ export default function VideoInterview() {
 
     // Clear screenshot interval
     if (screenshotIntervalRef.current) {
-      console.log('[Screenshot] Clearing screenshot interval');
+      console.log("[Screenshot] Clearing screenshot interval");
       clearInterval(screenshotIntervalRef.current);
       screenshotIntervalRef.current = null;
     }
@@ -643,7 +651,7 @@ export default function VideoInterview() {
   // Add logging to cleanup effect
   useEffect(() => {
     return () => {
-      console.log('[Screenshot] Component unmounting, cleaning up...');
+      console.log("[Screenshot] Component unmounting, cleaning up...");
       stopCamera();
       if (screenshotIntervalRef.current) {
         clearInterval(screenshotIntervalRef.current);
@@ -728,6 +736,7 @@ export default function VideoInterview() {
     } else {
       if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
       if (audioRecorderRef.current) audioRecorderRef.current.stop();
+      if (fullInterviewRecorderRef) fullInterviewRecorderRef.current?.stop();
       stopCamera();
       analyzeInterview();
       setShowCompletionScreen(true);
@@ -786,8 +795,10 @@ export default function VideoInterview() {
       // Request fullscreen when interview starts
       const element = document.documentElement;
       if (element.requestFullscreen) {
-        element.requestFullscreen().catch(err => {
-          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        element.requestFullscreen().catch((err) => {
+          console.error(
+            `Error attempting to enable fullscreen: ${err.message}`
+          );
         });
       } else if ((element as any).webkitRequestFullscreen) {
         (element as any).webkitRequestFullscreen();
@@ -829,35 +840,42 @@ export default function VideoInterview() {
   const captureAndSendScreenshot = async () => {
     try {
       if (!videoRef.current) {
-        console.warn('[Screenshot] Video element not found');
+        console.warn("[Screenshot] Video element not found");
         return;
       }
-      
-      console.log('[Screenshot] Starting capture process...');
-      const startTime = performance.now();
-      
-      const canvas = await html2canvas(videoRef.current);
-      console.log('[Screenshot] Canvas created successfully');
-      
-      const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((blob) => resolve(blob), 'image/png');
-      });
-      
-      if (!blob) {
-        console.error('[Screenshot] Failed to create blob from canvas');
-        return;
-      }
-      
-      console.log(`[Screenshot] Blob created successfully (${(blob.size / 1024).toFixed(2)} KB)`);
 
-      console.log('[Screenshot] Sending to backend...');
-      const response = await fetch("http://localhost:8000/api/interview/screenshot", {
-        method: "POST",
-        body: blob,
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem('i_token')}`
-        }
+      console.log("[Screenshot] Starting capture process...");
+      const startTime = performance.now();
+
+      const canvas = await html2canvas(videoRef.current);
+      console.log("[Screenshot] Canvas created successfully");
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), "image/png");
       });
+
+      if (!blob) {
+        console.error("[Screenshot] Failed to create blob from canvas");
+        return;
+      }
+
+      console.log(
+        `[Screenshot] Blob created successfully (${(blob.size / 1024).toFixed(
+          2
+        )} KB)`
+      );
+
+      console.log("[Screenshot] Sending to backend...");
+      const response = await fetch(
+        "http://localhost:8000/api/interview/screenshot",
+        {
+          method: "POST",
+          body: blob,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -865,7 +883,13 @@ export default function VideoInterview() {
 
       const result = await response.json();
       const endTime = performance.now();
-      console.log(`[Screenshot] Successfully saved (${((endTime - startTime) / 1000).toFixed(2)}s)`, result);
+      console.log(
+        `[Screenshot] Successfully saved (${(
+          (endTime - startTime) /
+          1000
+        ).toFixed(2)}s)`,
+        result
+      );
     } catch (err) {
       console.error("[Screenshot] Error during capture/upload:", err);
       toast.error("Failed to capture screenshot");
@@ -886,10 +910,8 @@ export default function VideoInterview() {
 
       // Get screen capture stream for recording
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          displaySurface: "monitor"
-        },
-        audio: true
+        video: true,
+        audio: true,
       });
 
       // Get audio-only stream for better audio quality
@@ -1036,11 +1058,14 @@ export default function VideoInterview() {
 
       // Start screenshot capture after devices are initialized
       if (screenshotIntervalRef.current) {
-        console.log('[Screenshot] Clearing existing interval');
+        console.log("[Screenshot] Clearing existing interval");
         clearInterval(screenshotIntervalRef.current);
       }
-      console.log('[Screenshot] Starting screenshot interval (30s)');
-      screenshotIntervalRef.current = setInterval(captureAndSendScreenshot, 30000);
+      console.log("[Screenshot] Starting screenshot interval (30s)");
+      screenshotIntervalRef.current = setInterval(
+        captureAndSendScreenshot,
+        30000
+      );
 
       setIsDevicesInitialized(true);
       toast.success("Camera and microphone initialized successfully");
