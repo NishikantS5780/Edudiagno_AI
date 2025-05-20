@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Save, Eye, Pencil } from "lucide-react";
@@ -34,6 +34,8 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
   const [questions, setQuestions] = useState<McqQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [timingMode, setTimingMode] = useState<'per_question' | 'whole_test'>('per_question');
+  const [wholeTestMinutes, setWholeTestMinutes] = useState<number>(30);
 
   useEffect(() => {
     fetchMcqQuestions();
@@ -43,6 +45,12 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
     try {
       const response = await jobAPI.getMcqQuestions(jobId.toString());
       setQuestions(response.data || []);
+      // Fetch job details to get quiz_time_minutes if it exists
+      const jobResponse = await jobAPI.getJob(jobId.toString());
+      if (jobResponse.data.quiz_time_minutes) {
+        setTimingMode('whole_test');
+        setWholeTestMinutes(jobResponse.data.quiz_time_minutes);
+      }
     } catch (error) {
       console.error("Error fetching MCQ questions:", error);
       toast.error("Failed to load MCQ questions");
@@ -174,78 +182,55 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
 
   const handleSaveQuestions = async () => {
     try {
-      console.log('Starting to save questions:', questions);
-      
-      for (const question of questions) {
-        let questionId = question.id;
-        console.log('Processing question:', {
-          id: questionId,
-          description: question.description,
-          type: question.type,
-          category: question.category,
-          time_seconds: question.time_seconds,
-          options: question.options
+      // First update the job's quiz_time_minutes if in whole test mode
+      if (timingMode === 'whole_test') {
+        await jobAPI.updateJob(jobId.toString(), {
+          quiz_time_minutes: wholeTestMinutes
         });
-        
-        // If the question has a negative ID, it's a new question
-        if (questionId < 0) {
-          console.log('Creating new question with data:', {
-            description: question.description,
-            type: question.type,
-            category: question.category,
-            time_seconds: question.time_seconds,
-            job_id: jobId
-          });
-          
-          const createResponse = await api.post(
-            `/quiz-question`,
+      }
+
+      // Then proceed with saving questions
+      for (const question of questions) {
+        if (question.id < 0) {
+          // New question
+          const questionResponse = await api.post(
+            "/quiz-question",
             {
               description: question.description,
               type: question.type,
               category: question.category,
-              time_seconds: question.time_seconds,
-              job_id: jobId
+              job_id: jobId,
+              time_seconds: timingMode === 'per_question' ? question.time_seconds : null,
             },
             {
               headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
             }
           );
-          questionId = createResponse.data.id;
-          console.log('Created new question with ID:', questionId);
 
-          // Create all options for the new question
+          // Create options for new question
           for (const option of question.options) {
-            console.log('Creating new option for new question');
-            const optionResponse = await api.post(
-              `/quiz-option`,
+            await api.post(
+              "/quiz-option",
               {
                 label: option.label,
                 correct: option.correct,
-                question_id: questionId
+                question_id: questionResponse.data.id,
               },
               {
                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
               }
             );
-            console.log('Created new option:', optionResponse.data);
           }
         } else {
-          console.log('Updating existing question:', {
-            id: questionId,
-            description: question.description,
-            type: question.type,
-            category: question.category,
-            time_seconds: question.time_seconds
-          });
-          
+          // Existing question
           await api.put(
-            `/quiz-question`,
+            "/quiz-question",
             {
-              id: questionId,
               description: question.description,
               type: question.type,
               category: question.category,
-              time_seconds: question.time_seconds
+              time_seconds: timingMode === 'per_question' ? question.time_seconds : null,
+              id: question.id,
             },
             {
               headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -256,24 +241,21 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
           for (const option of question.options) {
             if (option.id < 0) {
               // Create new option for existing question
-              console.log('Creating new option for existing question');
-              const optionResponse = await api.post(
-                `/quiz-option`,
+              await api.post(
+                "/quiz-option",
                 {
                   label: option.label,
                   correct: option.correct,
-                  question_id: questionId
+                  question_id: question.id,
                 },
                 {
                   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
                 }
               );
-              console.log('Created new option:', optionResponse.data);
             } else {
               // Update existing option
-              console.log('Updating existing option');
-              const optionResponse = await api.put(
-                `/quiz-option`,
+              await api.put(
+                "/quiz-option",
                 {
                   id: option.id,
                   label: option.label,
@@ -283,20 +265,14 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
                 }
               );
-              console.log('Updated option:', optionResponse.data);
             }
           }
         }
       }
       toast.success("MCQ questions saved successfully");
-      // Refresh the questions after saving
       await fetchMcqQuestions();
     } catch (error: any) {
       console.error("Error saving MCQ questions:", error);
-      if (error.response) {
-        console.error("Error response data:", error.response.data);
-        console.error("Error response status:", error.response.status);
-      }
       toast.error("Failed to save MCQ questions");
     }
   };
@@ -352,6 +328,56 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
         </div>
       </div>
 
+      {isEditMode && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Timing Settings</CardTitle>
+            <CardDescription>Configure how time limits are applied to the MCQ test</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Timing Mode</Label>
+                <Select
+                  value={timingMode}
+                  onValueChange={(value: 'per_question' | 'whole_test') => setTimingMode(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select timing mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="per_question">Per Question Timing</SelectItem>
+                    <SelectItem value="whole_test">Whole Test Timing</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {timingMode === 'whole_test' && (
+                <div className="space-y-2">
+                  <Label>Total Test Time (minutes)</Label>
+                  <Select
+                    value={wholeTestMinutes.toString()}
+                    onValueChange={(value) => setWholeTestMinutes(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select total time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="45">45 minutes</SelectItem>
+                      <SelectItem value="60">60 minutes</SelectItem>
+                      <SelectItem value="90">90 minutes</SelectItem>
+                      <SelectItem value="120">120 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="space-y-4 pb-24">
         {questions.map((question, index) => (
           <Card key={question.id}>
@@ -405,25 +431,27 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Time Limit (seconds)</Label>
-                        <Select
-                          value={question.time_seconds?.toString() || "60"}
-                          onValueChange={(value) => handleUpdateQuestion(index, "time_seconds", parseInt(value))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select time limit" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="30">30 seconds</SelectItem>
-                            <SelectItem value="45">45 seconds</SelectItem>
-                            <SelectItem value="60">60 seconds</SelectItem>
-                            <SelectItem value="90">90 seconds</SelectItem>
-                            <SelectItem value="120">120 seconds</SelectItem>
-                            <SelectItem value="180">180 seconds</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {timingMode === 'per_question' && (
+                        <div className="space-y-2">
+                          <Label>Time Limit (seconds)</Label>
+                          <Select
+                            value={question.time_seconds?.toString() || "60"}
+                            onValueChange={(value) => handleUpdateQuestion(index, "time_seconds", parseInt(value))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select time limit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="30">30 seconds</SelectItem>
+                              <SelectItem value="45">45 seconds</SelectItem>
+                              <SelectItem value="60">60 seconds</SelectItem>
+                              <SelectItem value="90">90 seconds</SelectItem>
+                              <SelectItem value="120">120 seconds</SelectItem>
+                              <SelectItem value="180">180 seconds</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       {question.options.map((option, optionIndex) => (

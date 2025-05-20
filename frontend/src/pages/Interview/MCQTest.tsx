@@ -68,11 +68,8 @@ const MCQTest = () => {
   const [currentSection, setCurrentSection] = useState<
     "technical" | "aptitude"
   >(() => {
-    // If only technical questions exist, start with technical section
-    if (questions.technical.length > 0 && questions.aptitude.length === 0) {
-      return "technical";
-    }
-    return "aptitude";
+    // Default to technical if it has questions, otherwise aptitude
+    return "technical";
   });
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<{
@@ -90,6 +87,8 @@ const MCQTest = () => {
     technical: boolean[];
     aptitude: boolean[];
   }>({ technical: [], aptitude: [] });
+  const [timingMode, setTimingMode] = useState<'per_question' | 'whole_test'>('per_question');
+  const [wholeTestTimeLeft, setWholeTestTimeLeft] = useState<number>(0);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -119,10 +118,41 @@ const MCQTest = () => {
         console.log("Raw quiz questions response:", response);
         console.log("Quiz questions data:", response.data);
 
+        // First get the job ID from the interview
+        const interviewResponse = await api.get(`/interview?id=${interviewId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` }
+        });
+        const jobId = interviewResponse.data.job_id;
+        console.log("Job ID from interview:", jobId);
+
+        // Then fetch job details using the job ID
+        const jobResponse = await jobAPI.getJob(jobId.toString());
+        console.log("Job details response:", jobResponse.data);
+        
+        // Check both mcq_timing_mode and quiz_time_minutes
+        const timingMode = jobResponse.data.mcq_timing_mode || 'per_question';
+        const quizTimeMinutes = jobResponse.data.quiz_time_minutes;
+        
+        console.log("Job timing mode:", timingMode);
+        console.log("Job quiz time minutes:", quizTimeMinutes);
+        
+        // Set timing mode based on job settings
+        setTimingMode(timingMode);
+        
+        // If quiz_time_minutes exists, use whole test mode regardless of mcq_timing_mode
+        if (quizTimeMinutes) {
+          const totalSeconds = quizTimeMinutes * 60;
+          console.log("Setting whole test time to:", totalSeconds, "seconds");
+          setWholeTestTimeLeft(totalSeconds);
+          setTimingMode('whole_test');
+        }
+
         const processedQuestions = response.data.map((question: any) => {
           const answerType = question.type;
           const category = question.category.toLowerCase();
-          const time_seconds = question.time_seconds || 60;
+          // Only use question time if we're in per-question mode and there's no quiz_time_minutes
+          const time_seconds = (timingMode === 'whole_test' || quizTimeMinutes) ? 0 : (question.time_seconds || 60);
+          console.log(`Question ${question.id} time_seconds:`, time_seconds);
 
           return {
             ...question,
@@ -139,11 +169,23 @@ const MCQTest = () => {
           (q: QuizQuestion) => q.category.toLowerCase() === "aptitude"
         );
 
+        console.log("Technical questions:", technicalQuestions);
+        console.log("Aptitude questions:", aptitudeQuestions);
+
+        // Set questions first
         setQuestions({
           technical: technicalQuestions,
           aptitude: aptitudeQuestions,
         });
 
+        // Set initial section based on available questions
+        if (technicalQuestions.length > 0) {
+          setCurrentSection("technical");
+        } else if (aptitudeQuestions.length > 0) {
+          setCurrentSection("aptitude");
+        }
+
+        // Set answers with proper initialization
         setAnswers({
           technical: technicalQuestions.map((q: QuizQuestion) =>
             q.answerType === "multiple" ? [] : -1
@@ -153,20 +195,30 @@ const MCQTest = () => {
           ),
         });
 
+        // Initialize markedForLater with proper checks
         setMarkedForLater({
-          technical: new Array(technicalQuestions.length).fill(false),
-          aptitude: new Array(aptitudeQuestions.length).fill(false),
+          technical: technicalQuestions.length > 0 ? new Array(technicalQuestions.length).fill(false) : [],
+          aptitude: aptitudeQuestions.length > 0 ? new Array(aptitudeQuestions.length).fill(false) : [],
         });
 
-        // Initialize question timers
-        const allQuestions = [...technicalQuestions, ...aptitudeQuestions];
-        const timers = allQuestions.map((q) => ({
-          questionId: q.id,
-          timeLeft: q.time_seconds,
-          isActive: false,
-          isExpired: false,
-        }));
-        setQuestionTimers(timers);
+        // Initialize question timers only if in per-question mode and no quiz_time_minutes
+        if (timingMode === 'per_question' && !quizTimeMinutes) {
+          console.log("Initializing per-question timers");
+          const allQuestions = [...technicalQuestions, ...aptitudeQuestions];
+          if (allQuestions.length > 0) {
+            const timers = allQuestions.map((q) => ({
+              questionId: q.id,
+              timeLeft: q.time_seconds,
+              isActive: false,
+              isExpired: false,
+            }));
+            console.log("Created question timers:", timers);
+            setQuestionTimers(timers);
+          }
+        } else {
+          console.log("Whole test timer mode - not initializing per-question timers");
+          setQuestionTimers([]);
+        }
 
         setIsLoading(false);
       } catch (error) {
@@ -185,38 +237,64 @@ const MCQTest = () => {
     let timer: NodeJS.Timeout;
 
     if (isTestStarted) {
-      timer = setInterval(() => {
-        setQuestionTimers((prevTimers) => {
-          return prevTimers.map((timer) => {
-            if (timer.isActive && !timer.isExpired && timer.timeLeft > 0) {
-              const newTimeLeft = timer.timeLeft - 1;
-
-              // Show warning when 10 seconds are left
-              if (newTimeLeft === 10 && !warningShown) {
-                toast.warning("10 seconds remaining for this question!");
-                setWarningShown(true);
-              }
-
-              // If time runs out
-              if (newTimeLeft === 0) {
-                toast.error("Time's up for this question!");
-                return { ...timer, timeLeft: 0, isExpired: true };
-              }
-
-              return { ...timer, timeLeft: newTimeLeft };
+      console.log("Test started, timing mode:", timingMode);
+      if (timingMode === 'whole_test') {
+        console.log("Starting whole test timer with time left:", wholeTestTimeLeft);
+        timer = setInterval(() => {
+          setWholeTestTimeLeft((prev) => {
+            if (prev <= 0) {
+              console.log("Whole test time expired");
+              handleSubmit();
+              return 0;
             }
-            return timer;
+            // Show warning when 5 minutes are left
+            if (prev === 300 && !warningShown) {
+              console.log("5 minutes remaining warning");
+              toast.warning("5 minutes remaining for the test!");
+              setWarningShown(true);
+            }
+            return prev - 1;
           });
-        });
-      }, 1000);
+        }, 1000);
+      } else {
+        console.log("Starting per-question timers");
+        timer = setInterval(() => {
+          setQuestionTimers((prevTimers) => {
+            return prevTimers.map((timer) => {
+              if (timer.isActive && !timer.isExpired && timer.timeLeft > 0) {
+                const newTimeLeft = timer.timeLeft - 1;
+                console.log(`Question ${timer.questionId} time left:`, newTimeLeft);
+
+                // Show warning when 10 seconds are left
+                if (newTimeLeft === 10 && !warningShown) {
+                  console.log(`Question ${timer.questionId} 10 seconds remaining warning`);
+                  toast.warning("10 seconds remaining for this question!");
+                  setWarningShown(true);
+                }
+
+                // If time runs out
+                if (newTimeLeft === 0) {
+                  console.log(`Question ${timer.questionId} time expired`);
+                  toast.error("Time's up for this question!");
+                  return { ...timer, timeLeft: 0, isExpired: true };
+                }
+
+                return { ...timer, timeLeft: newTimeLeft };
+              }
+              return timer;
+            });
+          });
+        }, 1000);
+      }
     }
 
     return () => {
       if (timer) {
+        console.log("Cleaning up timer");
         clearInterval(timer);
       }
     };
-  }, [isTestStarted, warningShown]);
+  }, [isTestStarted, warningShown, timingMode]);
 
   useEffect(() => {
     let countdownTimer: NodeJS.Timeout;
@@ -291,10 +369,10 @@ const MCQTest = () => {
     ).length;
 
     if (unanswered > 0) {
+      // Show warning but allow submission
       toast.warning(
-        `You have ${unanswered} unanswered questions. Are you sure you want to submit?`
+        `You have ${unanswered} unanswered questions. Submitting now...`
       );
-      return;
     }
 
     if (currentSection === "aptitude" && questions.technical.length > 0) {
@@ -455,9 +533,34 @@ const MCQTest = () => {
   };
 
   const getCurrentQuestionTimer = () => {
+    if (timingMode === 'whole_test') {
+      return { timeLeft: wholeTestTimeLeft };
+    }
     const currentQuestion = questions[currentSection][currentQuestionIndex];
     return questionTimers.find(
       (timer) => timer.questionId === currentQuestion.id
+    );
+  };
+
+  const renderTimer = () => {
+    if (timingMode === 'whole_test') {
+      return (
+        <div className="flex items-center gap-2">
+          <Timer className="h-5 w-5 text-destructive" />
+          <span className="font-medium">
+            {formatTime(wholeTestTimeLeft)}
+          </span>
+        </div>
+      );
+    }
+    const timer = getCurrentQuestionTimer();
+    return (
+      <div className="flex items-center gap-2">
+        <Timer className="h-5 w-5 text-destructive" />
+        <span className="font-medium">
+          {formatTime(timer?.timeLeft || 0)}
+        </span>
+      </div>
     );
   };
 
@@ -576,7 +679,9 @@ const MCQTest = () => {
                   <div>
                     <p className="font-medium">Time Limit</p>
                     <p className="text-sm text-muted-foreground">
-                      Individual timers per question
+                      {timingMode === 'whole_test' 
+                        ? `${Math.floor(wholeTestTimeLeft / 60)} minutes for the whole test`
+                        : 'Individual timers per question'}
                     </p>
                   </div>
                 </div>
@@ -659,12 +764,12 @@ const MCQTest = () => {
                 </Button>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Timer className="h-5 w-5 text-destructive" />
-              <span className="font-medium">
-                {formatTime(getCurrentQuestionTimer()?.timeLeft || 0)}
-              </span>
-            </div>
+            <Button
+              onClick={handleSubmit}
+              variant="destructive"
+            >
+              Submit Test
+            </Button>
           </div>
 
           <div className="flex gap-6">
@@ -830,10 +935,7 @@ const MCQTest = () => {
                         </CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Timer className="h-5 w-5 text-destructive" />
-                        <span className="font-medium">
-                          {formatTime(getCurrentQuestionTimer()?.timeLeft || 0)}
-                        </span>
+                        {renderTimer()}
                       </div>
                     </div>
                   </div>
@@ -912,41 +1014,20 @@ const MCQTest = () => {
                     Previous
                   </Button>
                   <div className="flex gap-2">
-                    {currentSection === "aptitude" &&
-                    questions.technical.length > 0 ? (
+                    {currentSection === "aptitude" && questions.technical.length > 0 ? (
                       <Button onClick={() => setCurrentSection("technical")}>
                         Next Section
                       </Button>
                     ) : (
                       <Button
-                        onClick={handleSubmit}
-                        disabled={
-                          (questions.aptitude.length > 0 &&
-                            answers.aptitude.some(
-                              (a) =>
-                                a === -1 || (Array.isArray(a) && a.length === 0)
-                            )) ||
-                          (questions.technical.length > 0 &&
-                            answers.technical.some(
-                              (a) =>
-                                a === -1 || (Array.isArray(a) && a.length === 0)
-                            ))
-                        }
+                        variant="outline"
+                        onClick={handleNext}
+                        disabled={currentQuestionIndex === questions[currentSection].length - 1}
                       >
-                        Submit Test
+                        Next
                       </Button>
                     )}
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleNext}
-                    disabled={
-                      currentQuestionIndex ===
-                      questions[currentSection].length - 1
-                    }
-                  >
-                    Next
-                  </Button>
                 </CardFooter>
               </Card>
             </div>

@@ -36,6 +36,10 @@ export interface JobData {
     options: string[];
     correct_options: number[];
   }>;
+  quiz_time_minutes: number | null;
+  mcq_timing_mode: 'per_question' | 'whole_test';
+  company_id: number;
+  updated_at: string;
 }
 
 export interface CandidateJobData {

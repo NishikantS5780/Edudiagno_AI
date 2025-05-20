@@ -59,7 +59,18 @@ const ForgotPassword = () => {
         email,
         otp
       });
-      
+      // Save the new token from the response header (check both lowercase and uppercase)
+      const authHeader = response.headers["authorization"] || response.headers["Authorization"];
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.split("Bearer ")[1];
+        if (token && token.split(".").length === 3) {
+          localStorage.setItem("token", token);
+        } else {
+          throw new Error("Invalid token format received from server.");
+        }
+      } else {
+        throw new Error("No authorization token received from server.");
+      }
       if (response.data) {
         setStep("password");
         toast.success("OTP verified successfully");
@@ -90,6 +101,13 @@ const ForgotPassword = () => {
       return;
     }
 
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error("Session expired. Please try again.");
+      setStep("email");
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -97,17 +115,23 @@ const ForgotPassword = () => {
         password: newPassword
       }, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${token.trim()}`
         }
       });
       
       if (response.data) {
         toast.success("Password reset successfully");
-        // Redirect to login
+        // Clear the token and redirect to login
+        localStorage.removeItem('token');
         window.location.href = "/login";
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to reset password");
+      if (error.response?.status === 401) {
+        toast.error("Session expired. Please try again.");
+        setStep("email");
+      } else {
+        toast.error(error.response?.data?.message || "Failed to reset password");
+      }
       console.error("Reset password failed:", error);
     } finally {
       setIsLoading(false);
