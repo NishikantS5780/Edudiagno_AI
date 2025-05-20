@@ -485,14 +485,11 @@ const NewJob = () => {
         }))
       };
 
-      let response;
-      if (jobData.id) {
-        // If job already exists (was saved as draft), update it
-        response = await jobAPI.updateJob(jobData.id.toString(), jobDataToSubmit);
-      } else {
-        // If no job exists yet, create a new one
-        response = await jobAPI.createJob(jobDataToSubmit);
+      // Always update the existing draft job
+      if (!jobData.id) {
+        throw new Error("Please save job details first");
       }
+      const response = await jobAPI.updateJob(jobData.id.toString(), jobDataToSubmit);
 
       if (response.status >= 200 && response.status < 300) {
         // If MCQ questions are enabled, save them
@@ -613,6 +610,11 @@ const NewJob = () => {
   };
 
   const handleMcqQuestionAdd = () => {
+    if (!jobData.requires_mcq) {
+      toast.error("Please enable MCQ assessment in Job Details first");
+      return;
+    }
+
     const newQuestion: MCQQuestion = {
       title: "",
       type: "single",
@@ -621,9 +623,10 @@ const NewJob = () => {
       options: ["", "", "", ""],
       correct_options: [0]
     };
+
     setJobData(prev => ({
       ...prev,
-      mcq_questions: [...(prev.mcq_questions || []), newQuestion]
+      mcq_questions: prev.mcq_questions ? [...prev.mcq_questions, newQuestion] : [newQuestion]
     }));
   };
 
@@ -1846,87 +1849,97 @@ const NewJob = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Timing Mode</Label>
-                      <Select
-                        value={jobData.mcq_timing_mode || 'per_question'}
-                        onValueChange={handleTimingModeChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select timing mode" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="per_question">Per Question Timing</SelectItem>
-                          <SelectItem value="whole_test">Whole Test Timing</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  {!jobData.requires_mcq ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        Enable MCQ assessment in the Job Details tab to add questions
+                      </p>
                     </div>
+                  ) : (
+                    <>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Timing Mode</Label>
+                          <Select
+                            value={jobData.mcq_timing_mode || 'per_question'}
+                            onValueChange={handleTimingModeChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select timing mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="per_question">Per Question Timing</SelectItem>
+                              <SelectItem value="whole_test">Whole Test Timing</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                    {jobData.mcq_timing_mode === 'whole_test' && (
-                      <div className="space-y-2">
-                        <Label>Total Test Time (minutes)</Label>
-                        <Select
-                          value={jobData.quiz_time_minutes?.toString() || "60"}
-                          onValueChange={handleQuizTimeChange}
+                        {jobData.mcq_timing_mode === 'whole_test' && (
+                          <div className="space-y-2">
+                            <Label>Total Test Time (minutes)</Label>
+                            <Select
+                              value={jobData.quiz_time_minutes?.toString() || "60"}
+                              onValueChange={handleQuizTimeChange}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select total time" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="15">15 minutes</SelectItem>
+                                <SelectItem value="30">30 minutes</SelectItem>
+                                <SelectItem value="45">45 minutes</SelectItem>
+                                <SelectItem value="60">1 hour</SelectItem>
+                                <SelectItem value="90">1.5 hours</SelectItem>
+                                <SelectItem value="120">2 hours</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <div className="space-y-1">
+                            <h3 className="text-lg font-medium">MCQ Questions</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Total Questions: {jobData.mcq_questions?.length || 0}
+                            </p>
+                          </div>
+                          <div className="flex gap-4">
+                            <ExcelImport onImport={handleExcelImport} />
+                            <Button onClick={handleMcqQuestionAdd}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Question
+                            </Button>
+                          </div>
+                        </div>
+                        {jobData.mcq_questions?.map((question, index) => (
+                          renderMcqQuestion(question, index)
+                        ))}
+                      </div>
+
+                      <div className="flex justify-end mt-4">
+                        <Button
+                          type="button"
+                          onClick={handleSaveMcqQuestions}
+                          disabled={isSavingMcq}
+                          variant="outline"
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select total time" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="15">15 minutes</SelectItem>
-                            <SelectItem value="30">30 minutes</SelectItem>
-                            <SelectItem value="45">45 minutes</SelectItem>
-                            <SelectItem value="60">1 hour</SelectItem>
-                            <SelectItem value="90">1.5 hours</SelectItem>
-                            <SelectItem value="120">2 hours</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div className="space-y-1">
-                        <h3 className="text-lg font-medium">MCQ Questions</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Total Questions: {jobData.mcq_questions?.length || 0}
-                        </p>
-                      </div>
-                      <div className="flex gap-4">
-                        <ExcelImport onImport={handleExcelImport} />
-                        <Button onClick={handleMcqQuestionAdd}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Question
+                          {isSavingMcq ? (
+                            <>
+                              <LoadingSpinner size="sm" className="mr-2" />
+                              Saving MCQ Questions...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Save MCQ Questions
+                            </>
+                          )}
                         </Button>
                       </div>
-                    </div>
-                    {jobData.mcq_questions?.map((question, index) => (
-                      renderMcqQuestion(question, index)
-                    ))}
-                  </div>
-
-                  <div className="flex justify-end mt-4">
-                    <Button
-                      type="button"
-                      onClick={handleSaveMcqQuestions}
-                      disabled={isSavingMcq}
-                      variant="outline"
-                    >
-                      {isSavingMcq ? (
-                        <>
-                          <LoadingSpinner size="sm" className="mr-2" />
-                          Saving MCQ Questions...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save MCQ Questions
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
