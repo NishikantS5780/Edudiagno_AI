@@ -878,18 +878,27 @@ export default function VideoInterview() {
       // Stop any existing stream first
       stopCamera();
 
-      // Get video stream
+      // Get camera stream for display
       const videoStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
         video: true,
+        audio: true,
       });
 
-      // Get audio-only stream
+      // Get screen capture stream for recording
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: "monitor"
+        },
+        audio: true
+      });
+
+      // Get audio-only stream for better audio quality
       const audioStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: false,
       });
 
+      // Use video stream for display
       streamRef.current = videoStream;
       audioStreamRef.current = audioStream;
 
@@ -900,8 +909,8 @@ export default function VideoInterview() {
         });
       }
 
-      // Set up video media recorder
-      const videoRecorder = new MediaRecorder(videoStream, {
+      // Set up video media recorder with screen capture
+      const videoRecorder = new MediaRecorder(screenStream, {
         mimeType: "video/webm;codecs=vp9,opus",
       });
 
@@ -913,8 +922,8 @@ export default function VideoInterview() {
       mediaRecorderRef.current = videoRecorder;
       audioRecorderRef.current = audioRecorder;
 
-      // Set up full interview recorder
-      const fullInterviewRecorder = new MediaRecorder(videoStream, {
+      // Set up full interview recorder with screen capture
+      const fullInterviewRecorder = new MediaRecorder(screenStream, {
         mimeType: "video/webm;codecs=vp9,opus",
       });
       fullInterviewRecorderRef.current = fullInterviewRecorder;
