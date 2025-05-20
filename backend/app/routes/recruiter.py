@@ -101,7 +101,7 @@ async def upate_recruiter(
     if "password" in data:
         data.pop("password")
     if password_hash:
-        recruiter_data["password_hash"] = password_hash
+        data["password_hash"] = password_hash
 
     stmt = (
         update(Recruiter)

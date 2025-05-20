@@ -33,6 +33,11 @@ import ExcelImport from '@/components/jobs/ExcelImport';
 import { useUser } from "@/context/UserContext";
 import { RecruiterData } from "@/types/recruiter";
 import { recruiterAPI } from "@/lib/api";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 
 const jobFormSchema = z.object({
   title: z
@@ -77,27 +82,70 @@ const jobFormSchema = z.object({
     title: z.string().nonempty({ message: "MCQ question title is required" }),
     type: z.enum(["single", "multiple", "true_false"]),
     category: z.enum(["technical", "aptitude"]),
-    time_seconds: z.number().min(30, { message: "Time limit must be at least 30 seconds" }).max(180, { message: "Time limit cannot exceed 3 minutes" }),
+    time_seconds: z.number().min(30, { message: "Time limit must be at least 30 seconds" }).max(180, { message: "Time limit cannot exceed 3 minutes" }).optional(),
     options: z.array(z.string().nonempty({ message: "Option text is required" })),
     correct_options: z.array(z.number())
-  })).optional()
+  })).optional(),
+  mcq_timing_mode: z.enum(['per_question', 'whole_test']).default('per_question'),
+  quiz_time_minutes: z.number().min(15, { message: "Quiz time must be at least 15 minutes" }).max(120, { message: "Quiz time cannot exceed 2 hours" }).nullable()
+}).refine((data) => {
+  // If MCQ is required and timing mode is whole_test, quiz_time_minutes is required
+  if (data.requires_mcq && data.mcq_timing_mode === 'whole_test') {
+    return data.quiz_time_minutes !== null;
+  }
+  return true;
+}, {
+  message: "Please set the total quiz time when using whole test timing mode",
+  path: ["quiz_time_minutes"]
+}).refine((data) => {
+  // If MCQ is required and timing mode is per_question, each question must have time_seconds
+  if (data.requires_mcq && data.mcq_timing_mode === 'per_question' && data.mcq_questions) {
+    return data.mcq_questions.every(q => q.time_seconds !== undefined && q.time_seconds !== null);
+  }
+  return true;
+}, {
+  message: "Each question must have a time limit when using per question timing mode",
+  path: ["mcq_questions"]
 });
 
 type JobFormValues = z.infer<typeof jobFormSchema>;
 
-const saveMcqQuestions = async (jobId: number, questions: any[]) => {
+const saveMcqQuestions = async (jobId: number, questions: any[], jobData: JobData) => {
   try {
+    // First update the job with timing information
+    await jobAPI.updateJob(jobId.toString(), {
+      ...jobData,
+      mcq_timing_mode: jobData.mcq_timing_mode,
+      quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
+    });
+
     for (const question of questions) {
+      // Create a default empty image file
+      const emptyImage = new File([], 'empty.png', { type: 'image/png' });
+
+      // Create form data for the request
+      const formData = new FormData();
+      formData.append('description', question.title);
+      formData.append('job_id', jobId.toString());
+      formData.append('type', question.type);
+      formData.append('category', question.category);
+      
+      // Always send time_seconds, but set it based on timing mode
+      if (jobData.mcq_timing_mode === 'whole_test') {
+        // For whole test mode, set a default value that won't be used
+        formData.append('time_seconds', '60');
+      } else {
+        // For per_question mode, use the question's time_seconds
+        formData.append('time_seconds', (question.time_seconds || 60).toString());
+      }
+      
+      formData.append('image', emptyImage);
+
       // Create the quiz question
-      const questionResponse = await api.post('/quiz-question', {
-        description: question.title,
-        job_id: jobId,
-        type: question.type,
-        category: question.category,
-        time_seconds: question.time_seconds
-      }, {
+      const questionResponse = await api.post('/quiz-question', formData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data'
         }
       });
 
@@ -177,7 +225,11 @@ const NewJob = () => {
         const parsed = JSON.parse(savedJobData);
         return {
           ...parsed,
-          createdAt: parsed.createdAt || new Date().toISOString()
+          createdAt: parsed.createdAt || new Date().toISOString(),
+          mcq_timing_mode: parsed.mcq_timing_mode || 'per_question',
+          quiz_time_minutes: parsed.mcq_timing_mode === 'whole_test' ? (parsed.quiz_time_minutes || 30) : null,
+          company_id: parsed.company_id || 0,
+          updated_at: parsed.updated_at || new Date().toISOString()
         };
       } catch (e) {
         console.error('Error parsing saved job data:', e);
@@ -207,10 +259,17 @@ const NewJob = () => {
       requires_dsa: false,
       requires_mcq: false,
       dsa_questions: [],
-      mcq_questions: []
+      mcq_questions: [],
+      mcq_timing_mode: 'per_question',
+      quiz_time_minutes: null,
+      company_id: 0,
+      updated_at: new Date().toISOString()
     };
   });
   const { addNotification } = useNotifications();
+  const [cities, setCities] = useState<Array<{ id: number; name: string }>>([]);
+  const [citySearchTerm, setCitySearchTerm] = useState("");
+  const [cityPopupOpen, setCityPopupOpen] = useState(false);
 
   // Fetch recruiter data when component mounts
   useEffect(() => {
@@ -245,11 +304,44 @@ const NewJob = () => {
     };
   }, []);
 
+  // Fetch cities when search term changes
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const response = await api.get(`/city?keyword=${encodeURIComponent(citySearchTerm)}`);
+        setCities(response.data || []);
+      } catch (error) {
+        console.error('Error fetching cities:', error);
+        toast.error('Failed to fetch cities');
+        setCities([]);
+      }
+    };
+
+    if (citySearchTerm) {
+      fetchCities();
+    }
+  }, [citySearchTerm]);
+
+  // Add effect to handle timing mode changes
+  useEffect(() => {
+    if (jobData.mcq_timing_mode === 'whole_test' && !jobData.quiz_time_minutes) {
+      setJobData(prev => ({
+        ...prev,
+        quiz_time_minutes: 30 // Default to 30 minutes when switching to whole_test mode
+      }));
+    } else if (jobData.mcq_timing_mode === 'per_question') {
+      setJobData(prev => ({
+        ...prev,
+        quiz_time_minutes: null // Clear quiz_time_minutes when switching to per_question mode
+      }));
+    }
+  }, [jobData.mcq_timing_mode]);
+
   interface MCQQuestion {
     title: string;
     type: "single" | "multiple" | "true_false";
     category: "technical" | "aptitude";
-    time_seconds: number;
+    time_seconds?: number;
     options: string[];
     correct_options: number[];
   }
@@ -291,11 +383,18 @@ const NewJob = () => {
     requires_mcq: boolean;
     dsa_questions: DSAQuestion[];
     mcq_questions: MCQQuestion[];
+    mcq_timing_mode: 'per_question' | 'whole_test';
+    quiz_time_minutes: number | null;
+    company_id: number;
+    updated_at: string;
   }
 
   const validateField = (field: keyof JobFormValues, value: any) => {
     try {
-      jobFormSchema.shape[field].parse(value);
+      const validationSchema = z.object({
+        [field]: z.any()
+      });
+      validationSchema.parse({ [field]: value });
       setErrors(prev => ({ ...prev, [field]: '' }));
     } catch (error: any) {
       setErrors(prev => ({ ...prev, [field]: error.errors[0].message }));
@@ -316,34 +415,101 @@ const NewJob = () => {
       const validationResult = jobFormSchema.safeParse(jobData);
       if (!validationResult.success) {
         const newErrors: Record<string, string> = {};
+        const errorMessages: string[] = [];
+        
         validationResult.error.errors.forEach(error => {
-          newErrors[error.path[0]] = error.message;
+          const fieldName = error.path[0];
+          newErrors[fieldName] = error.message;
+          
+          // Create user-friendly field names
+          const fieldDisplayNames: Record<string, string> = {
+            title: "Job Title",
+            department: "Department",
+            city: "City",
+            location: "Location Type",
+            type: "Job Type",
+            min_experience: "Minimum Experience",
+            max_experience: "Maximum Experience",
+            duration_months: "Job Duration",
+            key_qualification: "Required Qualification",
+            description: "Job Description",
+            requirements: "Job Requirements",
+            benefits: "Benefits",
+            currency: "Currency",
+            mcq_timing_mode: "MCQ Timing Mode",
+            quiz_time_minutes: "Total Quiz Time",
+            dsa_questions: "DSA Questions",
+            mcq_questions: "MCQ Questions"
+          };
+
+          const displayName = fieldDisplayNames[fieldName] || fieldName;
+          errorMessages.push(`${displayName}: ${error.message}`);
         });
+
         setErrors(newErrors);
-        toast.error("Please fill in all required fields");
+        
+        // Show all validation errors in a toast
+        toast.error(
+          <div className="space-y-2">
+            <p className="font-semibold">Please fix the following fields:</p>
+            <ul className="list-disc pl-4">
+              {errorMessages.map((msg, index) => (
+                <li key={index}>{msg}</li>
+              ))}
+            </ul>
+          </div>
+        );
+
+        // Scroll to the first error field
+        const firstErrorField = Object.keys(newErrors)[0];
+        const element = document.getElementById(firstErrorField);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
         setIsSubmitting(false);
         return;
       }
 
+      // Prepare job data based on timing mode
+      const jobDataToSubmit = {
+        ...jobData,
+        status: "active",
+        mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
+        // Only include quiz_time_minutes if in whole_test mode
+        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null,
+        // Update MCQ questions based on timing mode
+        mcq_questions: jobData.mcq_questions?.map(q => ({
+          ...q,
+          time_seconds: jobData.mcq_timing_mode === 'per_question' ? q.time_seconds : undefined
+        }))
+      };
+
       let response;
       if (jobData.id) {
         // If job already exists (was saved as draft), update it
-        response = await jobAPI.updateJob(jobData.id.toString(), {
-          ...jobData,
-          status: "active"
-        });
+        response = await jobAPI.updateJob(jobData.id.toString(), jobDataToSubmit);
       } else {
         // If no job exists yet, create a new one
-        response = await jobAPI.createJob({
-          ...jobData,
-          status: "active"
-        });
+        response = await jobAPI.createJob(jobDataToSubmit);
       }
 
       if (response.status >= 200 && response.status < 300) {
         // If MCQ questions are enabled, save them
         if (jobData.requires_mcq && jobData.mcq_questions && jobData.mcq_questions.length > 0) {
-          await saveMcqQuestions(response.data.id, jobData.mcq_questions);
+          // Update the job with MCQ questions and timing information
+          const updatedJobData = {
+            ...jobDataToSubmit,
+            id: response.data.id,
+            mcq_timing_mode: jobData.mcq_timing_mode,
+            quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
+          };
+          
+          // First update the job with timing information
+          await jobAPI.updateJob(response.data.id.toString(), updatedJobData);
+          
+          // Then save the MCQ questions
+          await saveMcqQuestions(response.data.id, jobData.mcq_questions, updatedJobData);
         }
 
         addNotification({
@@ -451,64 +617,140 @@ const NewJob = () => {
       title: "",
       type: "single",
       category: "technical",
-      time_seconds: 60, // Default to 60 seconds
+      time_seconds: jobData.mcq_timing_mode === 'per_question' ? 60 : undefined,
       options: ["", "", "", ""],
       correct_options: [0]
     };
-    setJobData({
-      ...jobData,
-      mcq_questions: [...(jobData.mcq_questions || []), newQuestion]
-    });
+    setJobData(prev => ({
+      ...prev,
+      mcq_questions: [...(prev.mcq_questions || []), newQuestion]
+    }));
   };
 
   const handleMcqQuestionUpdate = (index: number, field: string, value: any) => {
-    const updatedQuestions = [...(jobData.mcq_questions || [])];
-    if (field === "options") {
-      const optionIndex = parseInt(value.optionIndex);
-      const optionValue = value.value;
-      updatedQuestions[index] = {
-        ...updatedQuestions[index],
-        options: updatedQuestions[index].options.map((opt, idx) =>
-          idx === optionIndex ? optionValue : opt
-        )
+    setJobData(prev => {
+      const updatedQuestions = [...(prev.mcq_questions || [])];
+      if (field === "options") {
+        const optionIndex = parseInt(value.optionIndex);
+        const optionValue = value.value;
+        updatedQuestions[index] = {
+          ...updatedQuestions[index],
+          options: updatedQuestions[index].options.map((opt, idx) =>
+            idx === optionIndex ? optionValue : opt
+          )
+        };
+      } else if (field === "type") {
+        // Reset correct options when type changes
+        updatedQuestions[index] = {
+          ...updatedQuestions[index],
+          type: value,
+          correct_options: [0], // Default to first option being correct
+          // For true/false questions, automatically set up True and False options
+          options: value === "true_false" ? ["True", "False"] : ["", "", "", ""]
+        };
+      } else if (field === "correct_options") {
+        updatedQuestions[index] = {
+          ...updatedQuestions[index],
+          correct_options: value
+        };
+      } else if (field === "category") {
+        updatedQuestions[index] = {
+          ...updatedQuestions[index],
+          category: value
+        };
+      } else if (field === "time_seconds" && prev.mcq_timing_mode === 'per_question') {
+        // Only update time_seconds if in per_question mode
+        updatedQuestions[index] = {
+          ...updatedQuestions[index],
+          time_seconds: value
+        };
+      } else {
+        updatedQuestions[index] = {
+          ...updatedQuestions[index],
+          [field]: value
+        };
+      }
+      return {
+        ...prev,
+        mcq_questions: updatedQuestions
       };
-    } else if (field === "type") {
-      // Reset correct options when type changes
-      updatedQuestions[index] = {
-        ...updatedQuestions[index],
-        type: value,
-        correct_options: [0], // Default to first option being correct
-        // For true/false questions, automatically set up True and False options
-        options: value === "true_false" ? ["True", "False"] : ["", "", "", ""]
-      };
-    } else if (field === "correct_options") {
-      updatedQuestions[index] = {
-        ...updatedQuestions[index],
-        correct_options: value
-      };
-    } else if (field === "category") {
-      updatedQuestions[index] = {
-        ...updatedQuestions[index],
-        category: value,
-        // Ensure exactly 4 options when changing question type
-        options: ["", "", "", ""]
-      };
-    } else if (field === "time_seconds") {
-      updatedQuestions[index] = {
-        ...updatedQuestions[index],
-        time_seconds: parseInt(value)
-      };
-    } else {
-      updatedQuestions[index] = {
-        ...updatedQuestions[index],
-        [field]: value
-      };
-    }
-    setJobData({
-      ...jobData,
-      mcq_questions: updatedQuestions
     });
   };
+
+  const handleSaveMcqQuestions = async () => {
+    if (!jobData.id) {
+      toast.error("Please save job details first");
+      return;
+    }
+
+    setIsSavingMcq(true);
+    try {
+      if (!jobData.mcq_questions || jobData.mcq_questions.length === 0) {
+        toast.error("Please add at least one MCQ question");
+        setIsSavingMcq(false);
+        return;
+      }
+
+      // Validate MCQ questions
+      const mcqQuestionSchema = z.object({
+        title: z.string().nonempty({ message: "Question title is required" }),
+        type: z.enum(["single", "multiple", "true_false"]),
+        category: z.enum(["technical", "aptitude"]),
+        time_seconds: z.number().min(30).max(180).optional(),
+        options: z.array(z.string().nonempty({ message: "Option text is required" })),
+        correct_options: z.array(z.number())
+      });
+
+      const validationSchema = z.object({
+        mcq_questions: z.array(mcqQuestionSchema)
+      });
+
+      const validationResult = validationSchema.safeParse({ mcq_questions: jobData.mcq_questions });
+      if (!validationResult.success) {
+        const newErrors: Record<string, string> = {};
+        validationResult.error.errors.forEach((error) => {
+          const path = error.path[0];
+          if (typeof path === 'string') {
+            newErrors[path] = error.message;
+          }
+        });
+        setErrors(newErrors);
+        toast.error("Please fill in all required fields for MCQ questions");
+        setIsSavingMcq(false);
+        return;
+      }
+
+      // Update job with MCQ questions
+      const response = await jobAPI.updateJob(jobData.id.toString(), {
+        ...jobData,
+        mcq_questions: jobData.mcq_questions,
+        mcq_timing_mode: jobData.mcq_timing_mode,
+        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        toast.success("MCQ questions saved successfully");
+      } else {
+        throw new Error("Failed to save MCQ questions");
+      }
+    } catch (error: any) {
+      console.error("Error saving MCQ questions:", error);
+      let errorMessage = "Failed to save MCQ questions";
+
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsSavingMcq(false);
+    }
+  };
+
+  // Add state for MCQ saving
+  const [isSavingMcq, setIsSavingMcq] = useState(false);
 
   const renderMcqQuestion = (question: any, index: number) => {
     return (
@@ -554,27 +796,29 @@ const NewJob = () => {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Time Limit (seconds)</Label>
-              <Select
-                value={question.time_seconds.toString()}
-                onValueChange={(value) =>
-                  handleMcqQuestionUpdate(index, "time_seconds", parseInt(value))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select time limit" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30 seconds</SelectItem>
-                  <SelectItem value="45">45 seconds</SelectItem>
-                  <SelectItem value="60">60 seconds</SelectItem>
-                  <SelectItem value="90">90 seconds</SelectItem>
-                  <SelectItem value="120">120 seconds</SelectItem>
-                  <SelectItem value="180">180 seconds</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {jobData.mcq_timing_mode === 'per_question' && (
+              <div className="space-y-2">
+                <Label>Time Limit (seconds)</Label>
+                <Select
+                  value={question.time_seconds?.toString() || "30"}
+                  onValueChange={(value) =>
+                    handleMcqQuestionUpdate(index, "time_seconds", parseInt(value))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time limit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">30 seconds</SelectItem>
+                    <SelectItem value="45">45 seconds</SelectItem>
+                    <SelectItem value="60">60 seconds</SelectItem>
+                    <SelectItem value="90">90 seconds</SelectItem>
+                    <SelectItem value="120">120 seconds</SelectItem>
+                    <SelectItem value="180">180 seconds</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <Button
             variant="ghost"
@@ -667,22 +911,29 @@ const NewJob = () => {
   const handleSaveJobDetails = async () => {
     setIsSaving(true);
     try {
-      // Validate job details fields
       const jobDetailsFields = [
         'title', 'department', 'city', 'location', 'type',
         'min_experience', 'max_experience', 'duration_months',
         'key_qualification', 'salary_min', 'salary_max',
-        'show_salary', 'description', 'requirements', 'benefits'
+        'show_salary', 'description', 'requirements', 'benefits',
+        'mcq_timing_mode', 'quiz_time_minutes' // Add timing fields
       ];
 
-      const validationResult = jobFormSchema.pick(
-        Object.fromEntries(jobDetailsFields.map(field => [field, true])) as any
-      ).safeParse(jobData);
+      const validationSchema = z.object(
+        Object.fromEntries(
+          jobDetailsFields.map(field => [field, z.any()])
+        )
+      );
+
+      const validationResult = validationSchema.safeParse(jobData);
 
       if (!validationResult.success) {
         const newErrors: Record<string, string> = {};
-        validationResult.error.errors.forEach(error => {
-          newErrors[error.path[0]] = error.message;
+        validationResult.error.errors.forEach((error) => {
+          const path = error.path[0];
+          if (typeof path === 'string') {
+            newErrors[path] = error.message;
+          }
         });
         setErrors(newErrors);
         
@@ -698,16 +949,23 @@ const NewJob = () => {
         return;
       }
 
-      // Create job with only job details
+      // Create job with job details including timing information
       const response = await jobAPI.createJob({
         ...jobData,
-        status: 'draft' // Set status as draft when saving job details
+        status: 'draft',
+        mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
+        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
       });
 
       if (response.status >= 200 && response.status < 300) {
         toast.success("Job details saved successfully");
         // Update the job ID in the state
-        setJobData(prev => ({ ...prev, id: response.data.id }));
+        setJobData(prev => ({ 
+          ...prev, 
+          id: response.data.id,
+          mcq_timing_mode: prev.mcq_timing_mode || 'per_question',
+          quiz_time_minutes: prev.mcq_timing_mode === 'whole_test' ? prev.quiz_time_minutes : null
+        }));
       } else {
         throw new Error("Failed to save job details");
       }
@@ -735,18 +993,35 @@ const NewJob = () => {
 
     setIsSavingDsa(true);
     try {
-      // Validate DSA questions
       if (!jobData.dsa_questions || jobData.dsa_questions.length === 0) {
         toast.error("Please add at least one DSA question");
         setIsSavingDsa(false);
         return;
       }
 
-      const validationResult = jobFormSchema.shape.dsa_questions.safeParse(jobData.dsa_questions);
+      const dsaQuestionSchema = z.object({
+        title: z.string().nonempty(),
+        description: z.string().nonempty(),
+        difficulty: z.string().nonempty(),
+        time_minutes: z.number().min(1).max(180),
+        test_cases: z.array(z.object({
+          input: z.string().nonempty(),
+          expected_output: z.string().nonempty()
+        })).min(1)
+      });
+
+      const validationSchema = z.object({
+        dsa_questions: z.array(dsaQuestionSchema)
+      });
+
+      const validationResult = validationSchema.safeParse({ dsa_questions: jobData.dsa_questions });
       if (!validationResult.success) {
         const newErrors: Record<string, string> = {};
-        validationResult.error.errors.forEach(error => {
-          newErrors[error.path[0]] = error.message;
+        validationResult.error.errors.forEach((error) => {
+          const path = error.path[0];
+          if (typeof path === 'string') {
+            newErrors[path] = error.message;
+          }
         });
         setErrors(newErrors);
         toast.error("Please fill in all required fields for DSA questions");
@@ -878,6 +1153,30 @@ const NewJob = () => {
     handleChange("currency", value);
   };
 
+  // Update the timing mode change handler
+  const handleTimingModeChange = (value: 'per_question' | 'whole_test') => {
+    setJobData(prev => ({
+      ...prev,
+      mcq_timing_mode: value,
+      // When switching to whole_test, set default time to 60 minutes (1 hour)
+      quiz_time_minutes: value === 'whole_test' ? 60 : null,
+      // Clear individual question times when switching to whole_test
+      mcq_questions: prev.mcq_questions?.map(q => ({
+        ...q,
+        time_seconds: value === 'per_question' ? (q.time_seconds || 60) : undefined
+      }))
+    }));
+  };
+
+  // Update the quiz time change handler
+  const handleQuizTimeChange = (value: string) => {
+    const minutes = parseInt(value);
+    setJobData(prev => ({
+      ...prev,
+      quiz_time_minutes: minutes
+    }));
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -1005,37 +1304,53 @@ const NewJob = () => {
                     <Label>
                       City <span className="text-destructive">*</span>
                     </Label>
-                    <Select
-                      onValueChange={(val) => handleChange("city", val)}
-                      defaultValue={jobData.city}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select city" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mumbai">Mumbai</SelectItem>
-                        <SelectItem value="delhi">Delhi</SelectItem>
-                        <SelectItem value="bengaluru">Bengaluru</SelectItem>
-                        <SelectItem value="hyderabad">Hyderabad</SelectItem>
-                        <SelectItem value="chennai">Chennai</SelectItem>
-                        <SelectItem value="kolkata">Kolkata</SelectItem>
-                        <SelectItem value="pune">Pune</SelectItem>
-                        <SelectItem value="ahmedabad">Ahmedabad</SelectItem>
-                        <SelectItem value="jaipur">Jaipur</SelectItem>
-                        <SelectItem value="lucknow">Lucknow</SelectItem>
-                        <SelectItem value="kochi">Kochi</SelectItem>
-                        <SelectItem value="indore">Indore</SelectItem>
-                        <SelectItem value="bhopal">Bhopal</SelectItem>
-                        <SelectItem value="chandigarh">Chandigarh</SelectItem>
-                        <SelectItem value="nagpur">Nagpur</SelectItem>
-                        <SelectItem value="visakhapatnam">Visakhapatnam</SelectItem>
-                        <SelectItem value="patna">Patna</SelectItem>
-                        <SelectItem value="bhubaneswar">Bhubaneswar</SelectItem>
-                        <SelectItem value="coimbatore">Coimbatore</SelectItem>
-                        <SelectItem value="guwahati">Guwahati</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Popover open={cityPopupOpen} onOpenChange={setCityPopupOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "w-full justify-between",
+                            !jobData.city && "text-muted-foreground"
+                          )}
+                        >
+                          {jobData.city || "Select a city"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search city..."
+                            value={citySearchTerm}
+                            onValueChange={setCitySearchTerm}
+                          />
+                          <CommandList>
+                            <CommandEmpty>No city found.</CommandEmpty>
+                            <CommandGroup className="max-h-[300px] overflow-auto">
+                              {cities.map((city) => (
+                                <CommandItem
+                                  key={city.id}
+                                  value={city.name}
+                                  onSelect={() => {
+                                    handleChange("city", city.name);
+                                    setCityPopupOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      jobData.city === city.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {city.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     {errors.city && (
                       <p className="text-sm text-destructive">{errors.city}</p>
                     )}
@@ -1104,9 +1419,7 @@ const NewJob = () => {
                     </Label>
                     <Select
                       value={jobData.key_qualification}
-                      onValueChange={(value) =>
-                        handleChange("key_qualification", value)
-                      }
+                      onValueChange={(value) => handleChange("key_qualification", value)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select qualification" />
@@ -1127,12 +1440,12 @@ const NewJob = () => {
                         Job Duration (Months) <span className="text-destructive">*</span>
                       </Label>
                       <Input
+                        id="duration_months"
                         type="number"
                         min="1"
                         value={jobData.duration_months}
                         onChange={(e) => {
                           const value = e.target.value;
-                          // Only allow positive integers
                           if (value === '' || /^\d+$/.test(value)) {
                             handleChange("duration_months", value === '' ? 0 : parseInt(value));
                           }
@@ -1237,6 +1550,7 @@ const NewJob = () => {
                       />
                     </div>
                     <Textarea
+                      id="description"
                       className="min-h-[200px]"
                       placeholder="Describe the role, responsibilities, and expectations..."
                       value={jobData.description}
@@ -1266,6 +1580,7 @@ const NewJob = () => {
                       />
                     </div>
                     <Textarea
+                      id="requirements"
                       className="min-h-[200px]"
                       placeholder="List the required skills, qualifications, and experience..."
                       value={jobData.requirements}
@@ -1279,6 +1594,7 @@ const NewJob = () => {
                   <div className="space-y-2">
                     <Label>Benefits</Label>
                     <Textarea
+                      id="benefits"
                       className="min-h-[150px]"
                       placeholder="List the benefits and perks offered..."
                       value={jobData.benefits}
@@ -1400,8 +1716,6 @@ const NewJob = () => {
                                     <SelectItem value="60">60 minutes</SelectItem>
                                     <SelectItem value="90">90 minutes</SelectItem>
                                     <SelectItem value="120">120 minutes</SelectItem>
-                                    <SelectItem value="150">150 minutes</SelectItem>
-                                    <SelectItem value="180">180 minutes</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -1526,39 +1840,93 @@ const NewJob = () => {
             <TabsContent value="mcq-questions">
               <Card>
                 <CardHeader>
-                  <CardTitle>Multiple Choice Questions</CardTitle>
+                  <CardTitle>MCQ Questions</CardTitle>
+                  <CardDescription>
+                    Add multiple-choice questions for the assessment
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {!jobData.requires_mcq ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">
-                        Enable MCQ assessment in the Job Details tab to add questions
-                      </p>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Timing Mode</Label>
+                      <Select
+                        value={jobData.mcq_timing_mode || 'per_question'}
+                        onValueChange={handleTimingModeChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select timing mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="per_question">Per Question Timing</SelectItem>
+                          <SelectItem value="whole_test">Whole Test Timing</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  ) : (
-                    <>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <div className="space-y-1">
-                            <h3 className="text-lg font-medium">MCQ Questions</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Total Questions: {jobData.mcq_questions?.length || 0}
-                            </p>
-                          </div>
-                          <div className="flex gap-4">
-                            <ExcelImport onImport={handleExcelImport} />
-                            <Button onClick={handleMcqQuestionAdd}>
-                              <Plus className="h-4 w-4 mr-2" />
-                              Add Question
-                            </Button>
-                          </div>
-                        </div>
-                        {jobData.mcq_questions?.map((question, index) => (
-                          renderMcqQuestion(question, index)
-                        ))}
+
+                    {jobData.mcq_timing_mode === 'whole_test' && (
+                      <div className="space-y-2">
+                        <Label>Total Test Time (minutes)</Label>
+                        <Select
+                          value={jobData.quiz_time_minutes?.toString() || "60"}
+                          onValueChange={handleQuizTimeChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select total time" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="15">15 minutes</SelectItem>
+                            <SelectItem value="30">30 minutes</SelectItem>
+                            <SelectItem value="45">45 minutes</SelectItem>
+                            <SelectItem value="60">1 hour</SelectItem>
+                            <SelectItem value="90">1.5 hours</SelectItem>
+                            <SelectItem value="120">2 hours</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </>
-                  )}
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-medium">MCQ Questions</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Total Questions: {jobData.mcq_questions?.length || 0}
+                        </p>
+                      </div>
+                      <div className="flex gap-4">
+                        <ExcelImport onImport={handleExcelImport} />
+                        <Button onClick={handleMcqQuestionAdd}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Question
+                        </Button>
+                      </div>
+                    </div>
+                    {jobData.mcq_questions?.map((question, index) => (
+                      renderMcqQuestion(question, index)
+                    ))}
+                  </div>
+
+                  <div className="flex justify-end mt-4">
+                    <Button
+                      type="button"
+                      onClick={handleSaveMcqQuestions}
+                      disabled={isSavingMcq}
+                      variant="outline"
+                    >
+                      {isSavingMcq ? (
+                        <>
+                          <LoadingSpinner size="sm" className="mr-2" />
+                          Saving MCQ Questions...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save MCQ Questions
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

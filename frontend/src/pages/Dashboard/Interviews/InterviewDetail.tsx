@@ -36,6 +36,7 @@ import {
   Briefcase,
   Link as LinkIcon,
   FileText,
+  Image,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import VideoJS from "@/components/common/VideoJs";
@@ -113,6 +114,7 @@ const InterviewDetail = () => {
     aptitude: { correct: 0, total: 0 },
   });
   const playerRef = React.useRef(null);
+  const [interviews, setInterviews] = useState<InterviewData[]>([]);
 
   useEffect(() => {
     const fetchInterview = async () => {
@@ -143,19 +145,18 @@ const InterviewDetail = () => {
           linkedinUrl: interviewData.linkedin_url,
           portfolioUrl: interviewData.portfolio_url,
           resumeUrl: interviewData.resume_url,
+          resumeText: interviewData.resume_text,
           resumeMatchScore: interviewData.resume_match_score,
           resumeMatchFeedback: interviewData.resume_match_feedback,
           overallScore: interviewData.overall_score,
+          technicalSkillsScore: interviewData.technical_skills_score,
+          communicationSkillsScore: interviewData.communication_skills_score,
+          problemSolvingSkillsScore: interviewData.problem_solving_skills_score,
+          culturalFitScore: interviewData.cultural_fit_score,
           feedback: interviewData.feedback,
-          createdAt: interviewData.created_at,
           jobId: interviewData.job_id,
-          technical_skills_score: interviewData.technical_skills_score,
-          communication_skills_score: interviewData.communication_skills_score,
-          problem_solving_skills_score:
-            interviewData.problem_solving_skills_score,
-          cultural_fit_score: interviewData.cultural_fit_score,
-          resumeText: interviewData.resumeText || "",
           videoUrl: interviewData.video_url,
+          screenshot_urls: interviewData.screenshot_urls || [],
         });
 
         // Fetch job details
@@ -628,74 +629,71 @@ const InterviewDetail = () => {
                 View MCQ Responses
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+            <div className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Technical Skills
-                </p>
+                <h4 className="font-medium mb-2">Technical Skills</h4>
                 <div className="flex items-center gap-2">
                   <div className="w-full bg-muted rounded-full h-2">
                     <div
                       className="bg-primary h-2 rounded-full"
                       style={{
-                        width: `${interview?.technical_skills_score || 0}%`,
+                        width: `${interview.technicalSkillsScore}%`,
                       }}
                     />
                   </div>
                   <span className="text-sm font-medium">
-                    {interview?.technical_skills_score || 0}%
+                    {interview.technicalSkillsScore}%
                   </span>
                 </div>
               </div>
+
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Communication Skills
-                </p>
+                <h4 className="font-medium mb-2">Communication Skills</h4>
                 <div className="flex items-center gap-2">
                   <div className="w-full bg-muted rounded-full h-2">
                     <div
                       className="bg-primary h-2 rounded-full"
                       style={{
-                        width: `${interview?.communication_skills_score || 0}%`,
+                        width: `${interview.communicationSkillsScore}%`,
                       }}
                     />
                   </div>
                   <span className="text-sm font-medium">
-                    {interview?.communication_skills_score || 0}%
+                    {interview.communicationSkillsScore}%
                   </span>
                 </div>
               </div>
+
               <div>
-                <p className="text-sm text-muted-foreground">Problem Solving</p>
+                <h4 className="font-medium mb-2">Problem Solving</h4>
                 <div className="flex items-center gap-2">
                   <div className="w-full bg-muted rounded-full h-2">
                     <div
                       className="bg-primary h-2 rounded-full"
                       style={{
-                        width: `${
-                          interview?.problem_solving_skills_score || 0
-                        }%`,
+                        width: `${interview.problemSolvingSkillsScore}%`,
                       }}
                     />
                   </div>
                   <span className="text-sm font-medium">
-                    {interview?.problem_solving_skills_score || 0}%
+                    {interview.problemSolvingSkillsScore}%
                   </span>
                 </div>
               </div>
+
               <div>
-                <p className="text-sm text-muted-foreground">Cultural Fit</p>
+                <h4 className="font-medium mb-2">Cultural Fit</h4>
                 <div className="flex items-center gap-2">
                   <div className="w-full bg-muted rounded-full h-2">
                     <div
                       className="bg-primary h-2 rounded-full"
                       style={{
-                        width: `${interview?.cultural_fit_score || 0}%`,
+                        width: `${interview.culturalFitScore}%`,
                       }}
                     />
                   </div>
                   <span className="text-sm font-medium">
-                    {interview?.cultural_fit_score || 0}%
+                    {interview.culturalFitScore}%
                   </span>
                 </div>
               </div>
@@ -709,6 +707,7 @@ const InterviewDetail = () => {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
           <TabsTrigger value="video">Video</TabsTrigger>
+          <TabsTrigger value="screenshots">Screenshots</TabsTrigger>
           <TabsTrigger value="questions">Questions & Responses</TabsTrigger>
           <TabsTrigger value="mcq">MCQ Responses</TabsTrigger>
         </TabsList>
@@ -831,6 +830,57 @@ const InterviewDetail = () => {
                     });
                   }}
                 />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="screenshots" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Interview Screenshots</CardTitle>
+              <CardDescription>Captured moments during the interview</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {interview.screenshot_urls && interview.screenshot_urls.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {interview.screenshot_urls.map((url: string, index: number) => {
+                    // Clean up the URL by removing any 'None' segments and ensuring proper path
+                    const cleanUrl = url.replace(/\/None\//g, '/').replace(/\/+/g, '/');
+                    const imageUrl = cleanUrl.startsWith('http') 
+                      ? cleanUrl 
+                      : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/uploads/screenshot/${interview.id}/${cleanUrl.split('/').pop()}`;
+                    
+                    return (
+                      <div key={index} className="relative group">
+                        <img
+                          src={imageUrl}
+                          alt={`Interview screenshot ${index + 1}`}
+                          className="w-full h-48 object-cover rounded-lg"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'https://placehold.co/400x300?text=Image+Not+Found';
+                            console.error('Failed to load image:', imageUrl);
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => window.open(imageUrl, '_blank')}
+                          >
+                            View Full Size
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center p-10">
+                  <Image className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">No screenshots available</p>
+                </div>
               )}
             </CardContent>
           </Card>

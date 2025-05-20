@@ -231,7 +231,7 @@ const SignUp = () => {
           <div className="flex justify-center mb-6">
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-10 h-10 rounded-md bg-brand flex items-center justify-center text-white font-bold">
-                EM
+                E
               </div>
               <span className="font-bold text-xl">EduDiagno</span>
             </Link>

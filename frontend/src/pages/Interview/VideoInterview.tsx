@@ -211,6 +211,27 @@ export default function VideoInterview() {
   // Add new state for screenshot interval
   const screenshotIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Add fullscreen effect hook with other useEffect hooks
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && 
+          !(document as any).webkitFullscreenElement && 
+          !(document as any).msFullscreenElement) {
+        toast.warning("Please stay in fullscreen mode during the interview");
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   useEffect(() => {
     if (currentQuestion.length) {
       // Show typing animation immediately
@@ -761,6 +782,18 @@ export default function VideoInterview() {
 
       // Initialize camera and microphone
       await initializeDevices();
+
+      // Request fullscreen when interview starts
+      const element = document.documentElement;
+      if (element.requestFullscreen) {
+        element.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else if ((element as any).webkitRequestFullscreen) {
+        (element as any).webkitRequestFullscreen();
+      } else if ((element as any).msRequestFullscreen) {
+        (element as any).msRequestFullscreen();
+      }
     } catch (error) {
       console.error("Error starting interview:", error);
       toast.error("Failed to start interview");

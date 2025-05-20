@@ -35,7 +35,8 @@ export function MatchResultsStage({
   const navigate = useNavigate();
 
   const handleStartInterview = () => {
-    navigate(`/interview/overview?i_id=${interviewId}&company=${companyName}`);
+    const interviewUrl = `/interview/overview?i_id=${interviewId}&company=${companyName}`;
+    window.open(interviewUrl, '_blank', 'fullscreen=yes');
   };
 
   const handleScheduleLater = () => {

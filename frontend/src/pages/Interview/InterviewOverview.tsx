@@ -31,21 +31,32 @@ const InterviewOverview = () => {
     enabled: !!interviewId,
   });
 
-  const handleStartInterview = () => {
-    console.log('Job Data:', jobData);
-    console.log('hasQuiz:', jobData?.hasQuiz);
-    console.log('hasDSATest:', jobData?.hasDSATest);
-    
+  const handleStartInterview = async () => {
+    let interviewUrl = '';
     if (jobData?.hasQuiz) {
-      console.log('Flow: Taking user to MCQ test');
-      navigate(`/mcq?i_id=${interviewId}&company=${companyName}`);
+      interviewUrl = `/mcq?i_id=${interviewId}&company=${companyName}`;
     } else if (jobData?.hasDSATest) {
-      console.log('Flow: Taking user to DSA playground');
-      navigate(`/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`);
+      interviewUrl = `/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`;
     } else {
-      console.log('Flow: Taking user to video interview');
-      navigate(`/interview/video?i_id=${interviewId}&company=${companyName}`);
+      interviewUrl = `/interview/video?i_id=${interviewId}&company=${companyName}`;
     }
+
+    // First navigate to the interview page
+    navigate(interviewUrl);
+
+    // Then request fullscreen after a short delay to ensure the page has loaded
+    setTimeout(() => {
+      const element = document.documentElement;
+      if (element.requestFullscreen) {
+        element.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else if ((element as any).webkitRequestFullscreen) {
+        (element as any).webkitRequestFullscreen();
+      } else if ((element as any).msRequestFullscreen) {
+        (element as any).msRequestFullscreen();
+      }
+    }, 100);
   };
 
   if (isLoading) {
