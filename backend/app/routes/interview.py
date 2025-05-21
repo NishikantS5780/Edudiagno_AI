@@ -21,9 +21,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, delete, select, update
 
 from app import config, database, schemas
+from app import services
 from app.configs import openai
 from app.lib.errors import CustomException
-from app.models import Interview, InterviewQuestionAndResponse, Job, Recruiter
+from app.models import (
+    Interview,
+    InterviewQuestion,
+    InterviewQuestionAndResponse,
+    InterviewQuestionResponse,
+    Job,
+    Recruiter,
+)
 from app.services import brevo
 from app.utils import jwt
 from app.dependencies.authorization import authorize_candidate, authorize_recruiter
@@ -470,8 +478,21 @@ async def generate_feedback(
         InterviewQuestionAndResponse.question_type,
         InterviewQuestionAndResponse.answer,
     ).where(InterviewQuestionAndResponse.interview_id == interview_id)
-    questions_and_responses = db.execute(stmt).all()
-    questions_and_responses = [q_a._mapping for q_a in questions_and_responses]
+    questions_and_responses = db.execute(stmt).mappings().all()
+
+    stmt = (
+        select(
+            InterviewQuestion.question,
+            InterviewQuestion.question_type,
+            InterviewQuestionResponse.answer,
+        )
+        .join(
+            InterviewQuestion,
+            InterviewQuestion.id == InterviewQuestionResponse.question_id,
+        )
+        .where(InterviewQuestionResponse.interview_id == interview_id)
+    )
+    custom_question_responses = db.execute(stmt).mappings().all()
 
     conversation = ""
     for question_and_response in questions_and_responses:
@@ -479,6 +500,13 @@ async def generate_feedback(
             Recruiter: {question_and_response.question} (question type: {question_and_response.question_type})
 
             Candidate: {question_and_response.answer}
+        """
+
+    for response in custom_question_responses:
+        conversation += f"""
+            Recruiter: {response.question} (question type: {response.question_type})
+
+            Candidate: {response.answer}
         """
 
     prompt = f"""
@@ -682,3 +710,14 @@ async def update_interview(
     db.execute(stmt)
     db.commit()
     return
+
+
+@router.post("/interview-question-response")
+async def create_interview_question_response(
+    response_data: schemas.CreateInterviewQuestionResponse,
+    interview_id: int = Depends(authorize_candidate),
+    db: Session = Depends(database.get_db),
+):
+    return services.interview_question_response.create_interview_question_response(
+        response_data, interview_id, db
+    )

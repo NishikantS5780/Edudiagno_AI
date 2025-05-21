@@ -5,6 +5,7 @@ from sqlalchemy import select, update
 import random
 
 from app import config, database, models, schemas
+from app import services
 from app.dependencies.authorization import authorize_recruiter
 from app.lib.errors import CustomException
 from app.models import Recruiter
@@ -50,11 +51,33 @@ async def login_recruiter(
     login_data: schemas.RecruiterLogin,
     db: Session = Depends(database.get_db),
 ):
-    stmt = select(Recruiter).where(Recruiter.email == login_data.email)
-    recruiter = db.execute(stmt).scalars().one()
+    stmt = select(
+        Recruiter.id,
+        Recruiter.name,
+        Recruiter.email,
+        Recruiter.password_hash,
+        Recruiter.email_verified,
+        Recruiter.phone,
+        Recruiter.designation,
+        Recruiter.company_name,
+        Recruiter.company_logo,
+        Recruiter.website,
+        Recruiter.industry,
+        Recruiter.min_company_size,
+        Recruiter.max_company_size,
+        Recruiter.country,
+        Recruiter.state,
+        Recruiter.city,
+        Recruiter.zip,
+        Recruiter.address,
+        Recruiter.verified,
+        Recruiter.created_at,
+        Recruiter.updated_at,
+    ).where(Recruiter.email == login_data.email)
+    recruiter = db.execute(stmt).mappings().one()
 
     password_match = security.verify_password(
-        login_data.password, recruiter.password_hash
+        login_data.password, recruiter["password_hash"]
     )
 
     if not password_match:
@@ -70,7 +93,9 @@ async def login_recruiter(
     )
 
     response.headers["Authorization"] = f"Bearer {encoded_jwt}"
-    return recruiter
+    recruiter_data = dict(recruiter)
+    recruiter_data.pop("password_hash")
+    return recruiter_data
 
 
 @router.get("", response_model=schemas.Recruiter)
@@ -211,3 +236,45 @@ async def verify_otp(
 
     response.headers["Authorization"] = f"Bearer {encoded_jwt}"
     return recruiter
+
+
+@router.post("/interview-question")
+async def create_interview_questions(
+    interview_question_data: schemas.CreateInterviewQuestion,
+    recruiter_id: int = Depends(authorize_recruiter),
+    db: Session = Depends(database.get_db),
+):
+    return services.interview_question.create_interview_question(
+        interview_question_data, db
+    )
+
+
+@router.put("/interview-question")
+async def update_interview_question(
+    interview_question_data: schemas.UpdateInterviewQuestion,
+    recruiter_id: int = Depends(authorize_recruiter),
+    db: Session = Depends(database.get_db),
+):
+    return services.interview_question.update_interview_question(
+        interview_question_data, db
+    )
+
+
+@router.delete("/interview-question")
+async def delete_interview_question(
+    id: int,
+    recruiter_id: int = Depends(authorize_recruiter),
+    db: Session = Depends(database.get_db),
+):
+    return services.interview_question.delete_interview_question(id, db)
+
+
+@router.get("/interview-question-response")
+async def get_interview_question_response_by_interview(
+    interview_id: int,
+    recruiter_id: int = Depends(authorize_recruiter),
+    db: Session = Depends(database.get_db),
+):
+    return services.interview_question_response.get_interview_question_response_by_interview_id(
+        interview_id, db
+    )

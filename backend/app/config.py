@@ -9,8 +9,12 @@ class Settings:
         os.getenv("ACCESS_TOKEN_EXPIRATION_MINUTES", "3")
     )
     CORS_ORIGINS: list = os.getenv(
-        "CORS_ORIGINS", "http://localhost:8080,http://localhost:5173,http://127.0.0.1:8080,http://127.0.0.1:5173"
+        "CORS_ORIGINS",
+        "http://localhost:8080,http://localhost:5173,http://127.0.0.1:8080,http://127.0.0.1:5173",
     ).split(",")
+
+    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID")
+    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET")
 
     # OpenAI Settings
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
@@ -19,7 +23,9 @@ class Settings:
     MAIL_SENDER_NAME: str = os.getenv("MAIL_SENDER_NAME")
     MAIL_SENDER_EMAIL: str = os.getenv("MAIL_SENDER_EMAIL")
 
-    OTP_EXPIRY_DURATION_SECONDS: int = int(os.getenv("OTP_EXPIRY_DURATION_SECONDS", "300"))
+    OTP_EXPIRY_DURATION_SECONDS: int = int(
+        os.getenv("OTP_EXPIRY_DURATION_SECONDS", "300")
+    )
 
 
 settings = Settings()

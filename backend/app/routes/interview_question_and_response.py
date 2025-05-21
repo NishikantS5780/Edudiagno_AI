@@ -8,7 +8,7 @@ from sqlalchemy import and_, select, update
 from app import database, schemas
 from app.configs import openai
 from app.dependencies.authorization import authorize_candidate, authorize_recruiter
-from app.models import Interview, InterviewQuestionAndResponse, Job
+from app.models import Interview, InterviewQuestion, InterviewQuestionAndResponse, Job
 
 router = APIRouter()
 
@@ -36,6 +36,17 @@ async def generate_questions(
 
     stmt = select(Job).where(Job.id == interview.job_id)
     job = db.execute(stmt).scalars().one()
+
+    stmt = select(InterviewQuestion.question, InterviewQuestion.question_type).where(
+        InterviewQuestion.job_id == interview.job_id
+    )
+    custom_questions = db.execute(stmt).mappings().all()
+
+    example_questions = ""
+    for question in custom_questions:
+        example_questions += f"""
+        Question: {question.question} (question type: {question.question_type})
+"""
 
     if not interview.resume_text and not job.description:
         return [
@@ -74,6 +85,9 @@ Job Description:
 
 Candidate's Resume:
 {interview.resume_text}
+
+Example Questions:
+{example_questions}
 
 {'For the first question, start with a brief greeting and then ask your first question. Format it as: "Hello! [Greeting message]. [Question]".'}
 

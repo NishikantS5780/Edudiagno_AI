@@ -97,6 +97,7 @@ from app.routes import (
     dsa_response,
     dsa_test_case,
     interview_question_and_response,
+    public,
     quiz_option,
     quiz_question,
     quiz_response,
@@ -110,13 +111,14 @@ from app.routes import (
     dsa_question,
 )
 
+app.include_router(public.router, prefix="/api", tags=["Public"])
 app.include_router(recruiter.router, prefix="/api/recruiter", tags=["Recruiter"])
 app.include_router(job.router, prefix="/api/job", tags=["Job"])
 app.include_router(interview.router, prefix="/api/interview", tags=["Interview"])
 app.include_router(
     interview_question_and_response.router,
     prefix="/api/interview-question-and-response",
-    tags=["Interview Question"],
+    tags=["Interview Question and Response"],
 )
 app.include_router(resume.router, prefix="/api/resume", tags=["Resume"])
 app.include_router(text.router, prefix="/api/text", tags=["Text"])
