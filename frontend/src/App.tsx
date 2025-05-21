@@ -23,6 +23,7 @@ import ScrollToTop from "@/components/common/ScrollToTop";
 import Landing from "@/pages/Landing";
 import Landing1 from "@/pages/Landing1";
 import Landing2 from "@/pages/Landing2";
+import Landing4 from "@/pages/Landing4";
 import Features from "@/pages/Features";
 import About from "@/pages/About";
 import CaseStudies from "@/pages/CaseStudies";
@@ -96,6 +97,7 @@ const App = () => {
                 <Route path="/" element={<Landing />} />
                 <Route path="/landing1" element={<Landing1 />} />
                 <Route path="/landing2" element={<Landing2 />} />
+                <Route path="/landing4" element={<Landing4 />} />
                 <Route path="/features" element={<Features />} />
                 {/* Case Studies, About, and Pricing pages temporarily hidden
                 <Route path="/pricing" element={<Pricing />} />
