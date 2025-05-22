@@ -85,6 +85,52 @@ class Job(Base):
         "DSAQuestion",
         back_populates="job",
     )
+    interview_questions = relationship("InterviewQuestion", back_populates="job")
+
+
+class InterviewQuestion(Base):
+    __tablename__ = "interview_questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    question = Column(String, nullable=False)
+    question_type = Column(
+        String, nullable=False
+    )  # technical, behavioral, problem_solving, custom
+    order_number = Column(Integer)
+    job_id = Column(
+        Integer,
+        ForeignKey("jobs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    __table_args__ = (UniqueConstraint("order_number", "job_id", name="uq_order_job"),)
+
+    # Relationships
+    job = relationship("Job", back_populates="interview_questions")
+    responses = relationship("InterviewQuestionResponse", back_populates="question")
+
+
+class InterviewQuestionResponse(Base):
+    __tablename__ = "interview_question_responses"
+
+    answer = Column(String)
+    question_id = Column(
+        Integer,
+        ForeignKey("interview_questions.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    created_at = Column(DateTime, default=func.now())
+    interview_id = Column(
+        Integer,
+        ForeignKey("interviews.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+
+    # Relationships
+    question = relationship("InterviewQuestion", back_populates="responses")
+    interview = relationship("Interview", back_populates="question_responses")
 
 
 class QuizQuestion(Base):
@@ -209,6 +255,9 @@ class Interview(Base):
     dsa_responses = relationship(
         "DSAResponse",
         back_populates="interview",
+    )
+    question_responses = relationship(
+        "InterviewQuestionResponse", back_populates="interview"
     )
 
 

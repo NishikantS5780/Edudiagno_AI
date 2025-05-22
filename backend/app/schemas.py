@@ -107,6 +107,24 @@ class UpdateJob(BaseModel):
     quiz_time_minutes: Optional[int] = None
 
 
+class CreateInterviewQuestion(BaseModel):
+    question: str
+    question_type: str
+    order_number: int
+    job_id: int
+
+
+class UpdateInterviewQuestion(BaseModel):
+    id: int
+    question: Optional[str] = None
+    question_type: Optional[str] = None
+
+
+class CreateInterviewQuestionResponse(BaseModel):
+    question_id: int
+    answer: str
+
+
 class Job(BaseModel):
     id: int
     title: str
