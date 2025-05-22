@@ -101,37 +101,62 @@ const Landing4 = () => {
       {/* Hero section */}
       <motion.section
         className="relative overflow-hidden py-20 md:py-32 px-4"
-        style={{ background: 'linear-gradient(90deg, #5B21B6 0%, #7C3AED 100%)' }}
+        style={{
+          background: 'linear-gradient(135deg, #A259E6 0%, #1a0025 100%)',
+        }}
         initial="hidden"
         animate="visible"
         variants={stagger}
       >
         {/* Gradient background shapes */}
-        <div className="absolute top-0 left-0 w-72 h-72 rounded-full bg-purple-900 opacity-20 blur-2xl -z-10" style={{ top: '-4rem', left: '-4rem' }} />
-        <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-purple-700 opacity-20 blur-2xl -z-10" style={{ bottom: '-6rem', right: '-6rem' }} />
+        <div className="absolute top-0 left-0 w-72 h-72 rounded-full bg-[#6D249F] opacity-30 blur-2xl -z-10" style={{ top: '-4rem', left: '-4rem' }} />
+        <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-[#A259E6] opacity-30 blur-2xl -z-10" style={{ bottom: '-6rem', right: '-6rem' }} />
+        {/* Large purple circle behind robot */}
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full bg-[#A259E6] opacity-80 -z-10" style={{ right: '6%', top: '50%' }} />
+        {/* Decorative circles */}
+        <div className="absolute left-1/3 top-1/4 w-16 h-16 rounded-full bg-[#A259E6] opacity-60 -z-10" />
+        <div className="absolute left-1/2 top-2/3 w-10 h-10 rounded-full bg-[#6D249F] opacity-40 -z-10" />
+        <div className="absolute right-1/4 top-1/3 w-8 h-8 rounded-full bg-[#A259E6] opacity-50 -z-10" />
         <div className="container mx-auto relative z-10">
-          <div className="max-w-4xl mx-auto text-center space-y-4">
-            <motion.div variants={slideInLeft}>
-              <div className="inline-flex items-center rounded-full border border-violet-200 bg-white/30 px-4 py-1.5 text-sm mb-8 backdrop-blur">
-                <span className="flex h-2 w-2 rounded-full bg-white mr-2"></span>
-                <span className="text-white font-semibold">
-                  AI-powered Candidate Selection
-                </span>
-              </div>
-            </motion.div>
-            <motion.h1 className="text-6xl md:text-7xl font-extrabold text-white mb-6 leading-tight" variants={slideInRight}>
-              Smarter Hiring with AI<br />for Modern Teams
-            </motion.h1>
-            <motion.p className="text-white text-lg md:text-xl max-w-2xl mx-auto" variants={slideInLeft}>
-              Automated interviews, instant insights, and data-driven hiring. Transform your recruitment process with our AI-powered platform—trusted by MNCs and startups worldwide.
-            </motion.p>
-            <motion.div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6" variants={slideInCenter}>
-              <Button size="lg" className="w-full sm:w-auto bg-purple-700 hover:bg-purple-800 text-white rounded-xl px-10 py-4 text-lg font-semibold">
-                Start Slide
-              </Button>
-              <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-purple-400 text-white hover:bg-purple-400/20 rounded-xl px-10 py-4 text-lg font-semibold flex items-center gap-2">
-                Watch Video <span className="inline-block bg-white/20 rounded-full p-1"><svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="white" fillOpacity="0.2"/><polygon points="10,8 16,12 10,16" fill="white"/></svg></span>
-              </Button>
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center md:items-start gap-12">
+            {/* Left: Text */}
+            <div className="flex-1 text-left space-y-4">
+              <motion.div variants={slideInLeft} className="inline-block">
+                <div className="inline-flex items-center rounded-full border border-violet-200 bg-white/30 px-4 py-1.5 text-sm mb-8 backdrop-blur">
+                  <span className="flex h-2 w-2 rounded-full bg-white mr-2"></span>
+                  <span className="text-white font-semibold">
+                    AI-powered Candidate Selection
+                  </span>
+                </div>
+              </motion.div>
+              <motion.h1 className="text-6xl md:text-7xl font-extrabold text-white mb-6 leading-tight" variants={slideInRight}>
+                Smarter Hiring with AI<br />for Modern Teams
+              </motion.h1>
+              <motion.p className="text-white text-lg md:text-xl max-w-2xl" variants={slideInLeft}>
+                Automated interviews, instant insights, and data-driven hiring. Transform your recruitment process with our AI-powered platform—trusted by MNCs and startups worldwide.
+              </motion.p>
+              <motion.div className="flex flex-col sm:flex-row items-center md:items-start gap-4 pt-6" variants={slideInCenter}>
+                <Button size="lg" className="w-full sm:w-auto bg-purple-700 hover:bg-purple-800 text-white rounded-xl px-10 py-4 text-lg font-semibold">
+                  Start Slide
+                </Button>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-purple-400 text-white hover:bg-purple-400/20 rounded-xl px-10 py-4 text-lg font-semibold flex items-center gap-2">
+                  Watch Video <span className="inline-block bg-white/20 rounded-full p-1"><svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="white" fillOpacity="0.2"/><polygon points="10,8 16,12 10,16" fill="white"/></svg></span>
+                </Button>
+                <Link to="/dashboard4">
+                  <Button size="lg" className="w-full sm:w-auto bg-violet-900 hover:bg-violet-800 text-white rounded-xl px-10 py-4 text-lg font-semibold">
+                    Go to Dashboard
+                  </Button>
+                </Link>
+              </motion.div>
+            </div>
+            {/* Right: Avatar */}
+            <motion.div className="flex-1 flex justify-center md:justify-end items-center" variants={slideInRight}>
+              <img
+                src="/executive-avatar.png"
+                alt="Executive Avatar"
+                className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full object-cover shadow-2xl border-4 border-white/30 bg-white/10 max-w-full max-h-full"
+                style={{ maxWidth: '320px', maxHeight: '320px' }}
+              />
             </motion.div>
           </div>
         </div>
@@ -376,7 +401,7 @@ const Landing4 = () => {
               Built for scale, security, and speed—our platform adapts to the needs of both global enterprises and fast-moving startups.
             </p>
           </motion.div>
-          <motion.div className="grid md:grid-cols-3 gap-10" variants={stagger}>
+          <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8" variants={stagger}>
             {featureDetails.map((f, i) => (
               <motion.div
                 key={f.title}
@@ -559,6 +584,43 @@ const Landing4 = () => {
         <div className="container mx-auto px-4 text-center max-w-2xl">
           <h2 className="text-4xl font-bold text-violet-900 mb-4">Our Mission</h2>
           <p className="text-violet-700 text-lg">We believe in a world where hiring is fair, fast, and data-driven. Our mission is to empower organizations of all sizes to find the best talent—anywhere, anytime—using the power of AI and automation.</p>
+        </div>
+      </motion.section>
+
+      {/* New Dashboard Suite Preview Section */}
+      <motion.section className="py-20 bg-gradient-to-br from-[#A259E6]/80 to-[#1a0025]" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={stagger}>
+        <div className="container mx-auto px-4 overflow-x-auto">
+          <motion.div className="text-center max-w-3xl mx-auto mb-16" variants={slideInLeft}>
+            <h2 className="text-4xl font-bold text-white mb-4">Explore the New Dashboard Suite</h2>
+            <p className="text-violet-200 text-lg">A modern, AI-powered workspace for all your hiring needs. Try the new dashboard, candidate management, analytics, and more!</p>
+          </motion.div>
+          <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8" variants={stagger}>
+            <motion.div className="bg-white/10 rounded-2xl p-8 shadow-xl text-white text-center border border-violet-400/30 hover:scale-105 transition-transform cursor-pointer" variants={slideInLeft}>
+              <h3 className="text-2xl font-bold mb-2">Dashboard</h3>
+              <p className="mb-4 text-violet-200">Your AI-powered hiring overview, stats, and quick actions.</p>
+              <Link to="/dashboard4" className="inline-block"><Button className="bg-violet-700 hover:bg-violet-800 text-white rounded-xl px-6 py-2">Open</Button></Link>
+            </motion.div>
+            <motion.div className="bg-white/10 rounded-2xl p-8 shadow-xl text-white text-center border border-violet-400/30 hover:scale-105 transition-transform cursor-pointer" variants={slideInRight}>
+              <h3 className="text-2xl font-bold mb-2">Candidates</h3>
+              <p className="mb-4 text-violet-200">Manage, screen, and track candidates with ease.</p>
+              <Link to="/candidates4" className="inline-block"><Button className="bg-violet-700 hover:bg-violet-800 text-white rounded-xl px-6 py-2">Open</Button></Link>
+            </motion.div>
+            <motion.div className="bg-white/10 rounded-2xl p-8 shadow-xl text-white text-center border border-violet-400/30 hover:scale-105 transition-transform cursor-pointer" variants={slideInLeft}>
+              <h3 className="text-2xl font-bold mb-2">Jobs</h3>
+              <p className="mb-4 text-violet-200">Create, edit, and manage job postings and pipelines.</p>
+              <Link to="/jobs4" className="inline-block"><Button className="bg-violet-700 hover:bg-violet-800 text-white rounded-xl px-6 py-2">Open</Button></Link>
+            </motion.div>
+            <motion.div className="bg-white/10 rounded-2xl p-8 shadow-xl text-white text-center border border-violet-400/30 hover:scale-105 transition-transform cursor-pointer" variants={slideInRight}>
+              <h3 className="text-2xl font-bold mb-2">Analytics</h3>
+              <p className="mb-4 text-violet-200">Visualize hiring funnel, interview success, and more.</p>
+              <Link to="/analytics4" className="inline-block"><Button className="bg-violet-700 hover:bg-violet-800 text-white rounded-xl px-6 py-2">Open</Button></Link>
+            </motion.div>
+            <motion.div className="bg-white/10 rounded-2xl p-8 shadow-xl text-white text-center border border-violet-400/30 hover:scale-105 transition-transform cursor-pointer" variants={slideInLeft}>
+              <h3 className="text-2xl font-bold mb-2">Settings</h3>
+              <p className="mb-4 text-violet-200">Profile, company, and preferences in one place.</p>
+              <Link to="/settings4" className="inline-block"><Button className="bg-violet-700 hover:bg-violet-800 text-white rounded-xl px-6 py-2">Open</Button></Link>
+            </motion.div>
+          </motion.div>
         </div>
       </motion.section>
 

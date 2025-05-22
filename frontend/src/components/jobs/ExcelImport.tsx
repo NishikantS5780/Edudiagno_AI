@@ -754,6 +754,7 @@ const ExcelImport: React.FC<ExcelImportProps> = ({ onImport }) => {
             accept=".xlsx,.xls"
             onChange={handleFileUpload}
             disabled={isLoading}
+            onClick={(e) => e.stopPropagation()}
           />
         </div>
         <Button

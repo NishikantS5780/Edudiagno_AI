@@ -79,12 +79,12 @@ const jobFormSchema = z.object({
     })).min(1, { message: "At least one test case is required" })
   })).optional(),
   mcq_questions: z.array(z.object({
-    title: z.string().nonempty({ message: "MCQ question title is required" }),
-    type: z.enum(["single", "multiple", "true_false"]),
-    category: z.enum(["technical", "aptitude"]),
-    time_seconds: z.number().min(30, { message: "Time limit must be at least 30 seconds" }).max(180, { message: "Time limit cannot exceed 3 minutes" }).optional(),
-    options: z.array(z.string().nonempty({ message: "Option text is required" })),
-    correct_options: z.array(z.number())
+    title: z.string().optional(),
+    type: z.enum(["single", "multiple", "true_false"]).optional(),
+    category: z.enum(["technical", "aptitude"]).optional(),
+    time_seconds: z.number().min(30).max(180).optional(),
+    options: z.array(z.string()).optional(),
+    correct_options: z.array(z.number()).optional()
   })).optional(),
   mcq_timing_mode: z.enum(['per_question', 'whole_test']).default('per_question'),
   quiz_time_minutes: z.number().min(15, { message: "Quiz time must be at least 15 minutes" }).max(120, { message: "Quiz time cannot exceed 2 hours" }).nullable()
@@ -610,11 +610,6 @@ const NewJob = () => {
   };
 
   const handleMcqQuestionAdd = () => {
-    if (!jobData.requires_mcq) {
-      toast.error("Please enable MCQ assessment in Job Details first");
-      return;
-    }
-
     const newQuestion: MCQQuestion = {
       title: "",
       type: "single",
@@ -1060,10 +1055,14 @@ const NewJob = () => {
   };
 
   const handleExcelImport = (importedQuestions: any[]) => {
-    setJobData({
-      ...jobData,
+    // Prevent form submission
+    event?.preventDefault();
+    event?.stopPropagation();
+    
+    setJobData(prev => ({
+      ...prev,
       mcq_questions: [
-        ...(jobData.mcq_questions || []),
+        ...(prev.mcq_questions || []),
         ...importedQuestions.map(q => ({
           title: q.title,
           type: q.type,
@@ -1073,7 +1072,7 @@ const NewJob = () => {
           correct_options: q.correct_options
         }))
       ]
-    });
+    }));
   };
 
   interface Currency {
@@ -1907,7 +1906,7 @@ const NewJob = () => {
                           </div>
                           <div className="flex gap-4">
                             <ExcelImport onImport={handleExcelImport} />
-                            <Button onClick={handleMcqQuestionAdd}>
+                            <Button type="button" onClick={handleMcqQuestionAdd}>
                               <Plus className="h-4 w-4 mr-2" />
                               Add Question
                             </Button>
@@ -1968,3 +1967,4 @@ const NewJob = () => {
 };
 
 export default NewJob;
+

@@ -65,11 +65,9 @@ const MCQTest = () => {
     technical: QuizQuestion[];
     aptitude: QuizQuestion[];
   }>({ technical: [], aptitude: [] });
-  const [currentSection, setCurrentSection] = useState<
-    "technical" | "aptitude"
-  >(() => {
-    // Default to technical if it has questions, otherwise aptitude
-    return "technical";
+  const [currentSection, setCurrentSection] = useState<"technical" | "aptitude">(() => {
+    // Always start with aptitude if available, otherwise technical
+    return "aptitude";
   });
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<{
@@ -178,11 +176,11 @@ const MCQTest = () => {
           aptitude: aptitudeQuestions,
         });
 
-        // Set initial section based on available questions
-        if (technicalQuestions.length > 0) {
-          setCurrentSection("technical");
-        } else if (aptitudeQuestions.length > 0) {
+        // Set initial section based on available questions - always start with aptitude if available
+        if (aptitudeQuestions.length > 0) {
           setCurrentSection("aptitude");
+        } else if (technicalQuestions.length > 0) {
+          setCurrentSection("technical");
         }
 
         // Set answers with proper initialization
@@ -491,6 +489,36 @@ const MCQTest = () => {
     }
   };
 
+  const handleNext = () => {
+    if (currentQuestionIndex < questions[currentSection].length - 1) {
+      const newIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(newIndex);
+      const question = questions[currentSection][newIndex];
+
+      // Update timers
+      setQuestionTimers((prevTimers) => {
+        return prevTimers.map((timer) => ({
+          ...timer,
+          isActive: timer.questionId === question.id,
+        }));
+      });
+    } else if (currentSection === "aptitude" && questions.technical.length > 0) {
+      // Only move to technical section if we're on the last aptitude question
+      if (currentQuestionIndex === questions.aptitude.length - 1) {
+        setCurrentSection("technical");
+        setCurrentQuestionIndex(0);
+        // Activate timer for first technical question
+        setQuestionTimers((prevTimers) => {
+          const firstQuestion = questions.technical[0];
+          return prevTimers.map((timer) => ({
+            ...timer,
+            isActive: timer.questionId === firstQuestion.id,
+          }));
+        });
+      }
+    }
+  };
+
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
       const newIndex = currentQuestionIndex - 1;
@@ -504,20 +532,16 @@ const MCQTest = () => {
           isActive: timer.questionId === question.id,
         }));
       });
-    }
-  };
-
-  const handleNext = () => {
-    if (currentQuestionIndex < questions[currentSection].length - 1) {
-      const newIndex = currentQuestionIndex + 1;
-      setCurrentQuestionIndex(newIndex);
-      const question = questions[currentSection][newIndex];
-
-      // Update timers
+    } else if (currentSection === "technical" && questions.aptitude.length > 0) {
+      // Move back to aptitude section
+      setCurrentSection("aptitude");
+      setCurrentQuestionIndex(questions.aptitude.length - 1);
+      // Activate timer for last aptitude question
       setQuestionTimers((prevTimers) => {
+        const lastQuestion = questions.aptitude[questions.aptitude.length - 1];
         return prevTimers.map((timer) => ({
           ...timer,
-          isActive: timer.questionId === question.id,
+          isActive: timer.questionId === lastQuestion.id,
         }));
       });
     }
@@ -1014,17 +1038,32 @@ const MCQTest = () => {
                     Previous
                   </Button>
                   <div className="flex gap-2">
-                    {currentSection === "aptitude" && questions.technical.length > 0 ? (
-                      <Button onClick={() => setCurrentSection("technical")}>
+                    <Button
+                      variant="outline"
+                      onClick={handleNext}
+                      disabled={
+                        (currentSection === "aptitude" && currentQuestionIndex === questions.aptitude.length - 1) ||
+                        (currentSection === "technical" && currentQuestionIndex === questions.technical.length - 1)
+                      }
+                    >
+                      Next
+                    </Button>
+                    {currentSection === "aptitude" && 
+                     currentQuestionIndex === questions.aptitude.length - 1 && 
+                     questions.technical.length > 0 && (
+                      <Button onClick={() => {
+                        setCurrentSection("technical");
+                        setCurrentQuestionIndex(0);
+                        // Activate timer for first technical question
+                        setQuestionTimers((prevTimers) => {
+                          const firstQuestion = questions.technical[0];
+                          return prevTimers.map((timer) => ({
+                            ...timer,
+                            isActive: timer.questionId === firstQuestion.id,
+                          }));
+                        });
+                      }}>
                         Next Section
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        onClick={handleNext}
-                        disabled={currentQuestionIndex === questions[currentSection].length - 1}
-                      >
-                        Next
                       </Button>
                     )}
                   </div>

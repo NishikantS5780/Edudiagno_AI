@@ -64,6 +64,11 @@ import { NotificationProvider } from "@/context/NotificationContext";
 import MCQTest from "@/pages/Interview/MCQTest";
 import InterviewReport from "@/pages/Dashboard/Interviews/InterviewReport";
 import InterviewOverview from "@/pages/Interview/InterviewOverview";
+import Dashboard4 from "@/pages/Dashboard4";
+import Candidates4 from "@/pages/Candidates4";
+import Jobs4 from "@/pages/Jobs4";
+import Analytics4 from "@/pages/Analytics4";
+import Settings4 from "@/pages/Settings4";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -255,6 +260,12 @@ const App = () => {
                 />
 
                 <Route path="/interview/overview" element={<InterviewOverview />} />
+
+                <Route path="/dashboard4" element={<Dashboard4 />} />
+                <Route path="/candidates4" element={<Candidates4 />} />
+                <Route path="/jobs4" element={<Jobs4 />} />
+                <Route path="/analytics4" element={<Analytics4 />} />
+                <Route path="/settings4" element={<Settings4 />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>

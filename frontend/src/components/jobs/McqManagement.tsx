@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Save, Eye, Pencil } from "lucide-react";
+import { Plus, Trash2, Save, Eye, Pencil, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { jobAPI } from "@/lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 interface QuizOption {
   id: number;
@@ -23,6 +24,7 @@ interface McqQuestion {
   type: 'single' | 'multiple' | 'true_false';
   category: 'technical' | 'aptitude';
   time_seconds: number;
+  image_url?: string;
   options: QuizOption[];
 }
 
@@ -295,6 +297,36 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
     ]);
   };
 
+  const handleImageUpload = async (index: number, file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('description', questions[index].description);
+      formData.append('type', questions[index].type);
+      formData.append('category', questions[index].category);
+      formData.append('job_id', jobId.toString());
+      formData.append('time_seconds', questions[index].time_seconds.toString());
+
+      const response = await api.post('/quiz-question', formData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const updatedQuestions = [...questions];
+      updatedQuestions[index] = {
+        ...updatedQuestions[index],
+        image_url: response.data.image_url
+      };
+      setQuestions(updatedQuestions);
+      toast.success('Image uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+    }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -381,22 +413,67 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
       <div className="space-y-4 pb-24">
         {questions.map((question, index) => (
           <Card key={question.id}>
-            <CardContent className="p-6">
+            <CardHeader>
+              <CardTitle>Question {index + 1}</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Question Text</Label>
+                  <Textarea
+                    value={question.description}
+                    onChange={(e) => handleUpdateQuestion(index, "description", e.target.value)}
+                    placeholder="Enter your question"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Add Image</Label>
+                    <Switch
+                      checked={!!question.image_url}
+                      onCheckedChange={(checked) => {
+                        if (!checked) {
+                          handleUpdateQuestion(index, "image_url", undefined);
+                        }
+                      }}
+                    />
+                  </div>
+                  {!question.image_url && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageUpload(index, file);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                  {question.image_url && (
+                    <div className="relative">
+                      <img
+                        src={question.image_url}
+                        alt="Question"
+                        className="max-w-full h-auto rounded-lg"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => handleUpdateQuestion(index, "image_url", undefined)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-between items-start">
                   <div className="space-y-4 flex-1">
-                    {isEditMode ? (
-                      <Textarea
-                        placeholder="Enter your question"
-                        value={question.description}
-                        onChange={(e) =>
-                          handleUpdateQuestion(index, "description", e.target.value)
-                        }
-                        className="min-h-[100px]"
-                      />
-                    ) : (
-                      <p className="text-lg">{question.description}</p>
-                    )}
                     <div className="flex gap-4">
                       <div className="space-y-2">
                         <Label>Question Type</Label>

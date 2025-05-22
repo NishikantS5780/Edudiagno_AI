@@ -3,6 +3,7 @@ export interface QuizQuestion {
   title: string;
   type: "single" | "multiple" | "true_false";
   category: "technical" | "aptitude";
+  image_url?: string;
   options: Array<{
     id: number;
     label: string;
