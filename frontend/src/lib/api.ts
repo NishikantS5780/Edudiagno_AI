@@ -264,6 +264,28 @@ export const interviewAPI = {
     );
     return res;
   },
+  sendOtp: async (email: string) => {
+    const iToken = localStorage.getItem("i_token");
+    const res = await api.post(
+      "/interview/send-otp",
+      { email },
+      {
+        headers: { Authorization: `Bearer ${iToken}` },
+      }
+    );
+    return res.data;
+  },
+  verifyOtp: async (email: string, otp: string) => {
+    const iToken = localStorage.getItem("i_token");
+    const res = await api.post(
+      "/interview/verify-otp",
+      { email, otp },
+      {
+        headers: { Authorization: `Bearer ${iToken}` },
+      }
+    );
+    return res.data;
+  },
 };
 
 export const jobAPI = {

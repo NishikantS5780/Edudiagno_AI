@@ -9,6 +9,7 @@ import { interviewAPI, resumeAPI } from "@/lib/api";
 import { Loader2, User, Mail, Phone, MapPin, Briefcase, GraduationCap, Brain, Link as LucideLink, Globe } from "lucide-react";
 import { InterviewData } from "@/types/interview";
 import { MatchResultsStage } from "./MatchResultsStage";
+import { EmailVerificationStage } from "./EmailVerificationStage";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -42,6 +43,7 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
   const navigate = useNavigate();
   const { accessCode } = useParams<{ accessCode: string }>();
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const handleResumeChange = (file: File) => {
     if (isCompleted) return;
@@ -143,13 +145,12 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
     return errors;
   };
 
-  const handleSubmitApplication = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitApplication = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (isCompleted) return;
 
     if (!resumeFile) {
-      toast.error("Please upload your resume");
       return;
     }
 
@@ -181,18 +182,18 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
           education: data.education,
           skills: data.skills,
           linkedinUrl: data.linkedin_url,
-          portfolioUrl: data.portfoio_url,
+          portfolioUrl: data.portfolio_url,
           resumeMatchScore: 0,
           resumeMatchFeedback: '',
           status: 'pending',
           overallScore: 0,
           feedback: '',
           createdAt: new Date().toISOString(),
-          jobId: 0,
-          technical_skills_score: 0,
-          communication_skills_score: 0,
-          problem_solving_skills_score: 0,
-          cultural_fit_score: 0,
+          jobId: jobId,
+          technicalSkillsScore: 0,
+          communicationSkillsScore: 0,
+          problemSolvingSkillsScore: 0,
+          culturalFitScore: 0,
           resumeUrl: '',
         });
         const token = res.headers["authorization"].split("Bearer ")[1];
@@ -211,12 +212,11 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
         });
       } catch (error: any) {
         console.error("Error processing resume:", error);
-        let errorMessage = "Error processing your resume. Please try again.";
+        let errorMessage = "Error processing your resume";
 
         if (error.response?.data?.detail) {
           errorMessage = String(error.response.data.detail);
         } else if (error.response?.data?.errors) {
-          // Handle validation errors
           const errors = error.response.data.errors;
           errorMessage = errors.map((err: any) => String(err.msg)).join(", ");
         } else if (error.message) {
@@ -242,6 +242,14 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
   };
 
   if (isCompleted && matchAnalysis) {
+    if (!isEmailVerified) {
+      return (
+        <EmailVerificationStage
+          resumeEmail={candidateData?.email || ""}
+          onVerified={() => setIsEmailVerified(true)}
+        />
+      );
+    }
     return (
       <MatchResultsStage
         matchScore={matchAnalysis.matchScore}
@@ -250,7 +258,6 @@ export function ResumeUploadStage({ jobTitle, companyName, jobId }: ResumeUpload
         companyName={companyName}
         interviewId={candidateData?.id?.toString() ?? ''}
         onScheduleLater={() => {
-          // Here you would typically make an API call to schedule the interview for later
           toast.success("Interview scheduled for later. Check your email for details.");
         }}
       />

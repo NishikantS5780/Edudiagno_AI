@@ -513,9 +513,9 @@ const MCQTest = () => {
           return prevTimers.map((timer) => ({
             ...timer,
             isActive: timer.questionId === firstQuestion.id,
-          }));
-        });
-      }
+        }));
+      });
+    }
     }
   };
 
@@ -1038,15 +1038,15 @@ const MCQTest = () => {
                     Previous
                   </Button>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={handleNext}
+                      <Button
+                        variant="outline"
+                        onClick={handleNext}
                       disabled={
                         (currentSection === "aptitude" && currentQuestionIndex === questions.aptitude.length - 1) ||
                         (currentSection === "technical" && currentQuestionIndex === questions.technical.length - 1)
                       }
-                    >
-                      Next
+                      >
+                        Next
                     </Button>
                     {currentSection === "aptitude" && 
                      currentQuestionIndex === questions.aptitude.length - 1 && 
