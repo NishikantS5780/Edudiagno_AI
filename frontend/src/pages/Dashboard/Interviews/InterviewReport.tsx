@@ -26,8 +26,13 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { QuizResponse, QuizQuestion } from "@/types/quiz";
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } from 'docx';
 
-const InterviewReport = () => {
+interface InterviewReportProps {
+  jobTitle: string;
+}
+
+const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [interview, setInterview] = useState<InterviewData | null>(null);
@@ -80,10 +85,10 @@ const InterviewReport = () => {
           feedback: interviewData.feedback,
           createdAt: interviewData.created_at,
           jobId: interviewData.job_id,
-          technical_skills_score: interviewData.technical_skills_score,
-          communication_skills_score: interviewData.communication_skills_score,
-          problem_solving_skills_score: interviewData.problem_solving_skills_score,
-          cultural_fit_score: interviewData.cultural_fit_score
+          technicalSkillsScore: interviewData.technical_skills_score,
+          communicationSkillsScore: interviewData.communication_skills_score,
+          problemSolvingSkillsScore: interviewData.problem_solving_skills_score,
+          culturalFitScore: interviewData.cultural_fit_score
         });
       } catch (error) {
         console.error("Error fetching interview:", error);
@@ -97,42 +102,39 @@ const InterviewReport = () => {
   }, [id, navigate]);
 
   useEffect(() => {
-    const calculateScores = () => {
-      if (quizResponses.length === 0 || quizQuestions.length === 0) return;
-
+    const calculateMcqScores = () => {
       const scores = {
-        total: { correct: 0, total: quizResponses.length },
+        total: { correct: 0, total: 0 },
         technical: { correct: 0, total: 0 },
         aptitude: { correct: 0, total: 0 }
       };
 
-      quizResponses.forEach(response => {
-        const question = quizQuestions.find(q => q.id === response.question_id);
-        if (!question) return;
+      quizQuestions.forEach(question => {
+        const responses = quizResponses.filter(r => r.question_id === question.id);
+        const selectedOptionIds = responses.map(r => r.option_id);
+        const correctOptions = question.options.filter(opt => opt.correct).map(opt => opt.id);
 
-        const chosenOption = question.options.find((opt: { id: number; label: string; correct: boolean }) => opt.id === response.option_id);
-        if (chosenOption?.correct) {
-          scores.total.correct++;
-          if (question.question_type === 'technical') {
-            scores.technical.correct++;
-            scores.technical.total++;
-          } else if (question.question_type === 'aptitude') {
-            scores.aptitude.correct++;
-            scores.aptitude.total++;
-          }
-        } else {
-          if (question.question_type === 'technical') {
-            scores.technical.total++;
-          } else if (question.question_type === 'aptitude') {
-            scores.aptitude.total++;
-          }
+        const isFullyCorrect = selectedOptionIds.every(id => correctOptions.includes(id));
+        const allCorrectOptionsSelected = correctOptions.every(id => selectedOptionIds.includes(id));
+        const isCorrect = isFullyCorrect && allCorrectOptionsSelected;
+
+        scores.total.total++;
+        if (isCorrect) scores.total.correct++;
+
+        if (question.category === "technical") {
+          scores.technical.total++;
+          if (isCorrect) scores.technical.correct++;
+        } else if (question.category === "aptitude") {
+          scores.aptitude.total++;
+          if (isCorrect) scores.aptitude.correct++;
         }
       });
 
-      setMcqScores(scores);
+      return scores;
     };
 
-    calculateScores();
+    const scores = calculateMcqScores();
+    setMcqScores(scores);
   }, [quizResponses, quizQuestions]);
 
   const getScoreColor = (score: number) => {
@@ -141,88 +143,309 @@ const InterviewReport = () => {
     return "text-destructive";
   };
 
-  const exportReport = () => {
+  const generateWordReport = () => {
     if (!interview) return;
 
-    try {
-      const reportData = {
-        candidate: {
-          name: `${interview.firstName} ${interview.lastName}`,
-          email: interview.email,
-          phone: interview.phone,
-          location: interview.location,
-          education: interview.education,
-          experience: interview.workExperience,
-          skills: interview.skills
-        },
-        interview: {
-          date: new Date(interview.createdAt || '').toLocaleDateString(),
-          status: interview.status,
-          overallScore: interview.overallScore,
-          technicalSkills: interview.technical_skills_score,
-          communication: interview.communication_skills_score,
-          problemSolving: interview.problem_solving_skills_score,
-          culturalFit: interview.cultural_fit_score,
-          feedback: interview.feedback,
-          resumeMatchScore: interview.resumeMatchScore,
-          resumeMatchFeedback: interview.resumeMatchFeedback,
-          mcqScores: {
-            total: `${mcqScores.total.correct}/${mcqScores.total.total}`,
-            technical: `${mcqScores.technical.correct}/${mcqScores.technical.total}`,
-            aptitude: `${mcqScores.aptitude.correct}/${mcqScores.aptitude.total}`
-          }
-        }
-      };
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({
+            text: "Candidate Interview Report",
+            heading: "Heading1",
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400 }
+          }),
+          new Paragraph({
+            text: `${interview.firstName} ${interview.lastName}`,
+            heading: "Heading2",
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 }
+          }),
+          new Paragraph({
+            text: `Position: ${jobTitle || 'Not specified'}`,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 }
+          }),
+          new Paragraph({
+            text: `Date: ${new Date(interview.createdAt || '').toLocaleDateString()}`,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400 }
+          }),
+          new Paragraph({
+            text: "Candidate Information",
+            heading: "Heading2",
+            spacing: { before: 400, after: 200 }
+          }),
+          new Table({
+            width: {
+              size: 100,
+              type: WidthType.PERCENTAGE,
+            },
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.SINGLE, size: 1 },
+              right: { style: BorderStyle.SINGLE, size: 1 },
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Email")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(interview.email || '')],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Phone")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(interview.phone || '')],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Location")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(interview.location || '')],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Education")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(interview.education || '')],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Experience")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${interview.workExperience} years`)],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Skills")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(interview.skills || '')],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new Paragraph({
+            text: "Assessment Results",
+            heading: "Heading2",
+            spacing: { before: 400, after: 200 }
+          }),
+          new Table({
+            width: {
+              size: 100,
+              type: WidthType.PERCENTAGE,
+            },
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.SINGLE, size: 1 },
+              right: { style: BorderStyle.SINGLE, size: 1 },
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Overall Score")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${interview.overallScore}%`)],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Resume Match Score")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${interview.resumeMatchScore}%`)],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Technical Skills")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${interview.technicalSkillsScore}%`)],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Communication Skills")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${interview.communicationSkillsScore}%`)],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Problem Solving")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${interview.problemSolvingSkillsScore}%`)],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Cultural Fit")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${interview.culturalFitScore}%`)],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new Paragraph({
+            text: "MCQ Test Results",
+            heading: "Heading2",
+            spacing: { before: 400, after: 200 }
+          }),
+          new Table({
+            width: {
+              size: 100,
+              type: WidthType.PERCENTAGE,
+            },
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.SINGLE, size: 1 },
+              right: { style: BorderStyle.SINGLE, size: 1 },
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Total Score")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${mcqScores.total.correct}/${mcqScores.total.total}`)],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Technical Questions")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${mcqScores.technical.correct}/${mcqScores.technical.total}`)],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph("Aptitude Questions")],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${mcqScores.aptitude.correct}/${mcqScores.aptitude.total}`)],
+                    width: { size: 70, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new Paragraph({
+            text: "Feedback",
+            heading: "Heading2",
+            spacing: { before: 400, after: 200 }
+          }),
+          new Paragraph({
+            text: interview.feedback || '',
+            spacing: { after: 400 }
+          }),
+          new Paragraph({
+            text: "Resume Match Feedback",
+            heading: "Heading2",
+            spacing: { before: 400, after: 200 }
+          }),
+          new Paragraph({
+            text: interview.resumeMatchFeedback || '',
+            spacing: { after: 400 }
+          }),
+        ],
+      }],
+    });
 
-      const csvContent = [
-        ['Interview Report', new Date().toLocaleDateString()],
-        [''],
-        ['Candidate Information'],
-        ['Name: ' + reportData.candidate.name],
-        ['Email: ' + reportData.candidate.email],
-        ['Phone: ' + reportData.candidate.phone],
-        ['Location: ' + reportData.candidate.location],
-        ['Education: ' + reportData.candidate.education],
-        ['Experience: ' + reportData.candidate.experience + ' years'],
-        ['Skills: ' + reportData.candidate.skills],
-        [''],
-        ['Interview Details'],
-        ['Date: ' + reportData.interview.date],
-        ['Status: ' + reportData.interview.status],
-        ['Overall Score: ' + reportData.interview.overallScore + '%'],
-        ['Technical Skills: ' + reportData.interview.technicalSkills + '%'],
-        ['Communication: ' + reportData.interview.communication + '%'],
-        ['Problem Solving: ' + reportData.interview.problemSolving + '%'],
-        ['Cultural Fit: ' + reportData.interview.culturalFit + '%'],
-        [''],
-        ['MCQ Assessment'],
-        ['Total Score: ' + reportData.interview.mcqScores.total],
-        ['Technical Questions: ' + reportData.interview.mcqScores.technical],
-        ['Aptitude Questions: ' + reportData.interview.mcqScores.aptitude],
-        [''],
-        ['Resume Match'],
-        ['Score: ' + reportData.interview.resumeMatchScore + '%'],
-        ['Feedback: ' + reportData.interview.resumeMatchFeedback],
-        [''],
-        ['Interview Feedback'],
-        [reportData.interview.feedback]
-      ].map(row => row.join('\n')).join('\n\n');
+    // Generate and download the document
+    Packer.toBlob(doc).then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Interview_Report_${interview.firstName}_${interview.lastName}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    });
+  };
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `interview_report_${interview.firstName}_${interview.lastName}_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success('Report downloaded successfully');
-    } catch (error) {
-      console.error('Error exporting report:', error);
-      toast.error('Failed to export report');
-    }
+  const exportReport = () => {
+    generateWordReport();
   };
 
   if (loading) {
@@ -241,62 +464,47 @@ const InterviewReport = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-6">
-        <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/dashboard/interviews")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Interviews
-          </Button>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Interview Report</h1>
           <Button onClick={exportReport}>
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="w-4 h-4 mr-2" />
             Export Report
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card className="md:col-span-2">
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <Avatar className="h-14 w-14">
-                <AvatarFallback className="text-lg">
-                  {interview.firstName[0]}{interview.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <CardTitle className="text-xl">
-                  {interview.firstName} {interview.lastName}
-                </CardTitle>
-                <CardDescription>{interview.email}</CardDescription>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Candidate Information</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <Avatar>
+                  <AvatarImage src={`https://avatar.vercel.sh/${interview?.email}`} />
+                  <AvatarFallback>{interview?.firstName?.[0]}{interview?.lastName?.[0]}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-semibold">{interview?.firstName} {interview?.lastName}</h3>
+                  <p className="text-sm text-muted-foreground">{interview?.email}</p>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p>{interview?.phone}</p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground">Location</p>
-                  <p className="font-medium break-words">{interview.location}</p>
+                  <p>{interview?.location}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Education</p>
-                  <p className="font-medium break-words">{interview.education}</p>
+                  <p>{interview?.education}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Experience</p>
-                  <p className="font-medium break-words">
-                    {interview.workExperience ? `${interview.workExperience} years` : 'Not specified'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Skills</p>
-                  <div className="font-medium flex flex-wrap gap-1">
-                    {interview.skills?.split(',').map((skill, index) => (
-                      <span key={index} className="whitespace-nowrap">
-                        {skill.trim()}
-                        {index < interview.skills.split(',').length - 1 ? ',' : ''}
-                      </span>
-                    ))}
-                  </div>
+                  <p>{interview?.workExperience} years</p>
                 </div>
               </div>
             </CardContent>
@@ -304,26 +512,13 @@ const InterviewReport = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Interview Summary</CardTitle>
+              <CardTitle className="text-lg">Overall Assessment</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span>Status:</span>
-                <Badge variant="outline" className={interview.status === "completed" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
-                  {interview.status === "completed" ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
-                  {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Date:</span>
-                <span className="text-sm text-muted-foreground">
-                  {new Date(interview.createdAt || '').toLocaleDateString()}
-                </span>
-              </div>
+            <CardContent>
               <div className="flex items-center justify-between">
                 <span>Overall Score:</span>
-                <span className={`text-xl font-bold ${getScoreColor(interview.overallScore || 0)}`}>
-                  {interview.overallScore || 0}%
+                <span className={`text-xl font-bold ${getScoreColor(interview?.overallScore || 0)}`}>
+                  {interview?.overallScore || 0}%
                 </span>
               </div>
             </CardContent>
@@ -339,38 +534,38 @@ const InterviewReport = () => {
               <div>
                 <div className="flex justify-between mb-1">
                   <span>Technical Skills</span>
-                  <span className={getScoreColor(interview.technical_skills_score || 0)}>
-                    {interview.technical_skills_score || 0}%
+                  <span className={getScoreColor(interview?.technicalSkillsScore || 0)}>
+                    {interview?.technicalSkillsScore || 0}%
                   </span>
                 </div>
-                <Progress value={interview.technical_skills_score || 0} className="h-2" />
+                <Progress value={interview?.technicalSkillsScore || 0} className="h-2" />
               </div>
               <div>
                 <div className="flex justify-between mb-1">
                   <span>Communication</span>
-                  <span className={getScoreColor(interview.communication_skills_score || 0)}>
-                    {interview.communication_skills_score || 0}%
+                  <span className={getScoreColor(interview?.communicationSkillsScore || 0)}>
+                    {interview?.communicationSkillsScore || 0}%
                   </span>
                 </div>
-                <Progress value={interview.communication_skills_score || 0} className="h-2" />
+                <Progress value={interview?.communicationSkillsScore || 0} className="h-2" />
               </div>
               <div>
                 <div className="flex justify-between mb-1">
                   <span>Problem Solving</span>
-                  <span className={getScoreColor(interview.problem_solving_skills_score || 0)}>
-                    {interview.problem_solving_skills_score || 0}%
+                  <span className={getScoreColor(interview?.problemSolvingSkillsScore || 0)}>
+                    {interview?.problemSolvingSkillsScore || 0}%
                   </span>
                 </div>
-                <Progress value={interview.problem_solving_skills_score || 0} className="h-2" />
+                <Progress value={interview?.problemSolvingSkillsScore || 0} className="h-2" />
               </div>
               <div>
                 <div className="flex justify-between mb-1">
                   <span>Cultural Fit</span>
-                  <span className={getScoreColor(interview.cultural_fit_score || 0)}>
-                    {interview.cultural_fit_score || 0}%
+                  <span className={getScoreColor(interview?.culturalFitScore || 0)}>
+                    {interview?.culturalFitScore || 0}%
                   </span>
                 </div>
-                <Progress value={interview.cultural_fit_score || 0} className="h-2" />
+                <Progress value={interview?.culturalFitScore || 0} className="h-2" />
               </div>
             </CardContent>
           </Card>
@@ -383,15 +578,15 @@ const InterviewReport = () => {
               <div>
                 <div className="flex justify-between mb-1">
                   <span>Match Score</span>
-                  <span className={getScoreColor(interview.resumeMatchScore || 0)}>
-                    {interview.resumeMatchScore || 0}%
+                  <span className={getScoreColor(interview?.resumeMatchScore || 0)}>
+                    {interview?.resumeMatchScore || 0}%
                   </span>
                 </div>
-                <Progress value={interview.resumeMatchScore || 0} className="h-2" />
+                <Progress value={interview?.resumeMatchScore || 0} className="h-2" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Feedback</p>
-                <p className="text-sm whitespace-pre-wrap break-words">{interview.resumeMatchFeedback}</p>
+                <p className="text-sm whitespace-pre-wrap break-words">{interview?.resumeMatchFeedback}</p>
               </div>
             </CardContent>
           </Card>
@@ -426,7 +621,7 @@ const InterviewReport = () => {
             <CardTitle className="text-lg">Interview Feedback</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm whitespace-pre-wrap break-words">{interview.feedback}</p>
+            <p className="text-sm whitespace-pre-wrap break-words">{interview?.feedback}</p>
           </CardContent>
         </Card>
       </div>
@@ -434,4 +629,4 @@ const InterviewReport = () => {
   );
 };
 
-export default InterviewReport; 
+export default InterviewReport;
