@@ -297,15 +297,21 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
     ]);
   };
 
+  // Fixed handleImageUpload function
   const handleImageUpload = async (index: number, file: File) => {
     try {
+      const question = questions[index];
       const formData = new FormData();
+      
       formData.append('image', file);
-      formData.append('description', questions[index].description);
-      formData.append('type', questions[index].type);
-      formData.append('category', questions[index].category);
+      formData.append('description', question.description || '');
+      formData.append('type', question.type || 'single');
+      formData.append('category', question.category || 'technical');
       formData.append('job_id', jobId.toString());
-      formData.append('time_seconds', questions[index].time_seconds.toString());
+      
+      // Handle time_seconds safely - provide default if undefined
+      const timeSeconds = question.time_seconds || 60;
+      formData.append('time_seconds', timeSeconds.toString());
 
       const response = await api.post('/quiz-question', formData, {
         headers: {
@@ -314,12 +320,15 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
         }
       });
 
+      // Update the question with the new image URL and question ID
       const updatedQuestions = [...questions];
       updatedQuestions[index] = {
         ...updatedQuestions[index],
+        id: response.data.id, // Update with the real ID from backend
         image_url: response.data.image_url
       };
       setQuestions(updatedQuestions);
+      
       toast.success('Image uploaded successfully');
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -427,50 +436,52 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Add Image</Label>
-                    <Switch
-                      checked={!!question.image_url}
-                      onCheckedChange={(checked) => {
-                        if (!checked) {
-                          handleUpdateQuestion(index, "image_url", undefined);
-                        }
-                      }}
-                    />
-                  </div>
-                  {!question.image_url && (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleImageUpload(index, file);
+                {isEditMode && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Add Image</Label>
+                      <Switch
+                        checked={!!question.image_url}
+                        onCheckedChange={(checked) => {
+                          if (!checked) {
+                            handleUpdateQuestion(index, "image_url", undefined);
                           }
                         }}
                       />
                     </div>
-                  )}
-                  {question.image_url && (
-                    <div className="relative">
-                      <img
-                        src={question.image_url}
-                        alt="Question"
-                        className="max-w-full h-auto rounded-lg"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-2 right-2"
-                        onClick={() => handleUpdateQuestion(index, "image_url", undefined)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                    {!question.image_url && (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleImageUpload(index, file);
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                    {question.image_url && (
+                      <div className="relative">
+                        <img
+                          src={question.image_url}
+                          alt="Question"
+                          className="max-w-full h-auto rounded-lg"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={() => handleUpdateQuestion(index, "image_url", undefined)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex justify-between items-start">
                   <div className="space-y-4 flex-1">
@@ -480,6 +491,7 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                         <Select
                           value={question.category}
                           onValueChange={(value) => handleUpdateQuestion(index, "category", value)}
+                          disabled={!isEditMode}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select question type" />
@@ -497,6 +509,7 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                           onValueChange={(value) => {
                             handleUpdateQuestion(index, "type", value);
                           }}
+                          disabled={!isEditMode}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select answer type" />
@@ -514,6 +527,7 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                           <Select
                             value={question.time_seconds?.toString() || "60"}
                             onValueChange={(value) => handleUpdateQuestion(index, "time_seconds", parseInt(value))}
+                            disabled={!isEditMode}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select time limit" />
@@ -665,4 +679,4 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
   );
 };
 
-export default McqManagement; 
+export default McqManagement;
