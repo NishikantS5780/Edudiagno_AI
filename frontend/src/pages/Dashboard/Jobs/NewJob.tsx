@@ -68,6 +68,11 @@ const jobFormSchema = z.object({
   currency: z.string().nonempty({ message: "Please select a currency" }),
   requires_dsa: z.boolean().default(false),
   requires_mcq: z.boolean().default(false),
+  custom_interview_questions: z.array(z.object({
+    question: z.string().nonempty({ message: "Question is required" }),
+    question_type: z.enum(["technical", "behavioral", "problem_solving", "custom"]),
+    order_number: z.number()
+  })).optional(),
   dsa_questions: z.array(z.object({
     title: z.string().nonempty({ message: "DSA question title is required" }),
     description: z.string().nonempty({ message: "DSA question description is required" }),
@@ -215,7 +220,7 @@ const NewJob = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingDsa, setIsSavingDsa] = useState(false);
-  const [activeTab, setActiveTab] = useState("job-details");
+  const [activeTab, setActiveTab] = useState("details");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [jobData, setJobData] = useState<JobData>(() => {
     // Try to load saved job data from localStorage
@@ -258,6 +263,7 @@ const NewJob = () => {
       createdAt: new Date().toISOString(),
       requires_dsa: false,
       requires_mcq: false,
+      custom_interview_questions: [],
       dsa_questions: [],
       mcq_questions: [],
       mcq_timing_mode: 'per_question',
@@ -346,6 +352,12 @@ const NewJob = () => {
     correct_options: number[];
   }
 
+  interface CustomInterviewQuestion {
+    question: string;
+    question_type: "technical" | "behavioral" | "problem_solving" | "custom";
+    order_number: number;
+  }
+
   interface TestCase {
     input: string;
     expected_output: string;
@@ -381,6 +393,7 @@ const NewJob = () => {
     createdAt: string;
     requires_dsa: boolean;
     requires_mcq: boolean;
+    custom_interview_questions: CustomInterviewQuestion[];
     dsa_questions: DSAQuestion[];
     mcq_questions: MCQQuestion[];
     mcq_timing_mode: 'per_question' | 'whole_test';
@@ -675,234 +688,84 @@ const NewJob = () => {
     });
   };
 
-  const handleSaveMcqQuestions = async () => {
-    if (!jobData.id) {
-      toast.error("Please save job details first");
-      return;
-    }
-
-    setIsSavingMcq(true);
-    try {
-      if (!jobData.mcq_questions || jobData.mcq_questions.length === 0) {
-        toast.error("Please add at least one MCQ question");
-        setIsSavingMcq(false);
-        return;
-      }
-
-      // Validate MCQ questions
-      const mcqQuestionSchema = z.object({
-        title: z.string().nonempty({ message: "Question title is required" }),
-        type: z.enum(["single", "multiple", "true_false"]),
-        category: z.enum(["technical", "aptitude"]),
-        time_seconds: z.number().min(30).max(180).optional(),
-        options: z.array(z.string().nonempty({ message: "Option text is required" })),
-        correct_options: z.array(z.number())
-      });
-
-      const validationSchema = z.object({
-        mcq_questions: z.array(mcqQuestionSchema)
-      });
-
-      const validationResult = validationSchema.safeParse({ mcq_questions: jobData.mcq_questions });
-      if (!validationResult.success) {
-        const newErrors: Record<string, string> = {};
-        validationResult.error.errors.forEach((error) => {
-          const path = error.path[0];
-          if (typeof path === 'string') {
-            newErrors[path] = error.message;
-          }
-        });
-        setErrors(newErrors);
-        toast.error("Please fill in all required fields for MCQ questions");
-        setIsSavingMcq(false);
-        return;
-      }
-
-      // Update job with MCQ questions
-      const response = await jobAPI.updateJob(jobData.id.toString(), {
-        ...jobData,
-        mcq_questions: jobData.mcq_questions,
-        mcq_timing_mode: jobData.mcq_timing_mode,
-        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
-      });
-
-      if (response.status >= 200 && response.status < 300) {
-        toast.success("MCQ questions saved successfully");
-      } else {
-        throw new Error("Failed to save MCQ questions");
-      }
-    } catch (error: any) {
-      console.error("Error saving MCQ questions:", error);
-      let errorMessage = "Failed to save MCQ questions";
-
-      if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      toast.error(errorMessage);
-    } finally {
-      setIsSavingMcq(false);
-    }
+  const handleMcqQuestionDelete = (index: number) => {
+    const updatedQuestions = [...jobData.mcq_questions];
+    updatedQuestions.splice(index, 1);
+    handleChange("mcq_questions", updatedQuestions);
   };
 
-  // Add state for MCQ saving
-  const [isSavingMcq, setIsSavingMcq] = useState(false);
+  const handleCustomQuestionAdd = () => {
+    const newQuestion: CustomInterviewQuestion = {
+      question: "",
+      question_type: "technical",
+      order_number: jobData.custom_interview_questions?.length || 0
+    };
+    handleChange("custom_interview_questions", [...(jobData.custom_interview_questions || []), newQuestion]);
+  };
 
-  const renderMcqQuestion = (question: any, index: number) => {
+  const handleCustomQuestionUpdate = (index: number, field: keyof CustomInterviewQuestion, value: any) => {
+    const updatedQuestions = [...(jobData.custom_interview_questions || [])];
+    updatedQuestions[index] = {
+      ...updatedQuestions[index],
+      [field]: value
+    };
+    handleChange("custom_interview_questions", updatedQuestions);
+  };
+
+  const handleCustomQuestionDelete = (index: number) => {
+    const updatedQuestions = [...(jobData.custom_interview_questions || [])];
+    updatedQuestions.splice(index, 1);
+    // Update order numbers
+    updatedQuestions.forEach((q, i) => {
+      q.order_number = i;
+    });
+    handleChange("custom_interview_questions", updatedQuestions);
+  };
+
+  const renderCustomQuestion = (question: CustomInterviewQuestion, index: number) => {
     return (
-      <div key={index} className="space-y-4 p-4 border rounded-lg">
-        <div className="flex justify-between items-start">
-          <div className="space-y-2 flex-1">
-            <Label>Question {index + 1}</Label>
+      <Card key={index} className="mb-4">
+        <CardContent className="pt-6">
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor={`question-${index}`}>Question</Label>
             <Textarea
-              value={question.title}
-              onChange={(e) => handleMcqQuestionUpdate(index, "title", e.target.value)}
-              placeholder="Enter your question"
+                id={`question-${index}`}
+                value={question.question}
+                onChange={(e) => handleCustomQuestionUpdate(index, "question", e.target.value)}
+                placeholder="Enter your interview question"
             />
-            <div className="flex gap-4">
-              <div className="space-y-2">
+            </div>
+            <div className="grid gap-2">
                 <Label>Question Type</Label>
                 <Select
-                  value={question.category}
-                  onValueChange={(value) => handleMcqQuestionUpdate(index, "category", value)}
+                value={question.question_type}
+                onValueChange={(value) => handleCustomQuestionUpdate(index, "question_type", value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select question type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="technical">Technical</SelectItem>
-                    <SelectItem value="aptitude">Aptitude</SelectItem>
+                  <SelectItem value="behavioral">Behavioral</SelectItem>
+                  <SelectItem value="problem_solving">Problem Solving</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Answer Type</Label>
-                <Select
-                  value={question.type}
-                  onValueChange={(value) => handleMcqQuestionUpdate(index, "type", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select answer type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="single">Single Choice</SelectItem>
-                    <SelectItem value="multiple">Multiple Choice</SelectItem>
-                    <SelectItem value="true_false">True/False</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            {jobData.mcq_timing_mode === 'per_question' && (
-              <div className="space-y-2">
-                <Label>Time Limit (seconds)</Label>
-                <Select
-                  value={question.time_seconds?.toString() || "30"}
-                  onValueChange={(value) =>
-                    handleMcqQuestionUpdate(index, "time_seconds", parseInt(value))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select time limit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="30">30 seconds</SelectItem>
-                    <SelectItem value="45">45 seconds</SelectItem>
-                    <SelectItem value="60">60 seconds</SelectItem>
-                    <SelectItem value="90">90 seconds</SelectItem>
-                    <SelectItem value="120">120 seconds</SelectItem>
-                    <SelectItem value="180">180 seconds</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
+            <div className="flex justify-end">
           <Button
-            variant="ghost"
+                variant="destructive"
             size="sm"
-            onClick={() => {
-              const updatedQuestions = [...(jobData.mcq_questions || [])];
-              updatedQuestions.splice(index, 1);
-              setJobData({ ...jobData, mcq_questions: updatedQuestions });
-            }}
+                onClick={() => handleCustomQuestionDelete(index)}
           >
-            <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Question
           </Button>
         </div>
-        <div className="space-y-2">
-          <Label>Options</Label>
-          {question.type === "true_false" ? (
-            <div className="space-y-2">
-              <RadioGroup
-                value={question.correct_options[0]?.toString()}
-                onValueChange={(value) => handleMcqQuestionUpdate(index, "correct_options", [parseInt(value)])}
-              >
-                <div className="flex flex-col space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="0" id={`true-${index}`} />
-                    <Label htmlFor={`true-${index}`}>True</Label>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="1" id={`false-${index}`} />
-                    <Label htmlFor={`false-${index}`}>False</Label>
-                  </div>
-                </div>
-              </RadioGroup>
-            </div>
-          ) : (
-            question.options.map((option: string, optionIndex: number) => (
-              <div key={optionIndex} className="flex items-center space-x-2">
-                <Input
-                  value={option}
-                  onChange={(e) => handleMcqQuestionUpdate(index, "options", {
-                    optionIndex,
-                    value: e.target.value
-                  })}
-                  placeholder={`Option ${optionIndex + 1}`}
-                />
-                {question.type === "single" ? (
-                  <RadioGroup
-                    value={question.correct_options[0]?.toString()}
-                    onValueChange={(value) => handleMcqQuestionUpdate(index, "correct_options", [parseInt(value)])}
-                  >
-                    <RadioGroupItem value={optionIndex.toString()} />
-                  </RadioGroup>
-                ) : (
-                  <Checkbox
-                    checked={question.correct_options.includes(optionIndex)}
-                    onCheckedChange={(checked) => {
-                      const currentCorrect = [...question.correct_options];
-                      if (checked) {
-                        currentCorrect.push(optionIndex);
-                      } else {
-                        const index = currentCorrect.indexOf(optionIndex);
-                        if (index > -1) {
-                          currentCorrect.splice(index, 1);
-                        }
-                      }
-                      handleMcqQuestionUpdate(index, "correct_options", currentCorrect);
-                    }}
-                  />
-                )}
-              </div>
-            ))
-          )}
-        </div>
-        {question.type !== "true_false" && question.options.length < 4 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const updatedQuestions = [...(jobData.mcq_questions || [])];
-              updatedQuestions[index].options.push("");
-              setJobData({ ...jobData, mcq_questions: updatedQuestions });
-            }}
-          >
-            Add Option
-          </Button>
-        )}
-      </div>
+        </CardContent>
+      </Card>
     );
   };
 
@@ -1179,6 +1042,153 @@ const NewJob = () => {
     }));
   };
 
+  const handleSaveMcqQuestions = async () => {
+    if (!jobData.id) {
+      toast.error("Please save job details first");
+      return;
+    }
+
+    setIsSavingMcq(true);
+    try {
+      if (!jobData.mcq_questions || jobData.mcq_questions.length === 0) {
+        toast.error("Please add at least one MCQ question");
+        setIsSavingMcq(false);
+        return;
+      }
+
+      // Validate MCQ questions
+      const mcqQuestionSchema = z.object({
+        title: z.string().nonempty({ message: "Question title is required" }),
+        type: z.enum(["single", "multiple", "true_false"]),
+        category: z.enum(["technical", "aptitude"]),
+        time_seconds: z.number().min(30).max(180).optional(),
+        options: z.array(z.string().nonempty({ message: "Option text is required" })),
+        correct_options: z.array(z.number())
+      });
+
+      const validationSchema = z.object({
+        mcq_questions: z.array(mcqQuestionSchema)
+      });
+
+      const validationResult = validationSchema.safeParse({ mcq_questions: jobData.mcq_questions });
+      if (!validationResult.success) {
+        const newErrors: Record<string, string> = {};
+        validationResult.error.errors.forEach((error) => {
+          const path = error.path[0];
+          if (typeof path === 'string') {
+            newErrors[path] = error.message;
+          }
+        });
+        setErrors(newErrors);
+        toast.error("Please fill in all required fields for MCQ questions");
+        setIsSavingMcq(false);
+        return;
+      }
+
+      // Update job with MCQ questions
+      const response = await jobAPI.updateJob(jobData.id.toString(), {
+        ...jobData,
+        mcq_questions: jobData.mcq_questions,
+        mcq_timing_mode: jobData.mcq_timing_mode,
+        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        toast.success("MCQ questions saved successfully");
+      } else {
+        throw new Error("Failed to save MCQ questions");
+      }
+    } catch (error: any) {
+      console.error("Error saving MCQ questions:", error);
+      let errorMessage = "Failed to save MCQ questions";
+
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsSavingMcq(false);
+    }
+  };
+
+  const handleSaveCustomQuestions = async () => {
+    if (!jobData.id) {
+      toast.error("Please save job details first");
+      return;
+    }
+
+    setIsSavingCustom(true);
+    try {
+      if (!jobData.custom_interview_questions || jobData.custom_interview_questions.length === 0) {
+        toast.error("Please add at least one custom question");
+        setIsSavingCustom(false);
+        return;
+      }
+
+      // Validate custom questions
+      const customQuestionSchema = z.object({
+        question: z.string().nonempty({ message: "Question is required" }),
+        question_type: z.enum(["technical", "behavioral", "problem_solving", "custom"]),
+        order_number: z.number()
+      });
+
+      const validationSchema = z.object({
+        custom_interview_questions: z.array(customQuestionSchema)
+      });
+
+      const validationResult = validationSchema.safeParse({ custom_interview_questions: jobData.custom_interview_questions });
+      if (!validationResult.success) {
+        const newErrors: Record<string, string> = {};
+        validationResult.error.errors.forEach((error) => {
+          const path = error.path[0];
+          if (typeof path === 'string') {
+            newErrors[path] = error.message;
+          }
+        });
+        setErrors(newErrors);
+        toast.error("Please fill in all required fields for custom questions");
+        setIsSavingCustom(false);
+        return;
+      }
+
+      // Save each custom question
+      for (const question of jobData.custom_interview_questions) {
+        await api.post('/recruiter/interview-question', {
+          question: question.question,
+          question_type: question.question_type,
+          order_number: question.order_number,
+          job_id: jobData.id
+        }, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+      }
+
+      toast.success("Custom questions saved successfully");
+    } catch (error: any) {
+      console.error("Error saving custom questions:", error);
+      let errorMessage = "Failed to save custom questions";
+
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsSavingCustom(false);
+    }
+  };
+
+  // Add state for custom questions saving
+  const [isSavingCustom, setIsSavingCustom] = useState(false);
+  const [isSavingMcq, setIsSavingMcq] = useState(false);
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -1198,13 +1208,14 @@ const NewJob = () => {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="job-details">Job Details</TabsTrigger>
-              <TabsTrigger value="dsa-questions">DSA Questions</TabsTrigger>
-              <TabsTrigger value="mcq-questions">MCQ Questions</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="details">Job Details</TabsTrigger>
+              <TabsTrigger value="dsa">DSA Questions</TabsTrigger>
+              <TabsTrigger value="mcq">MCQ Questions</TabsTrigger>
+              <TabsTrigger value="custom">Custom Questions</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="job-details">
+            <TabsContent value="details">
               {/* Basic Information Section */}
               <Card>
                 <CardHeader>
@@ -1652,7 +1663,7 @@ const NewJob = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="dsa-questions">
+            <TabsContent value="dsa">
               <Card>
                 <CardHeader>
                   <CardTitle>DSA Questions</CardTitle>
@@ -1839,7 +1850,7 @@ const NewJob = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="mcq-questions">
+            <TabsContent value="mcq">
               <Card>
                 <CardHeader>
                   <CardTitle>MCQ Questions</CardTitle>
@@ -1913,7 +1924,121 @@ const NewJob = () => {
                           </div>
                         </div>
                         {jobData.mcq_questions?.map((question, index) => (
-                          renderMcqQuestion(question, index)
+                          <Card key={index} className="mb-4">
+                            <CardContent className="pt-6">
+                              <div className="grid gap-4">
+                                <div className="grid gap-2">
+                                  <Label htmlFor={`question-${index}`}>Question</Label>
+                                  <Textarea
+                                    id={`question-${index}`}
+                                    value={question.title}
+                                    onChange={(e) => handleMcqQuestionUpdate(index, "title", e.target.value)}
+                                    placeholder="Enter your question"
+                                  />
+                                </div>
+                                <div className="grid gap-2">
+                                  <Label>Question Type</Label>
+                                  <Select
+                                    value={question.type}
+                                    onValueChange={(value) => handleMcqQuestionUpdate(index, "type", value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select question type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="single">Single Choice</SelectItem>
+                                      <SelectItem value="multiple">Multiple Choice</SelectItem>
+                                      <SelectItem value="true_false">True/False</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="grid gap-2">
+                                  <Label>Category</Label>
+                                  <Select
+                                    value={question.category}
+                                    onValueChange={(value) => handleMcqQuestionUpdate(index, "category", value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="technical">Technical</SelectItem>
+                                      <SelectItem value="aptitude">Aptitude</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="grid gap-2">
+                                  <Label>Time Limit (seconds)</Label>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    value={question.time_seconds?.toString() || "30"}
+                                    onChange={(e) => handleMcqQuestionUpdate(index, "time_seconds", parseInt(e.target.value))}
+                                  />
+                                </div>
+                                <div className="grid gap-2">
+                                  <Label>Options</Label>
+                                  {question.type === "true_false" ? (
+                                    <div className="space-y-2">
+                                      <RadioGroup
+                                        value={question.correct_options[0]?.toString()}
+                                        onValueChange={(value) => handleMcqQuestionUpdate(index, "correct_options", [parseInt(value)])}
+                                      >
+                                        <div className="flex flex-col space-y-2">
+                                          <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="0" id={`true-${index}`} />
+                                            <Label htmlFor={`true-${index}`}>True</Label>
+                                          </div>
+                                          <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="1" id={`false-${index}`} />
+                                            <Label htmlFor={`false-${index}`}>False</Label>
+                                          </div>
+                                        </div>
+                                      </RadioGroup>
+                                    </div>
+                                  ) : (
+                                    question.options.map((option: string, optionIndex: number) => (
+                                      <div key={optionIndex} className="flex items-center space-x-2">
+                                        <Input
+                                          value={option}
+                                          onChange={(e) => handleMcqQuestionUpdate(index, "options", {
+                                            optionIndex,
+                                            value: e.target.value
+                                          })}
+                                          placeholder={`Option ${optionIndex + 1}`}
+                                        />
+                                        <Checkbox
+                                          checked={question.correct_options.includes(optionIndex)}
+                                          onCheckedChange={(checked) => {
+                                            const currentCorrect = [...question.correct_options];
+                                            if (checked) {
+                                              currentCorrect.push(optionIndex);
+                                            } else {
+                                              const index = currentCorrect.indexOf(optionIndex);
+                                              if (index > -1) {
+                                                currentCorrect.splice(index, 1);
+                                              }
+                                            }
+                                            handleMcqQuestionUpdate(index, "correct_options", currentCorrect);
+                                          }}
+                                        />
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                                <div className="flex justify-end">
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleMcqQuestionDelete(index)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Question
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
 
@@ -1939,6 +2064,51 @@ const NewJob = () => {
                       </div>
                     </>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="custom">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Custom Interview Questions</CardTitle>
+                  <CardDescription>
+                    Add custom questions that will be asked during the interview process.
+                    These questions will be presented to candidates in the order specified.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {jobData.custom_interview_questions?.map((question, index) => renderCustomQuestion(question, index))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCustomQuestionAdd}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Custom Question
+                    </Button>
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        type="button"
+                        onClick={handleSaveCustomQuestions}
+                        disabled={isSavingCustom}
+                      >
+                        {isSavingCustom ? (
+                          <>
+                            <LoadingSpinner className="mr-2" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4 mr-2" />
+                            Save Questions
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

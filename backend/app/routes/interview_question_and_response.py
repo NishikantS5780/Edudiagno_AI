@@ -68,7 +68,7 @@ async def generate_questions(
     ]
 
     system_prompt = f"""You are an expert technical interviewer for the position of {job.title}.
-Your task is to generate interview questions based on the job description and candidate's resume.
+Your task is to generate interview questions based on the job description, candidate's resume, and the custom questions provided.
 
 The questions should be:
 1. Clear and concise
@@ -76,6 +76,7 @@ The questions should be:
 3. Based on the candidate's experience from their resume
 4. Progressive in difficulty
 5. Natural and conversational
+6. Similar in style and focus to the custom questions provided
 
 Current question types: {', '.join(question_types)}
 Maximum questions to generate: {len(question_types)}
@@ -86,12 +87,17 @@ Job Description:
 Candidate's Resume:
 {interview.resume_text}
 
-Example Questions:
+Custom Questions to Enhance and Include:
 {example_questions}
 
-{'For the first question, start with a brief greeting and then ask your first question. Format it as: "Hello! [Greeting message]. [Question]".'}
+Instructions for Question Generation:
+1. First, analyze the custom questions provided and understand their style, focus, and complexity
+2. Generate enhanced versions of these custom questions, making them more specific to the candidate's experience
+3. Then generate additional questions that follow the same style and focus as the custom questions
+4. Ensure all questions maintain a natural conversation flow
+5. For the first question, start with a brief greeting and then ask your first question. Format it as: "Hello! [Greeting message]. [Question]"
 
-The question should be based on the previous conversation and maintain a natural flow.
+The questions should be based on the previous conversation and maintain a natural flow.
 If no resume text or job description is provided, generate a basic question about the candidate's experience.
 
 Return the questions as a JSON array of objects with "question" and "type" fields."""
@@ -100,7 +106,7 @@ Return the questions as a JSON array of objects with "question" and "type" field
         model="gpt-4",
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": "Generate the interview questions."},
+            {"role": "user", "content": "Generate the interview questions, making sure to include enhanced versions of the custom questions provided."},
         ],
         temperature=0.7,
         max_tokens=1000,
