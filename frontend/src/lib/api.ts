@@ -296,7 +296,7 @@ export const jobAPI = {
     sort_field?:
       | "title"
       | "department"
-      | "location"
+      | "city"
       | "type"
       | "show_salary"
       | "status";

@@ -75,9 +75,9 @@ const JobsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
-  const [locationFilter, setLocationFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
   const [jobToDelete, setJobToDelete] = useState<number | null>(null);
-  const [sortField, setSortField] = useState<'title' | 'department' | 'location' | 'type' | 'show_salary' | 'status'>('title');
+  const [sortField, setSortField] = useState<'title' | 'department' | 'city' | 'type' | 'show_salary' | 'status'>('title');
   const [sortOrder, setSortOrder] = useState<'ascending' | 'descending'>('ascending');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -91,15 +91,15 @@ const JobsPage = () => {
       .join(' ');
   };
 
-  // Get unique departments and locations from jobs data
+  // Get unique departments and cities from jobs data
   const departments = React.useMemo(() => {
     const uniqueDepts = new Set(jobs.map(job => job.department).filter(Boolean));
     return Array.from(uniqueDepts).sort();
   }, [jobs]);
 
-  const locations = React.useMemo(() => {
-    const uniqueLocs = new Set(jobs.map(job => job.location).filter(Boolean));
-    return Array.from(uniqueLocs).sort();
+  const cities = React.useMemo(() => {
+    const uniqueCities = new Set(jobs.map(job => job.city).filter(Boolean));
+    return Array.from(uniqueCities).sort();
   }, [jobs]);
 
   const fetchJobs = async () => {
@@ -113,13 +113,21 @@ const JobsPage = () => {
       });
       console.log('Jobs API Response:', response.data);
       const data = response.data;
-      const jobsData = data.map((jobData) => {
+      const jobsData = data.map((jobData: {
+        id: number;
+        title: string;
+        department: string;
+        city: string;
+        type: string;
+        status: string;
+        created_at?: string;
+      }) => {
         const date = jobData.created_at ? new Date(jobData.created_at.replace('Z', '')) : new Date();
         return {
           id: jobData.id,
           title: jobData.title,
           department: jobData.department,
-          location: jobData.location,
+          city: jobData.city,
           type: jobData.type,
           status: jobData.status,
           createdAt: date,
@@ -147,7 +155,7 @@ const JobsPage = () => {
       filtered = filtered.filter(job => 
         job.title.toLowerCase().includes(query) ||
         job.department.toLowerCase().includes(query) ||
-        job.location.toLowerCase().includes(query)
+        job.city.toLowerCase().includes(query)
       );
     }
 
@@ -156,9 +164,9 @@ const JobsPage = () => {
       filtered = filtered.filter(job => job.department === departmentFilter);
     }
 
-    // Apply location filter
-    if (locationFilter !== 'all') {
-      filtered = filtered.filter(job => job.location === locationFilter);
+    // Apply city filter
+    if (cityFilter !== 'all') {
+      filtered = filtered.filter(job => job.city === cityFilter);
     }
 
     // Apply status filter
@@ -167,7 +175,7 @@ const JobsPage = () => {
     }
 
     setFilteredJobs(filtered);
-  }, [jobs, searchQuery, departmentFilter, locationFilter, statusFilter]);
+  }, [jobs, searchQuery, departmentFilter, cityFilter, statusFilter]);
 
   useEffect(() => {
     fetchJobs();
@@ -266,51 +274,47 @@ const JobsPage = () => {
 
   return (
     <DashboardLayout>
-      <PageHeader title="Jobs" description="Create and manage job postings">
+      <div className="space-y-6">
+        <PageHeader
+          title="Jobs"
+          description="Manage your job postings"
+        >
         <Link to="/dashboard/jobs/new">
           <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Job
+              <Plus className="mr-2 h-4 w-4" />
+              Create Job
           </Button>
         </Link>
       </PageHeader>
 
+        <div className="space-y-4">
       {/* Filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search jobs..."
-            className="pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
+            </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue>
-                {statusFilter === 'all' ? 'All Statuses' : 
-                 statusFilter === 'active' ? 'Active' :
-                 statusFilter === 'draft' ? 'Draft' :
-                 statusFilter === 'closed' ? 'Closed' : 'Status'}
-              </SelectValue>
+                <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="closed">Closed</SelectItem>
             </SelectContent>
           </Select>
-
           <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-            <SelectTrigger className="w-[200px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue>
-                {departmentFilter === 'all' ? 'All Departments' : capitalizeWords(departmentFilter)}
-              </SelectValue>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Department" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
@@ -321,95 +325,128 @@ const JobsPage = () => {
               ))}
             </SelectContent>
           </Select>
-
-          <Select value={locationFilter} onValueChange={setLocationFilter}>
+            <Select value={cityFilter} onValueChange={setCityFilter}>
             <SelectTrigger className="w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue>
-                {locationFilter === 'all' ? 'All Locations' : capitalizeWords(locationFilter)}
-              </SelectValue>
+                <SelectValue placeholder="City" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Locations</SelectItem>
-              {locations.map((loc) => (
-                <SelectItem key={loc} value={loc}>
-                  {capitalizeWords(loc)}
+                <SelectItem value="all">All Cities</SelectItem>
+                {cities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {capitalizeWords(city)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
       </div>
 
       {/* Jobs Table */}
-      <div className="rounded-md border">
+          <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Job Title</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Applicants</TableHead>
-              <TableHead>Posted</TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => handleSort('title')}
+                  >
+                    <div className="flex items-center">
+                      Job Title
+                      {sortField === 'title' && (
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortOrder === 'descending' ? 'rotate-180' : ''}`} />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => handleSort('department')}
+                  >
+                    <div className="flex items-center">
+                      Department
+                      {sortField === 'department' && (
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortOrder === 'descending' ? 'rotate-180' : ''}`} />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => handleSort('city')}
+                  >
+                    <div className="flex items-center">
+                      City
+                      {sortField === 'city' && (
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortOrder === 'descending' ? 'rotate-180' : ''}`} />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center">
+                      Status
+                      {sortField === 'status' && (
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortOrder === 'descending' ? 'rotate-180' : ''}`} />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredJobs.length > 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <LoadingSpinner />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredJobs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      No jobs found
+                    </TableCell>
+                  </TableRow>
+                ) : (
               filteredJobs.map((job) => (
                 <TableRow key={job.id}>
-                  <TableCell className="font-medium">
-                    <Link
-                      to={`/dashboard/jobs/${job.id}`}
-                      className="hover:underline"
-                    >
-                      {job.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{job.department}</TableCell>
-                  <TableCell>{job.location}</TableCell>
+                      <TableCell className="font-medium">{job.title}</TableCell>
+                      <TableCell>{capitalizeWords(job.department)}</TableCell>
+                      <TableCell>{capitalizeWords(job.city)}</TableCell>
+                      <TableCell>{capitalizeWords(job.type)}</TableCell>
                   <TableCell>{getStatusBadge(job.status)}</TableCell>
-                  <TableCell className="flex items-center">
-                    <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                    {job.totalCandidatesCount || 0}
-                  </TableCell>
                   <TableCell>{formatDate(job.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                            <Button variant="ghost" className="h-8 w-8 p-0">
                           <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
                           <Link to={`/dashboard/jobs/${job.id}`}>
-                            <Eye className="h-4 w-4 mr-2" />
+                                <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link to={`/dashboard/jobs/${job.id}/edit`}>
-                            <Edit className="h-4 w-4 mr-2" />
+                                <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => copyInterviewLink(job.id)}
-                        >
-                          <Share className="h-4 w-4 mr-2" />
-                          Share Interview Link
+                            <DropdownMenuItem onClick={() => copyInterviewLink(job.id)}>
+                              <Share className="mr-2 h-4 w-4" />
+                              Copy Interview Link
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => setJobToDelete(job.id)}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
+                              <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -417,69 +454,85 @@ const JobsPage = () => {
                   </TableCell>
                 </TableRow>
               ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="text-center py-10 text-muted-foreground"
-                >
-                  No jobs found matching your criteria
-                </TableCell>
-              </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination className="mt-6">
+          <div className="flex justify-center mt-4">
+            <Pagination>
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious 
-                href="#" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage > 1) setCurrentPage(currentPage - 1);
-                }}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
               />
             </PaginationItem>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                
+                {/* First page */}
+                {currentPage > 2 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => setCurrentPage(1)}>1</PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                {/* Ellipsis if needed */}
+                {currentPage > 3 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                
+                {/* Current page and surrounding pages */}
+                {Array.from({ length: 3 }, (_, i) => currentPage - 1 + i)
+                  .filter(page => page > 0 && page <= totalPages)
+                  .map(page => (
               <PaginationItem key={page}>
                 <PaginationLink 
-                  href="#" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setCurrentPage(page);
-                  }}
-                  isActive={currentPage === page}
+                        onClick={() => setCurrentPage(page)}
+                        isActive={page === currentPage}
                 >
                   {page}
                 </PaginationLink>
               </PaginationItem>
             ))}
+                
+                {/* Ellipsis if needed */}
+                {currentPage < totalPages - 2 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                
+                {/* Last page */}
+                {currentPage < totalPages - 1 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => setCurrentPage(totalPages)}>
+                      {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                
             <PaginationItem>
               <PaginationNext 
-                href="#" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                }}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
               />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
-      )}
+          </div>
+        </div>
 
-      <AlertDialog open={jobToDelete !== null} onOpenChange={() => setJobToDelete(null)}>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!jobToDelete} onOpenChange={() => setJobToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the job posting
-              and all associated data.
+                This action cannot be undone. This will permanently delete the job
+                posting and all associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -493,6 +546,7 @@ const JobsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </DashboardLayout>
   );
 };
