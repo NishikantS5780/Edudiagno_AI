@@ -777,8 +777,34 @@ const NewJob = () => {
         'min_experience', 'max_experience', 'duration_months',
         'key_qualification', 'salary_min', 'salary_max',
         'show_salary', 'description', 'requirements', 'benefits',
-        'mcq_timing_mode', 'quiz_time_minutes' // Add timing fields
+        'mcq_timing_mode', 'quiz_time_minutes'
       ];
+
+      // First check if any required fields are empty
+      const emptyFields = jobDetailsFields.filter(field => {
+        const value = jobData[field as keyof typeof jobData];
+        return value === undefined || value === null || value === '';
+      });
+
+      if (emptyFields.length > 0) {
+        // Set errors for empty fields
+        const newErrors: Record<string, string> = {};
+        emptyFields.forEach(field => {
+          newErrors[field] = "This field is required";
+        });
+        setErrors(newErrors);
+
+        // Show simple error message and scroll to first empty field
+        toast.error("Please fill in all required fields");
+        const firstEmptyField = emptyFields[0];
+        const element = document.getElementById(firstEmptyField);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        setIsSaving(false);
+        return;
+      }
 
       const validationSchema = z.object(
         Object.fromEntries(
@@ -798,8 +824,7 @@ const NewJob = () => {
         });
         setErrors(newErrors);
         
-        toast.error("Please fill in all required fields");
-        
+        toast.error("Please fix the validation errors");
         const firstErrorField = Object.keys(newErrors)[0];
         const element = document.getElementById(firstErrorField);
         if (element) {
@@ -810,32 +835,51 @@ const NewJob = () => {
         return;
       }
 
-      // Create job with job details including timing information
-      const response = await jobAPI.createJob({
-        ...jobData,
-        status: 'draft',
-        mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
-        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
-      });
+      let response;
+      if (jobData.id) {
+        // Update existing job
+        response = await jobAPI.updateJob(jobData.id.toString(), {
+          ...jobData,
+          status: 'draft',
+          mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
+          quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
+        });
+      } else {
+        // Create new job
+        response = await jobAPI.createJob({
+          ...jobData,
+          status: 'draft',
+          mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
+          quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
+        });
+      }
 
       if (response.status >= 200 && response.status < 300) {
-        toast.success("Job details saved successfully");
-        // Update the job ID in the state
-        setJobData(prev => ({ 
-          ...prev, 
-          id: response.data.id,
-          mcq_timing_mode: prev.mcq_timing_mode || 'per_question',
-          quiz_time_minutes: prev.mcq_timing_mode === 'whole_test' ? prev.quiz_time_minutes : null
-        }));
+        toast.success(jobData.id ? "Job details updated successfully" : "Job details saved successfully");
+        // Update the job ID in the state if it's a new job
+        if (!jobData.id) {
+          setJobData(prev => ({ 
+            ...prev, 
+            id: response.data.id,
+            mcq_timing_mode: prev.mcq_timing_mode || 'per_question',
+            quiz_time_minutes: prev.mcq_timing_mode === 'whole_test' ? prev.quiz_time_minutes : null
+          }));
+        }
       } else {
-        throw new Error("Failed to save job details");
+        throw new Error(jobData.id ? "Failed to update job details" : "Failed to save job details");
       }
     } catch (error: any) {
       console.error("Error saving job details:", error);
-      let errorMessage = "Failed to save job details";
+      let errorMessage = jobData.id ? "Failed to update job details" : "Failed to save job details";
 
       if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
+        // Handle array of validation errors
+        if (Array.isArray(error.response.data.detail)) {
+          errorMessage = error.response.data.detail.map((err: any) => err.msg).join(', ');
+        } else {
+          // Handle single error message
+          errorMessage = error.response.data.detail;
+        }
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -1207,7 +1251,80 @@ const NewJob = () => {
         </PageHeader>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={(value) => {
+            // Validate job details before allowing tab switch
+            if (value !== "details") {
+              const jobDetailsFields = [
+                'title', 'department', 'city', 'location', 'type',
+                'min_experience', 'max_experience', 'duration_months',
+                'key_qualification', 'salary_min', 'salary_max',
+                'show_salary', 'description', 'requirements', 'benefits'
+              ];
+
+              const validationSchema = z.object(
+                Object.fromEntries(
+                  jobDetailsFields.map(field => [field, z.any()])
+                )
+              );
+
+              const validationResult = validationSchema.safeParse(jobData);
+              if (!validationResult.success) {
+                const newErrors: Record<string, string> = {};
+                validationResult.error.errors.forEach((error) => {
+                  const path = error.path[0];
+                  if (typeof path === 'string') {
+                    newErrors[path] = error.message;
+                  }
+                });
+                setErrors(newErrors);
+                
+                // Show error message for the specific tab
+                let errorMessage = "Please fill in all required fields in Job Details tab first";
+                if (value === "dsa" && !jobData.requires_dsa) {
+                  errorMessage = "Please enable DSA assessment in Job Details tab first";
+                } else if (value === "mcq" && !jobData.requires_mcq) {
+                  errorMessage = "Please enable MCQ assessment in Job Details tab first";
+                }
+                
+                toast.error(errorMessage);
+                
+                // Scroll to the first error field
+                const firstErrorField = Object.keys(newErrors)[0];
+                const element = document.getElementById(firstErrorField);
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+              }
+
+              // Additional checks for specific tabs
+              if (value === "dsa") {
+                if (!jobData.requires_dsa) {
+                  toast.error("Please enable DSA assessment in Job Details tab first");
+                  return;
+                }
+                if (!jobData.id) {
+                  toast.error("Please save job details first");
+                  return;
+                }
+              }
+              if (value === "mcq") {
+                if (!jobData.requires_mcq) {
+                  toast.error("Please enable MCQ assessment in Job Details tab first");
+                  return;
+                }
+                if (!jobData.id) {
+                  toast.error("Please save job details first");
+                  return;
+                }
+              }
+              if (value === "custom" && !jobData.id) {
+                toast.error("Please save job details first");
+                return;
+              }
+            }
+            setActiveTab(value);
+          }} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details">Job Details</TabsTrigger>
               <TabsTrigger value="dsa">DSA Questions</TabsTrigger>

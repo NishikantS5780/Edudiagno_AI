@@ -113,7 +113,15 @@ const JobsPage = () => {
       });
       console.log('Jobs API Response:', response.data);
       const data = response.data;
-      const jobsData = data.map((jobData) => {
+      const jobsData = data.map((jobData: {
+        id: number;
+        title: string;
+        department: string;
+        location: string;
+        type: string;
+        status: string;
+        created_at?: string;
+      }) => {
         const date = jobData.created_at ? new Date(jobData.created_at.replace('Z', '')) : new Date();
         return {
           id: jobData.id,
@@ -266,233 +274,279 @@ const JobsPage = () => {
 
   return (
     <DashboardLayout>
-      <PageHeader title="Jobs" description="Create and manage job postings">
-        <Link to="/dashboard/jobs/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Job
-          </Button>
-        </Link>
-      </PageHeader>
+      <div className="space-y-6">
+        <PageHeader
+          title="Jobs"
+          description="Manage your job postings"
+        >
+          <Link to="/dashboard/jobs/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Job
+            </Button>
+          </Link>
+        </PageHeader>
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search jobs..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue>
-                {statusFilter === 'all' ? 'All Statuses' : 
-                 statusFilter === 'active' ? 'Active' :
-                 statusFilter === 'draft' ? 'Draft' :
-                 statusFilter === 'closed' ? 'Closed' : 'Status'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="space-y-4">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search jobs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8"
+                />
+              </div>
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept} value={dept}>
+                    {capitalizeWords(dept)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={locationFilter} onValueChange={setLocationFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations</SelectItem>
+                {locations.map((loc) => (
+                  <SelectItem key={loc} value={loc}>
+                    {capitalizeWords(loc)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-            <SelectTrigger className="w-[200px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue>
-                {departmentFilter === 'all' ? 'All Departments' : capitalizeWords(departmentFilter)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Departments</SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept} value={dept}>
-                  {capitalizeWords(dept)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={locationFilter} onValueChange={setLocationFilter}>
-            <SelectTrigger className="w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue>
-                {locationFilter === 'all' ? 'All Locations' : capitalizeWords(locationFilter)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Locations</SelectItem>
-              {locations.map((loc) => (
-                <SelectItem key={loc} value={loc}>
-                  {capitalizeWords(loc)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Jobs Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Job Title</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Applicants</TableHead>
-              <TableHead>Posted</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredJobs.length > 0 ? (
-              filteredJobs.map((job) => (
-                <TableRow key={job.id}>
-                  <TableCell className="font-medium">
-                    <Link
-                      to={`/dashboard/jobs/${job.id}`}
-                      className="hover:underline"
-                    >
-                      {job.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{job.department}</TableCell>
-                  <TableCell>{job.location}</TableCell>
-                  <TableCell>{getStatusBadge(job.status)}</TableCell>
-                  <TableCell className="flex items-center">
-                    <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                    {job.totalCandidatesCount || 0}
-                  </TableCell>
-                  <TableCell>{formatDate(job.createdAt)}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Link to={`/dashboard/jobs/${job.id}`}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to={`/dashboard/jobs/${job.id}/edit`}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => copyInterviewLink(job.id)}
-                        >
-                          <Share className="h-4 w-4 mr-2" />
-                          Share Interview Link
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => setJobToDelete(job.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {/* Jobs Table */}
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => handleSort('title')}
+                  >
+                    <div className="flex items-center">
+                      Job Title
+                      {sortField === 'title' && (
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortOrder === 'descending' ? 'rotate-180' : ''}`} />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => handleSort('department')}
+                  >
+                    <div className="flex items-center">
+                      Department
+                      {sortField === 'department' && (
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortOrder === 'descending' ? 'rotate-180' : ''}`} />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => handleSort('location')}
+                  >
+                    <div className="flex items-center">
+                      Location
+                      {sortField === 'location' && (
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortOrder === 'descending' ? 'rotate-180' : ''}`} />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center">
+                      Status
+                      {sortField === 'status' && (
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortOrder === 'descending' ? 'rotate-180' : ''}`} />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="text-center py-10 text-muted-foreground"
-                >
-                  No jobs found matching your criteria
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <LoadingSpinner />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredJobs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      No jobs found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredJobs.map((job) => (
+                    <TableRow key={job.id}>
+                      <TableCell className="font-medium">{job.title}</TableCell>
+                      <TableCell>{capitalizeWords(job.department)}</TableCell>
+                      <TableCell>{capitalizeWords(job.location)}</TableCell>
+                      <TableCell>{capitalizeWords(job.type)}</TableCell>
+                      <TableCell>{getStatusBadge(job.status)}</TableCell>
+                      <TableCell>{formatDate(job.createdAt)}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/dashboard/jobs/${job.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/dashboard/jobs/${job.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => copyInterviewLink(job.id)}>
+                              <Share className="mr-2 h-4 w-4" />
+                              Copy Interview Link
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => setJobToDelete(job.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex justify-center mt-4">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+                
+                {/* First page */}
+                {currentPage > 2 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => setCurrentPage(1)}>1</PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                {/* Ellipsis if needed */}
+                {currentPage > 3 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                
+                {/* Current page and surrounding pages */}
+                {Array.from({ length: 3 }, (_, i) => currentPage - 1 + i)
+                  .filter(page => page > 0 && page <= totalPages)
+                  .map(page => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(page)}
+                        isActive={page === currentPage}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                
+                {/* Ellipsis if needed */}
+                {currentPage < totalPages - 2 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                
+                {/* Last page */}
+                {currentPage < totalPages - 1 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => setCurrentPage(totalPages)}>
+                      {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!jobToDelete} onOpenChange={() => setJobToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the job
+                posting and all associated data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => jobToDelete && handleDeleteJob(jobToDelete)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination className="mt-6">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious 
-                href="#" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage > 1) setCurrentPage(currentPage - 1);
-                }}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <PaginationItem key={page}>
-                <PaginationLink 
-                  href="#" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setCurrentPage(page);
-                  }}
-                  isActive={currentPage === page}
-                >
-                  {page}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            <PaginationItem>
-              <PaginationNext 
-                href="#" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                }}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
-
-      <AlertDialog open={jobToDelete !== null} onOpenChange={() => setJobToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the job posting
-              and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => jobToDelete && handleDeleteJob(jobToDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </DashboardLayout>
   );
 };
