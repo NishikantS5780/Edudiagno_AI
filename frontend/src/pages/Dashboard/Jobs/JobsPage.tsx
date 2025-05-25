@@ -75,9 +75,9 @@ const JobsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
-  const [locationFilter, setLocationFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
   const [jobToDelete, setJobToDelete] = useState<number | null>(null);
-  const [sortField, setSortField] = useState<'title' | 'department' | 'location' | 'type' | 'show_salary' | 'status'>('title');
+  const [sortField, setSortField] = useState<'title' | 'department' | 'city' | 'type' | 'show_salary' | 'status'>('title');
   const [sortOrder, setSortOrder] = useState<'ascending' | 'descending'>('ascending');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -91,15 +91,15 @@ const JobsPage = () => {
       .join(' ');
   };
 
-  // Get unique departments and locations from jobs data
+  // Get unique departments and cities from jobs data
   const departments = React.useMemo(() => {
     const uniqueDepts = new Set(jobs.map(job => job.department).filter(Boolean));
     return Array.from(uniqueDepts).sort();
   }, [jobs]);
 
-  const locations = React.useMemo(() => {
-    const uniqueLocs = new Set(jobs.map(job => job.location).filter(Boolean));
-    return Array.from(uniqueLocs).sort();
+  const cities = React.useMemo(() => {
+    const uniqueCities = new Set(jobs.map(job => job.city).filter(Boolean));
+    return Array.from(uniqueCities).sort();
   }, [jobs]);
 
   const fetchJobs = async () => {
@@ -117,7 +117,7 @@ const JobsPage = () => {
         id: number;
         title: string;
         department: string;
-        location: string;
+        city: string;
         type: string;
         status: string;
         created_at?: string;
@@ -127,7 +127,7 @@ const JobsPage = () => {
           id: jobData.id,
           title: jobData.title,
           department: jobData.department,
-          location: jobData.location,
+          city: jobData.city,
           type: jobData.type,
           status: jobData.status,
           createdAt: date,
@@ -155,7 +155,7 @@ const JobsPage = () => {
       filtered = filtered.filter(job => 
         job.title.toLowerCase().includes(query) ||
         job.department.toLowerCase().includes(query) ||
-        job.location.toLowerCase().includes(query)
+        job.city.toLowerCase().includes(query)
       );
     }
 
@@ -164,9 +164,9 @@ const JobsPage = () => {
       filtered = filtered.filter(job => job.department === departmentFilter);
     }
 
-    // Apply location filter
-    if (locationFilter !== 'all') {
-      filtered = filtered.filter(job => job.location === locationFilter);
+    // Apply city filter
+    if (cityFilter !== 'all') {
+      filtered = filtered.filter(job => job.city === cityFilter);
     }
 
     // Apply status filter
@@ -175,7 +175,7 @@ const JobsPage = () => {
     }
 
     setFilteredJobs(filtered);
-  }, [jobs, searchQuery, departmentFilter, locationFilter, statusFilter]);
+  }, [jobs, searchQuery, departmentFilter, cityFilter, statusFilter]);
 
   useEffect(() => {
     fetchJobs();
@@ -325,15 +325,15 @@ const JobsPage = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
+            <Select value={cityFilter} onValueChange={setCityFilter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Location" />
+                <SelectValue placeholder="City" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Locations</SelectItem>
-                {locations.map((loc) => (
-                  <SelectItem key={loc} value={loc}>
-                    {capitalizeWords(loc)}
+                <SelectItem value="all">All Cities</SelectItem>
+                {cities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {capitalizeWords(city)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -369,11 +369,11 @@ const JobsPage = () => {
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer"
-                    onClick={() => handleSort('location')}
+                    onClick={() => handleSort('city')}
                   >
                     <div className="flex items-center">
-                      Location
-                      {sortField === 'location' && (
+                      City
+                      {sortField === 'city' && (
                         <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${sortOrder === 'descending' ? 'rotate-180' : ''}`} />
                       )}
                     </div>
@@ -412,7 +412,7 @@ const JobsPage = () => {
                     <TableRow key={job.id}>
                       <TableCell className="font-medium">{job.title}</TableCell>
                       <TableCell>{capitalizeWords(job.department)}</TableCell>
-                      <TableCell>{capitalizeWords(job.location)}</TableCell>
+                      <TableCell>{capitalizeWords(job.city)}</TableCell>
                       <TableCell>{capitalizeWords(job.type)}</TableCell>
                       <TableCell>{getStatusBadge(job.status)}</TableCell>
                       <TableCell>{formatDate(job.createdAt)}</TableCell>
