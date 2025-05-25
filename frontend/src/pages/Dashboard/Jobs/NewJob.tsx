@@ -777,7 +777,7 @@ const NewJob = () => {
         'min_experience', 'max_experience', 'duration_months',
         'key_qualification', 'salary_min', 'salary_max',
         'show_salary', 'description', 'requirements', 'benefits',
-        'mcq_timing_mode', 'quiz_time_minutes'
+        'mcq_timing_mode' // Removed 'quiz_time_minutes' from here
       ];
 
       // First check if any required fields are empty

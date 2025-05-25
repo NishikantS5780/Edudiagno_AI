@@ -279,72 +279,72 @@ const JobsPage = () => {
           title="Jobs"
           description="Manage your job postings"
         >
-          <Link to="/dashboard/jobs/new">
-            <Button>
+        <Link to="/dashboard/jobs/new">
+          <Button>
               <Plus className="mr-2 h-4 w-4" />
               Create Job
-            </Button>
-          </Link>
-        </PageHeader>
+          </Button>
+        </Link>
+      </PageHeader>
 
         <div className="space-y-4">
-          {/* Filters */}
+      {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search jobs..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search jobs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-8"
-                />
-              </div>
+          />
+        </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
+            </SelectTrigger>
+            <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>
-                    {capitalizeWords(dept)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept} value={dept}>
+                  {capitalizeWords(dept)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
             <Select value={cityFilter} onValueChange={setCityFilter}>
-              <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="City" />
-              </SelectTrigger>
-              <SelectContent>
+            </SelectTrigger>
+            <SelectContent>
                 <SelectItem value="all">All Cities</SelectItem>
                 {cities.map((city) => (
                   <SelectItem key={city} value={city}>
                     {capitalizeWords(city)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+      </div>
 
-          {/* Jobs Table */}
+      {/* Jobs Table */}
           <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
+        <Table>
+          <TableHeader>
+            <TableRow>
                   <TableHead 
                     className="cursor-pointer"
                     onClick={() => handleSort('title')}
@@ -391,10 +391,10 @@ const JobsPage = () => {
                     </div>
                   </TableHead>
                   <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
@@ -408,67 +408,67 @@ const JobsPage = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredJobs.map((job) => (
-                    <TableRow key={job.id}>
+              filteredJobs.map((job) => (
+                <TableRow key={job.id}>
                       <TableCell className="font-medium">{job.title}</TableCell>
                       <TableCell>{capitalizeWords(job.department)}</TableCell>
                       <TableCell>{capitalizeWords(job.city)}</TableCell>
                       <TableCell>{capitalizeWords(job.type)}</TableCell>
-                      <TableCell>{getStatusBadge(job.status)}</TableCell>
-                      <TableCell>{formatDate(job.createdAt)}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                  <TableCell>{getStatusBadge(job.status)}</TableCell>
+                  <TableCell>{formatDate(job.createdAt)}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/dashboard/jobs/${job.id}`}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link to={`/dashboard/jobs/${job.id}`}>
                                 <Eye className="mr-2 h-4 w-4" />
-                                View Details
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/dashboard/jobs/${job.id}/edit`}>
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to={`/dashboard/jobs/${job.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </Link>
-                            </DropdownMenuItem>
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => copyInterviewLink(job.id)}>
                               <Share className="mr-2 h-4 w-4" />
                               Copy Interview Link
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => setJobToDelete(job.id)}
-                            >
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => setJobToDelete(job.id)}
+                        >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-          {/* Pagination */}
+      {/* Pagination */}
           <div className="flex justify-center mt-4">
             <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
+              />
+            </PaginationItem>
                 
                 {/* First page */}
                 {currentPage > 2 && (
@@ -488,15 +488,15 @@ const JobsPage = () => {
                 {Array.from({ length: 3 }, (_, i) => currentPage - 1 + i)
                   .filter(page => page > 0 && page <= totalPages)
                   .map(page => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
+              <PaginationItem key={page}>
+                <PaginationLink 
                         onClick={() => setCurrentPage(page)}
                         isActive={page === currentPage}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
+                >
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
                 
                 {/* Ellipsis if needed */}
                 {currentPage < totalPages - 2 && (
@@ -514,38 +514,38 @@ const JobsPage = () => {
                   </PaginationItem>
                 )}
                 
-                <PaginationItem>
-                  <PaginationNext
+            <PaginationItem>
+              <PaginationNext 
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
           </div>
         </div>
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={!!jobToDelete} onOpenChange={() => setJobToDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
                 This action cannot be undone. This will permanently delete the job
                 posting and all associated data.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => jobToDelete && handleDeleteJob(jobToDelete)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => jobToDelete && handleDeleteJob(jobToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </div>
     </DashboardLayout>
   );
