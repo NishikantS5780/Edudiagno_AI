@@ -839,11 +839,11 @@ const NewJob = () => {
       if (jobData.id) {
         // Update existing job
         response = await jobAPI.updateJob(jobData.id.toString(), {
-          ...jobData,
-          status: 'draft',
-          mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
-          quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
-        });
+        ...jobData,
+        status: 'draft',
+        mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
+        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
+      });
       } else {
         // Create new job
         response = await jobAPI.createJob({
@@ -858,12 +858,12 @@ const NewJob = () => {
         toast.success(jobData.id ? "Job details updated successfully" : "Job details saved successfully");
         // Update the job ID in the state if it's a new job
         if (!jobData.id) {
-          setJobData(prev => ({ 
-            ...prev, 
-            id: response.data.id,
-            mcq_timing_mode: prev.mcq_timing_mode || 'per_question',
-            quiz_time_minutes: prev.mcq_timing_mode === 'whole_test' ? prev.quiz_time_minutes : null
-          }));
+        setJobData(prev => ({ 
+          ...prev, 
+          id: response.data.id,
+          mcq_timing_mode: prev.mcq_timing_mode || 'per_question',
+          quiz_time_minutes: prev.mcq_timing_mode === 'whole_test' ? prev.quiz_time_minutes : null
+        }));
         }
       } else {
         throw new Error(jobData.id ? "Failed to update job details" : "Failed to save job details");
@@ -878,7 +878,7 @@ const NewJob = () => {
           errorMessage = error.response.data.detail.map((err: any) => err.msg).join(', ');
         } else {
           // Handle single error message
-          errorMessage = error.response.data.detail;
+        errorMessage = error.response.data.detail;
         }
       } else if (error.message) {
         errorMessage = error.message;
