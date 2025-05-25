@@ -5,6 +5,7 @@ from sqlalchemy import asc, case, delete, desc, select, and_, update
 from fastapi import HTTPException, status
 
 from app import schemas, database
+from app.lib.errors import CustomException
 from app.models import DSAQuestion, Job, QuizQuestion, Recruiter
 from app.dependencies.authorization import authorize_recruiter
 from app.configs import openai
@@ -18,6 +19,9 @@ async def create_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
+    if job_data.salary_min < 0 or job_data.salary_max > 2000000000:
+        raise CustomException(code=400, messag="invalid salary range")
+
     job = Job(
         title=job_data.title,
         description=job_data.description,

@@ -75,8 +75,8 @@ class CreateJob(BaseModel):
     min_experience: int
     max_experience: int
     currency: str
-    salary_min: int
-    salary_max: int
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
     show_salary: Optional[bool] = True
     key_qualification: str
     requirements: str
@@ -123,28 +123,6 @@ class UpdateInterviewQuestion(BaseModel):
 class CreateInterviewQuestionResponse(BaseModel):
     question_id: int
     answer: str
-
-
-class Job(BaseModel):
-    id: int
-    title: str
-    description: str
-    department: str
-    location: str
-    type: str
-    duration_months: Optional[int] = None
-    min_experience: int
-    max_experience: int
-    currency: str
-    salary_min: int
-    salary_max: int
-    show_salary: bool
-    key_qualification: str
-    requirements: str
-    benefits: str
-    status: str
-    quiz_time_minutes: int
-    company_id: int
 
 
 class CreateInterview(BaseModel):
