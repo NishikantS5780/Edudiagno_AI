@@ -772,21 +772,35 @@ const NewJob = () => {
   const handleSaveJobDetails = async () => {
     setIsSaving(true);
     try {
+      // Define base required fields
       const jobDetailsFields = [
         'title', 'department', 'city', 'location', 'type',
         'min_experience', 'max_experience', 'duration_months',
         'key_qualification', 'salary_min', 'salary_max',
         'show_salary', 'description', 'requirements', 'benefits',
-        'mcq_timing_mode', 'quiz_time_minutes'
+        'mcq_timing_mode'
       ];
+
+      // Only add quiz_time_minutes to required fields if MCQ is enabled and timing mode is whole_test
+      if (jobData.requires_mcq && jobData.mcq_timing_mode === 'whole_test') {
+        jobDetailsFields.push('quiz_time_minutes');
+      }
+
+      // Debug log to see current job data
+      console.log('Current job data:', jobData);
 
       // First check if any required fields are empty
       const emptyFields = jobDetailsFields.filter(field => {
         const value = jobData[field as keyof typeof jobData];
-        return value === undefined || value === null || value === '';
+        const isEmpty = value === undefined || value === null || value === '';
+        if (isEmpty) {
+          console.log(`Field ${field} is empty:`, value);
+        }
+        return isEmpty;
       });
 
       if (emptyFields.length > 0) {
+        console.log('Empty fields found:', emptyFields);
         // Set errors for empty fields
         const newErrors: Record<string, string> = {};
         emptyFields.forEach(field => {
@@ -806,6 +820,8 @@ const NewJob = () => {
         return;
       }
 
+      // Debug log for validation
+      console.log('Validating job data with schema...');
       const validationSchema = z.object(
         Object.fromEntries(
           jobDetailsFields.map(field => [field, z.any()])
@@ -813,8 +829,8 @@ const NewJob = () => {
       );
 
       const validationResult = validationSchema.safeParse(jobData);
-
       if (!validationResult.success) {
+        console.log('Validation errors:', validationResult.error.errors);
         const newErrors: Record<string, string> = {};
         validationResult.error.errors.forEach((error) => {
           const path = error.path[0];
@@ -835,17 +851,20 @@ const NewJob = () => {
         return;
       }
 
+      console.log('Preparing to save job data...');
       let response;
       if (jobData.id) {
         // Update existing job
+        console.log('Updating existing job...');
         response = await jobAPI.updateJob(jobData.id.toString(), {
-        ...jobData,
-        status: 'draft',
-        mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
-        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
-      });
+          ...jobData,
+          status: 'draft',
+          mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
+          quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
+        });
       } else {
         // Create new job
+        console.log('Creating new job...');
         response = await jobAPI.createJob({
           ...jobData,
           status: 'draft',
@@ -853,6 +872,8 @@ const NewJob = () => {
           quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
         });
       }
+
+      console.log('Save response:', response);
 
       if (response.status >= 200 && response.status < 300) {
         toast.success(jobData.id ? "Job details updated successfully" : "Job details saved successfully");
