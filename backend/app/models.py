@@ -239,6 +239,7 @@ class Interview(Base):
     problem_solving_skills_score = Column(Integer)
     cultural_fit_score = Column(Integer)
     feedback = Column(String)
+    report_file_url = Column(String)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     job_id = Column(Integer, ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False)

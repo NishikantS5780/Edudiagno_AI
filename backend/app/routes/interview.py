@@ -1,4 +1,5 @@
 import datetime
+import io
 import json
 import os
 import random
@@ -101,6 +102,7 @@ async def get_interview(
             Interview.overall_score,
             Interview.feedback,
             Interview.job_id,
+            Interview.report_file_url,
             Job.title,
             Recruiter.company_name,
         )
@@ -144,6 +146,7 @@ async def get_interview_recruiter_view(
             Interview.cultural_fit_score,
             Interview.feedback,
             Interview.job_id,
+            Interview.report_file_url,
         )
         .join(Job, Interview.job_id == Job.id)
         .join(Recruiter, Recruiter.id == Job.company_id)
@@ -467,7 +470,23 @@ async def generate_feedback(
     interview_id=Depends(authorize_candidate),
 ):
     stmt = (
-        select(Job.description, Job.requirements, Interview.resume_text)
+        select(
+            Job.title,
+            Job.description,
+            Job.requirements,
+            Interview.resume_text,
+            Interview.first_name,
+            Interview.last_name,
+            Interview.created_at,
+            Interview.email,
+            Interview.phone,
+            Interview.location,
+            Interview.education,
+            Interview.work_experience,
+            Interview.skills,
+            Interview.resume_match_score,
+            Interview.resume_match_feedback,
+        )
         .join(Interview)
         .where(Interview.id == interview_id)
     )
@@ -578,6 +597,132 @@ async def generate_feedback(
     interview_analysis = response.choices[0].message.content
     interview_data = json.loads(interview_analysis)
 
+    os.makedirs(os.path.join("uploads", "report"), exist_ok=True)
+
+    report_file_path = os.path.join(
+        "uploads",
+        "report",
+        f"{interview_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+    )
+    from fpdf import FPDF
+
+    pdf = FPDF(unit="pt")
+    pdf.add_page()
+    full_width = pdf.w - pdf.l_margin - pdf.r_margin
+    half_width = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.5
+    pdf.set_font("Arial", size=18)
+    pdf.set_text_color(0, 0, 200)
+    pdf.cell(full_width, 21.6, "Candidate Interview Report", border=0, ln=1, align="C")
+    pdf.ln(18)
+    pdf.set_font("Arial", size=16)
+    pdf.cell(
+        full_width,
+        19.2,
+        f"{data['first_name']} {data['last_name']}",
+        border=0,
+        ln=1,
+        align="C",
+    )
+    pdf.ln(16)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", size=14)
+    pdf.cell(full_width, 16.8, f"Position: {data['title']}", border=0, ln=1, align="C")
+    pdf.ln(14)
+    pdf.cell(full_width, 16.8, f"Date: {data['created_at']}", border=0, ln=1, align="C")
+    pdf.ln(14)
+    pdf.set_font("Arial", size=16)
+    pdf.set_text_color(0, 0, 200)
+    pdf.cell(full_width, 19.2, "Candidate Information", border=0, ln=1)
+    pdf.ln(8)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", size=14)
+    pdf.cell(half_width, 16.8, "Email", border=1)
+    pdf.cell(half_width, 16.8, data["email"], border=1, ln=1)
+    pdf.cell(half_width, 16.8, "Phone", border=1)
+    pdf.cell(half_width, 16.8, data["phone"], border=1, ln=1)
+    pdf.cell(half_width, 16.8, "Location", border=1)
+    pdf.cell(half_width, 16.8, data["location"], border=1, ln=1)
+    pdf.cell(half_width, 16.8, "Education", border=1)
+    pdf.cell(half_width, 16.8, data["education"], border=1, ln=1)
+    pdf.cell(half_width, 16.8, "Experience", border=1)
+    pdf.cell(half_width, 16.8, f"{data['work_experience']} years", border=1, ln=1)
+    pdf.cell(half_width, 16.8, "Skills", border=1)
+    pdf.cell(half_width, 16.8, data["skills"], border=1, ln=1)
+    pdf.ln(14)
+    pdf.set_font("Arial", size=16)
+    pdf.set_text_color(0, 0, 200)
+    pdf.cell(full_width, 19.2, "Assessment Results", border=0, ln=1)
+    pdf.ln(8)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", size=14)
+    pdf.cell(half_width, 16.8, "Overall Score", border=1)
+    pdf.cell(half_width, 16.8, str(interview_data["score"]) + "%", border=1, ln=1)
+    pdf.cell(half_width, 16.8, "Resume match Score", border=1)
+    pdf.cell(half_width, 16.8, str(data["resume_match_score"]) + "%", border=1, ln=1)
+    pdf.cell(half_width, 16.8, "Technical Score", border=1)
+    pdf.cell(
+        half_width,
+        16.8,
+        str(interview_data["scoreBreakdown"]["technicalSkills"]) + "%",
+        border=1,
+        ln=1,
+    )
+    pdf.cell(half_width, 16.8, "Communication Score", border=1)
+    pdf.cell(
+        half_width,
+        16.8,
+        str(interview_data["scoreBreakdown"]["communication"]) + "%",
+        border=1,
+        ln=1,
+    )
+    pdf.cell(half_width, 16.8, "Problem solving Score", border=1)
+    pdf.cell(
+        half_width,
+        16.8,
+        str(interview_data["scoreBreakdown"]["problemSolving"]) + "%",
+        border=1,
+        ln=1,
+    )
+    pdf.cell(half_width, 16.8, "Cultural Fit Score", border=1)
+    pdf.cell(
+        half_width,
+        16.8,
+        str(interview_data["scoreBreakdown"]["culturalFit"]) + "%",
+        border=1,
+        ln=1,
+    )
+    pdf.ln(14)
+    # pdf.set_font("Arial", size=16)
+    # pdf.set_text_color(0, 0, 200)
+    # pdf.cell(full_width, 19.2, "MCQ Test Results", border=0, ln=1)
+    # pdf.ln(8)
+    # pdf.set_text_color(0, 0, 0)
+    # pdf.set_font("Arial", size=14)
+    # pdf.cell(half_width, 16.8, "Total Score", border=1)
+    # pdf.cell(half_width, 16.8, "13", border=1, ln=1)
+    # pdf.cell(half_width, 16.8, "Technical Questions", border=1)
+    # pdf.cell(half_width, 16.8, "13", border=1, ln=1)
+    # pdf.cell(half_width, 16.8, "Aptitude Questions", border=1)
+    # pdf.cell(half_width, 16.8, "13", border=1, ln=1)
+    # pdf.ln(14)
+    pdf.set_font("Arial", size=16)
+    pdf.set_text_color(0, 0, 200)
+    pdf.cell(full_width, 19.2, "Feedback", border=0, ln=1)
+    pdf.ln(8)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", size=14)
+    pdf.multi_cell(full_width, 16.8, interview_data["feedback_for_candidate"], border=0)
+    pdf.ln(14)
+    pdf.set_font("Arial", size=16)
+    pdf.set_text_color(0, 0, 200)
+    pdf.cell(full_width, 19.2, "Resume match Feedback", border=0, ln=1)
+    pdf.ln(8)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", size=14)
+    pdf.multi_cell(full_width, 16.8, str(data["resume_match_feedback"]), border=0)
+
+    pdf.output(report_file_path)
+
     stmt = (
         update(Interview)
         .where(Interview.id == interview_id)
@@ -593,6 +738,7 @@ async def generate_feedback(
                 "problemSolving"
             ],
             cultural_fit_score=interview_data["scoreBreakdown"]["culturalFit"],
+            report_file_url=f"{config.settings.URL}/{report_file_path}",
         )
         .returning(
             Interview.id,
@@ -614,6 +760,7 @@ async def generate_feedback(
             Interview.overall_score,
             Interview.feedback,
             Interview.job_id,
+            Interview.report_file_url,
         )
     )
 
