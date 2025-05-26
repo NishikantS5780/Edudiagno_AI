@@ -118,16 +118,19 @@ type JobFormValues = z.infer<typeof jobFormSchema>;
 const saveMcqQuestions = async (jobId: number, questions: any[], jobData: JobData) => {
   try {
     // First update the job with timing information
-    await jobAPI.updateJob(jobId.toString(), {
+    const jobUpdateData: Partial<JobData> = {
       ...jobData,
-      mcq_timing_mode: jobData.mcq_timing_mode,
+      mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
+      // Only include quiz_time_minutes if in whole_test mode
       quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
-    });
+    };
+
+    // Remove fields that should not be sent in the update
+    const { status, mcq_timing_mode, quiz_time_minutes, ...updateData } = jobUpdateData;
+
+    await jobAPI.updateJob(jobId.toString(), updateData);
 
     for (const question of questions) {
-      // Create a default empty image file
-      const emptyImage = new File([], 'empty.png', { type: 'image/png' });
-
       // Create form data for the request
       const formData = new FormData();
       formData.append('description', question.title);
@@ -135,16 +138,19 @@ const saveMcqQuestions = async (jobId: number, questions: any[], jobData: JobDat
       formData.append('type', question.type);
       formData.append('category', question.category);
       
-      // Always send time_seconds, but set it based on timing mode
+      // Handle time_seconds based on timing mode
       if (jobData.mcq_timing_mode === 'whole_test') {
-        // For whole test mode, set a default value that won't be used
-        formData.append('time_seconds', '60');
+        // For whole test mode, don't send time_seconds as it's not used
+        formData.append('time_seconds', '0');
       } else {
-        // For per_question mode, use the question's time_seconds
+        // For per_question mode, use the question's time_seconds or default to 60
         formData.append('time_seconds', (question.time_seconds || 60).toString());
       }
-      
-      formData.append('image', emptyImage);
+
+      // Only append image if the question has an image
+      if (question.hasImage && question.image) {
+        formData.append('image', question.image);
+      }
 
       // Create the quiz question
       const questionResponse = await api.post('/quiz-question', formData, {
@@ -156,8 +162,9 @@ const saveMcqQuestions = async (jobId: number, questions: any[], jobData: JobDat
 
       const questionId = questionResponse.data.id;
 
+      // Handle options based on question type
       if (question.type === 'true_false') {
-        // For true/false questions, create only two options: True and False
+        // For true/false questions, create only two options
         await api.post('/quiz-option', {
           label: 'True',
           correct: question.correct_options[0] === 0,
@@ -184,10 +191,8 @@ const saveMcqQuestions = async (jobId: number, questions: any[], jobData: JobDat
           let isCorrect = false;
 
           if (question.type === 'single') {
-            // For single choice, only one option is correct
             isCorrect = question.correct_options[0] === i;
           } else if (question.type === 'multiple') {
-            // For multiple choice, check if this option is in correct_options array
             isCorrect = question.correct_options.includes(i);
           }
 
@@ -350,6 +355,9 @@ const NewJob = () => {
     time_seconds?: number;
     options: string[];
     correct_options: number[];
+    hasImage?: boolean;
+    image?: File | null;
+    imageUrl?: string;
   }
 
   interface CustomInterviewQuestion {
@@ -629,7 +637,10 @@ const NewJob = () => {
       category: "technical",
       time_seconds: jobData.mcq_timing_mode === 'per_question' ? 60 : undefined,
       options: ["", "", "", ""],
-      correct_options: [0]
+      correct_options: [0],
+      hasImage: false,
+      image: null,
+      imageUrl: undefined
     };
 
     setJobData(prev => ({
@@ -651,12 +662,10 @@ const NewJob = () => {
           )
         };
       } else if (field === "type") {
-        // Reset correct options when type changes
         updatedQuestions[index] = {
           ...updatedQuestions[index],
           type: value,
-          correct_options: [0], // Default to first option being correct
-          // For true/false questions, automatically set up True and False options
+          correct_options: [0],
           options: value === "true_false" ? ["True", "False"] : ["", "", "", ""]
         };
       } else if (field === "correct_options") {
@@ -670,10 +679,24 @@ const NewJob = () => {
           category: value
         };
       } else if (field === "time_seconds" && prev.mcq_timing_mode === 'per_question') {
-        // Only update time_seconds if in per_question mode
         updatedQuestions[index] = {
           ...updatedQuestions[index],
           time_seconds: value
+        };
+      } else if (field === "hasImage") {
+        updatedQuestions[index] = {
+          ...updatedQuestions[index],
+          hasImage: value,
+          // Clear image when toggling off
+          image: value ? updatedQuestions[index].image : null,
+          imageUrl: value ? updatedQuestions[index].imageUrl : undefined
+        };
+      } else if (field === "image") {
+        updatedQuestions[index] = {
+          ...updatedQuestions[index],
+          image: value,
+          // Generate a preview URL for the image
+          imageUrl: value ? URL.createObjectURL(value) : undefined
         };
       } else {
         updatedQuestions[index] = {
@@ -2074,6 +2097,43 @@ const NewJob = () => {
                                     placeholder="Enter your question"
                                   />
                                 </div>
+
+                                {/* Image upload section */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center space-x-2">
+                                    <Switch
+                                      id={`has-image-${index}`}
+                                      checked={question.hasImage || false}
+                                      onCheckedChange={(checked) => handleMcqQuestionUpdate(index, "hasImage", checked)}
+                                    />
+                                    <Label htmlFor={`has-image-${index}`}>Include Image</Label>
+                                  </div>
+                                  
+                                  {question.hasImage && (
+                                    <div className="space-y-2">
+                                      <Input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            handleMcqQuestionUpdate(index, "image", file);
+                                          }
+                                        }}
+                                      />
+                                      {question.imageUrl && (
+                                        <div className="mt-2">
+                                          <img 
+                                            src={question.imageUrl} 
+                                            alt="Question preview" 
+                                            className="max-w-xs max-h-48 object-contain rounded-md border border-gray-200"
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
                                 <div className="grid gap-2">
                                   <Label>Question Type</Label>
                                   <Select
@@ -2090,6 +2150,7 @@ const NewJob = () => {
                                     </SelectContent>
                                   </Select>
                                 </div>
+
                                 <div className="grid gap-2">
                                   <Label>Category</Label>
                                   <Select
@@ -2105,15 +2166,20 @@ const NewJob = () => {
                                     </SelectContent>
                                   </Select>
                                 </div>
-                                <div className="grid gap-2">
-                                  <Label>Time Limit (seconds)</Label>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={question.time_seconds?.toString() || "30"}
-                                    onChange={(e) => handleMcqQuestionUpdate(index, "time_seconds", parseInt(e.target.value))}
-                                  />
-                                </div>
+
+                                {jobData.mcq_timing_mode === 'per_question' && (
+                                  <div className="grid gap-2">
+                                    <Label>Time Limit (seconds)</Label>
+                                    <Input
+                                      type="number"
+                                      min="30"
+                                      max="180"
+                                      value={question.time_seconds?.toString() || "60"}
+                                      onChange={(e) => handleMcqQuestionUpdate(index, "time_seconds", parseInt(e.target.value))}
+                                    />
+                                  </div>
+                                )}
+
                                 <div className="grid gap-2">
                                   <Label>Options</Label>
                                   {question.type === "true_false" ? (
@@ -2164,6 +2230,7 @@ const NewJob = () => {
                                     ))
                                   )}
                                 </div>
+
                                 <div className="flex justify-end">
                                   <Button
                                     variant="destructive"

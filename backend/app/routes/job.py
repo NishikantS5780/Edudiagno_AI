@@ -94,6 +94,17 @@ async def get_all_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
+    try:
+        start_int = int(start)
+        if start_int < 0:
+            start_int = 0
+        limit_int = int(limit)
+        if limit_int < 1:
+            limit_int = 10
+    except ValueError:
+        start_int = 0
+        limit_int = 10
+
     order_column = Job.id
 
     if sort_field == "title":
@@ -130,8 +141,8 @@ async def get_all_job(
         )
         .where(Job.company_id == recruiter_id)
         .order_by(desc(order_column) if sort == "descending" else asc(order_column))
-        .limit(int(limit))
-        .offset(int(start))
+        .limit(limit_int)
+        .offset(start_int)
     )
     result = db.execute(stmt)
     jobs = result.all()
