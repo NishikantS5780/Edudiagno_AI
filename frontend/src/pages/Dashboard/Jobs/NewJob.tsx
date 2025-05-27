@@ -52,9 +52,10 @@ const jobFormSchema = z.object({
   max_experience: z.number().min(0, { message: "Maximum experience must be 0 or greater" }).int({ message: "Experience must be a whole number" }),
   duration_months: z.number().min(1, { message: "Duration must be at least 1 month" }).int({ message: "Duration must be a whole number" }),
   key_qualification: z.string().nonempty({ message: "Please select a key qualification" }),
-  salary_min: z.number().min(0, { message: "Minimum salary must be 0 or greater" }).int({ message: "Salary must be a whole number" }).nullable(),
-  salary_max: z.number().min(0, { message: "Maximum salary must be 0 or greater" }).int({ message: "Salary must be a whole number" }).nullable(),
-  show_salary: z.boolean().default(true),
+  salary_min: z.number().min(0, { message: "Minimum salary must be 0 or greater" }).int({ message: "Salary must be a whole number" }).nullable().optional(),
+  salary_max: z.number().min(0, { message: "Maximum salary must be 0 or greater" }).int({ message: "Salary must be a whole number" }).nullable().optional(),
+  show_salary: z.boolean().default(false),
+  currency: z.string().nullable().optional(),
   description: z
     .string()
     .min(10, { message: "Description must be at least 10 characters" })
@@ -65,7 +66,6 @@ const jobFormSchema = z.object({
     .nonempty({ message: "Job requirements are required" }),
   benefits: z.string().nonempty({ message: "Benefits are required" }),
   status: z.string().default("active"),
-  currency: z.string().nonempty({ message: "Please select a currency" }),
   requires_dsa: z.boolean().default(false),
   requires_mcq: z.boolean().default(false),
   custom_interview_questions: z.array(z.object({
@@ -93,6 +93,18 @@ const jobFormSchema = z.object({
   })).optional(),
   mcq_timing_mode: z.enum(['per_question', 'whole_test']).default('per_question'),
   quiz_time_minutes: z.number().min(15, { message: "Quiz time must be at least 15 minutes" }).max(120, { message: "Quiz time cannot exceed 2 hours" }).nullable()
+}).refine((data) => {
+  // Only validate salary fields if show_salary is true
+  if (data.show_salary) {
+    if (!data.currency) return false;
+    if (data.salary_min === null || data.salary_min === undefined) return false;
+    if (data.salary_max === null || data.salary_max === undefined) return false;
+    if (data.salary_min > data.salary_max) return false;
+  }
+  return true;
+}, {
+  message: "When showing salary, please provide valid currency, minimum and maximum salary values",
+  path: ["show_salary"]
 }).refine((data) => {
   // If MCQ is required and timing mode is whole_test, quiz_time_minutes is required
   if (data.requires_mcq && data.mcq_timing_mode === 'whole_test') {
@@ -799,10 +811,14 @@ const NewJob = () => {
       const jobDetailsFields = [
         'title', 'department', 'city', 'location', 'type',
         'min_experience', 'max_experience', 'duration_months',
-        'key_qualification', 'salary_min', 'salary_max',
-        'show_salary', 'description', 'requirements', 'benefits',
+        'key_qualification', 'description', 'requirements', 'benefits',
         'mcq_timing_mode'
       ];
+
+      // Only add salary fields to required fields if show_salary is true
+      if (jobData.show_salary) {
+        jobDetailsFields.push('salary_min', 'salary_max', 'currency');
+      }
 
       // Only add quiz_time_minutes to required fields if MCQ is enabled and timing mode is whole_test
       if (jobData.requires_mcq && jobData.mcq_timing_mode === 'whole_test') {
@@ -815,6 +831,10 @@ const NewJob = () => {
       // First check if any required fields are empty
       const emptyFields = jobDetailsFields.filter(field => {
         const value = jobData[field as keyof typeof jobData];
+        // For salary fields, only check if show_salary is true
+        if (field === 'salary_min' || field === 'salary_max' || field === 'currency') {
+          if (!jobData.show_salary) return false;
+        }
         const isEmpty = value === undefined || value === null || value === '';
         if (isEmpty) {
           console.log(`Field ${field} is empty:`, value);
@@ -1631,70 +1651,92 @@ const NewJob = () => {
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <Label>
-                      Salary Range <span className="text-destructive">*</span>
-                    </Label>
-                    <div className="flex gap-2">
-                      <Select
-                        onValueChange={handleCurrencyChange}
-                        value={jobData.currency}
-                      >
-                        <SelectTrigger className="w-[100px]">
-                          <SelectValue placeholder="Currency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableCurrencies.map((currency) => (
-                            <SelectItem key={currency.value} value={currency.value}>
-                              {currency.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="flex-1 grid grid-cols-2 gap-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          placeholder="Min salary"
-                          value={jobData.salary_min || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            // Only allow non-negative integers
-                            if (value === '' || /^\d+$/.test(value)) {
-                              handleChange("salary_min", value === '' ? null : Number(value));
-                            }
-                          }}
-                        />
-                        <Input
-                          type="number"
-                          min="0"
-                          placeholder="Max salary"
-                          value={jobData.salary_max || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            // Only allow non-negative integers
-                            if (value === '' || /^\d+$/.test(value)) {
-                              handleChange("salary_max", value === '' ? null : Number(value));
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Salary Range</Label>
+                      <div className="flex items-center space-x-2">
+                        <Label className="text-sm font-normal">
+                          Show salary in posting
+                        </Label>
+                        <Switch
+                          checked={jobData.show_salary}
+                          onCheckedChange={(checked) => {
+                            handleChange("show_salary", checked);
+                            if (!checked) {
+                              // Clear salary fields when show_salary is turned off
+                              handleChange("salary_min", null);
+                              handleChange("salary_max", null);
+                              handleChange("currency", null);
                             }
                           }}
                         />
                       </div>
                     </div>
-                    {(errors.salary_min || errors.salary_max || errors.currency) && (
+
+                    {jobData.show_salary && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="currency">Currency</Label>
+                            <Select
+                              value={jobData.currency || ""}
+                              onValueChange={(value) => handleChange("currency", value)}
+                            >
+                              <SelectTrigger id="currency">
+                                <SelectValue placeholder="Select currency" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="INR">INR (₹)</SelectItem>
+                                <SelectItem value="USD">USD ($)</SelectItem>
+                                <SelectItem value="EUR">EUR (€)</SelectItem>
+                                <SelectItem value="GBP">GBP (£)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="salary_min">Minimum Salary</Label>
+                            <Input
+                              id="salary_min"
+                              type="number"
+                              min="0"
+                              placeholder="e.g. 60000"
+                              value={jobData.salary_min || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || /^\d+$/.test(value)) {
+                                  handleChange("salary_min", value === '' ? null : Number(value));
+                                }
+                              }}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="salary_max">Maximum Salary</Label>
+                            <Input
+                              id="salary_max"
+                              type="number"
+                              min="0"
+                              placeholder="e.g. 80000"
+                              value={jobData.salary_max || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || /^\d+$/.test(value)) {
+                                  handleChange("salary_max", value === '' ? null : Number(value));
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {(errors.salary_min || errors.salary_max || errors.currency || errors.show_salary) && (
                       <p className="text-sm text-destructive">
-                        {errors.salary_min || errors.salary_max || errors.currency}
+                        {errors.salary_min || errors.salary_max || errors.currency || errors.show_salary}
                       </p>
                     )}
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={jobData.show_salary}
-                      onCheckedChange={(checked) =>
-                        handleChange("show_salary", checked)
-                      }
-                    />
-                    <Label>Show Salary in Job Posting</Label>
                   </div>
                 </CardContent>
               </Card>

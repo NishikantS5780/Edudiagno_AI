@@ -1,5 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel
+from pydantic import validator
 
 
 class RecruiterRegistration(BaseModel):
@@ -74,15 +75,29 @@ class CreateJob(BaseModel):
     duration_months: Optional[int] = None
     min_experience: int
     max_experience: int
-    currency: str
+    currency: Optional[str] = None
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
-    show_salary: Optional[bool] = True
+    show_salary: bool = False
     key_qualification: str
     requirements: str
     benefits: str
     status: str
     quiz_time_minutes: Optional[int] = None
+
+    @validator('currency', 'salary_min', 'salary_max')
+    def validate_salary_fields(cls, v, values):
+        if values.get('show_salary'):
+            if values.get('currency') is None:
+                raise ValueError('Currency is required when show_salary is True')
+            if values.get('salary_min') is None:
+                raise ValueError('Minimum salary is required when show_salary is True')
+            if values.get('salary_max') is None:
+                raise ValueError('Maximum salary is required when show_salary is True')
+            if values.get('salary_min') is not None and values.get('salary_max') is not None:
+                if values.get('salary_min') > values.get('salary_max'):
+                    raise ValueError('Minimum salary cannot be greater than maximum salary')
+        return v
 
 
 class UpdateJob(BaseModel):

@@ -19,8 +19,11 @@ async def create_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    if job_data.salary_min < 0 or job_data.salary_max > 2000000000:
-        raise CustomException(code=400, messag="invalid salary range")
+    # Only validate salary range if show_salary is true
+    if job_data.show_salary:
+        if job_data.salary_min is not None and job_data.salary_max is not None:
+            if job_data.salary_min < 0 or job_data.salary_max > 2000000000:
+                raise CustomException(code=400, messag="invalid salary range")
 
     job = Job(
         title=job_data.title,
