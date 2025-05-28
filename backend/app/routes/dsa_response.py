@@ -99,7 +99,7 @@ async def create_dsa_response(
                     .decode()
                     .rstrip("="),
                     "callbackUrlOnExecutionCompletion": config.settings.URL
-                    + "/api/dsa-response/callback",
+                    + "/dsa-response/callback",
                     "shouldEnablePerProcessAndThreadCpuTimeLimit": False,
                     "shouldEnablePerProcessAndThreadMemoryLimit": False,
                     "shouldAllowInternetAccess": False,
