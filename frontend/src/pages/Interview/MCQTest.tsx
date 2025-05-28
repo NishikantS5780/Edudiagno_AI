@@ -44,6 +44,7 @@ interface QuizQuestion {
   category: "technical" | "aptitude";
   answerType: "single" | "multiple" | "true_false";
   time_seconds: number;
+  image_url?: string;
 }
 
 interface QuestionTimer {
@@ -1015,8 +1016,21 @@ const MCQTest = () => {
                               : "Mark for Later"}
                           </Button>
                         </div>
-                        <p className="text-base mb-4">{question.description}</p>
-                        {renderQuestionOptions(question, currentQuestionIndex)}
+                        <div className="space-y-4">
+                          <p className="text-lg">{question.description}</p>
+                          
+                          {question.image_url && (
+                            <div className="my-4">
+                              <img 
+                                src={question.image_url} 
+                                alt="Question image" 
+                                className="max-w-full max-h-96 object-contain rounded-lg border border-border"
+                              />
+                            </div>
+                          )}
+
+                          {renderQuestionOptions(question, currentQuestionIndex)}
+                        </div>
                         {isExpired && (
                           <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100 rounded-lg">
                             <p className="flex items-center gap-2">

@@ -57,6 +57,8 @@ export interface CandidateJobData {
   createdAt?: string;
   requires_dsa?: boolean;
   city?: string;
+  min_experience?: number;
+  max_experience?: number;
   dsa_questions?: Array<{
     title: string;
     description: string;

@@ -22,7 +22,7 @@ async def create_quiz_question(
     category: str = Form(...),
     job_id: int = Form(...),
     time_seconds: int = Form(),
-    image: UploadFile = File(),
+    image: UploadFile = File(None),
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
@@ -37,22 +37,21 @@ async def create_quiz_question(
     db.commit()
     db.refresh(quiz_question)
 
-    if not path.exists(path.join("uploads", "image")):
-        os.makedirs(path.join("uploads", "image"))
+    if image and image.filename:
+        if not path.exists(path.join("uploads", "image")):
+            os.makedirs(path.join("uploads", "image"))
 
-    if image:
         with open(
             path.join("uploads", "image", f"quiz_{quiz_question.id}.png"), "wb"
         ) as f:
             for chunk in image.file:
                 f.write(chunk)
 
-    quiz_question.image_url = (
-        f"{config.settings.URL}/uploads/image/quiz_{quiz_question.id}.png"
-    )
-
-    db.commit()
-    db.refresh(quiz_question)
+        quiz_question.image_url = (
+            f"{config.settings.URL}/uploads/image/quiz_{quiz_question.id}.png"
+        )
+        db.commit()
+        db.refresh(quiz_question)
 
     return quiz_question
 

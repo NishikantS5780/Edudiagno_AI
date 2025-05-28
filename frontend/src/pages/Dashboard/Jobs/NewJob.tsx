@@ -52,9 +52,10 @@ const jobFormSchema = z.object({
   max_experience: z.number().min(0, { message: "Maximum experience must be 0 or greater" }).int({ message: "Experience must be a whole number" }),
   duration_months: z.number().min(1, { message: "Duration must be at least 1 month" }).int({ message: "Duration must be a whole number" }),
   key_qualification: z.string().nonempty({ message: "Please select a key qualification" }),
-  salary_min: z.number().min(0, { message: "Minimum salary must be 0 or greater" }).int({ message: "Salary must be a whole number" }).nullable(),
-  salary_max: z.number().min(0, { message: "Maximum salary must be 0 or greater" }).int({ message: "Salary must be a whole number" }).nullable(),
-  show_salary: z.boolean().default(true),
+  salary_min: z.number().min(0, { message: "Minimum salary must be 0 or greater" }).int({ message: "Salary must be a whole number" }).nullable().optional(),
+  salary_max: z.number().min(0, { message: "Maximum salary must be 0 or greater" }).int({ message: "Salary must be a whole number" }).nullable().optional(),
+  show_salary: z.boolean().default(false),
+  currency: z.string().nullable().optional(),
   description: z
     .string()
     .min(10, { message: "Description must be at least 10 characters" })
@@ -65,7 +66,6 @@ const jobFormSchema = z.object({
     .nonempty({ message: "Job requirements are required" }),
   benefits: z.string().nonempty({ message: "Benefits are required" }),
   status: z.string().default("active"),
-  currency: z.string().nonempty({ message: "Please select a currency" }),
   requires_dsa: z.boolean().default(false),
   requires_mcq: z.boolean().default(false),
   custom_interview_questions: z.array(z.object({
@@ -94,6 +94,18 @@ const jobFormSchema = z.object({
   mcq_timing_mode: z.enum(['per_question', 'whole_test']).default('per_question'),
   quiz_time_minutes: z.number().min(15, { message: "Quiz time must be at least 15 minutes" }).max(120, { message: "Quiz time cannot exceed 2 hours" }).nullable()
 }).refine((data) => {
+  // Only validate salary fields if show_salary is true
+  if (data.show_salary) {
+    if (!data.currency) return false;
+    if (data.salary_min === null || data.salary_min === undefined) return false;
+    if (data.salary_max === null || data.salary_max === undefined) return false;
+    if (data.salary_min > data.salary_max) return false;
+  }
+  return true;
+}, {
+  message: "When showing salary, please provide valid currency, minimum and maximum salary values",
+  path: ["show_salary"]
+}).refine((data) => {
   // If MCQ is required and timing mode is whole_test, quiz_time_minutes is required
   if (data.requires_mcq && data.mcq_timing_mode === 'whole_test') {
     return data.quiz_time_minutes !== null;
@@ -118,16 +130,19 @@ type JobFormValues = z.infer<typeof jobFormSchema>;
 const saveMcqQuestions = async (jobId: number, questions: any[], jobData: JobData) => {
   try {
     // First update the job with timing information
-    await jobAPI.updateJob(jobId.toString(), {
+    const jobUpdateData: Partial<JobData> = {
       ...jobData,
-      mcq_timing_mode: jobData.mcq_timing_mode,
+      mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
+      // Only include quiz_time_minutes if in whole_test mode
       quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
-    });
+    };
+
+    // Remove fields that should not be sent in the update
+    const { status, mcq_timing_mode, quiz_time_minutes, ...updateData } = jobUpdateData;
+
+    await jobAPI.updateJob(jobId.toString(), updateData);
 
     for (const question of questions) {
-      // Create a default empty image file
-      const emptyImage = new File([], 'empty.png', { type: 'image/png' });
-
       // Create form data for the request
       const formData = new FormData();
       formData.append('description', question.title);
@@ -135,16 +150,19 @@ const saveMcqQuestions = async (jobId: number, questions: any[], jobData: JobDat
       formData.append('type', question.type);
       formData.append('category', question.category);
       
-      // Always send time_seconds, but set it based on timing mode
+      // Handle time_seconds based on timing mode
       if (jobData.mcq_timing_mode === 'whole_test') {
-        // For whole test mode, set a default value that won't be used
-        formData.append('time_seconds', '60');
+        // For whole test mode, don't send time_seconds as it's not used
+        formData.append('time_seconds', '0');
       } else {
-        // For per_question mode, use the question's time_seconds
+        // For per_question mode, use the question's time_seconds or default to 60
         formData.append('time_seconds', (question.time_seconds || 60).toString());
       }
-      
-      formData.append('image', emptyImage);
+
+      // Only append image if the question has an image
+      if (question.hasImage && question.image) {
+        formData.append('image', question.image);
+      }
 
       // Create the quiz question
       const questionResponse = await api.post('/quiz-question', formData, {
@@ -156,8 +174,9 @@ const saveMcqQuestions = async (jobId: number, questions: any[], jobData: JobDat
 
       const questionId = questionResponse.data.id;
 
+      // Handle options based on question type
       if (question.type === 'true_false') {
-        // For true/false questions, create only two options: True and False
+        // For true/false questions, create only two options
         await api.post('/quiz-option', {
           label: 'True',
           correct: question.correct_options[0] === 0,
@@ -184,10 +203,8 @@ const saveMcqQuestions = async (jobId: number, questions: any[], jobData: JobDat
           let isCorrect = false;
 
           if (question.type === 'single') {
-            // For single choice, only one option is correct
             isCorrect = question.correct_options[0] === i;
           } else if (question.type === 'multiple') {
-            // For multiple choice, check if this option is in correct_options array
             isCorrect = question.correct_options.includes(i);
           }
 
@@ -350,6 +367,9 @@ const NewJob = () => {
     time_seconds?: number;
     options: string[];
     correct_options: number[];
+    hasImage?: boolean;
+    image?: File | null;
+    imageUrl?: string;
   }
 
   interface CustomInterviewQuestion {
@@ -629,7 +649,10 @@ const NewJob = () => {
       category: "technical",
       time_seconds: jobData.mcq_timing_mode === 'per_question' ? 60 : undefined,
       options: ["", "", "", ""],
-      correct_options: [0]
+      correct_options: [0],
+      hasImage: false,
+      image: null,
+      imageUrl: undefined
     };
 
     setJobData(prev => ({
@@ -651,12 +674,10 @@ const NewJob = () => {
           )
         };
       } else if (field === "type") {
-        // Reset correct options when type changes
         updatedQuestions[index] = {
           ...updatedQuestions[index],
           type: value,
-          correct_options: [0], // Default to first option being correct
-          // For true/false questions, automatically set up True and False options
+          correct_options: [0],
           options: value === "true_false" ? ["True", "False"] : ["", "", "", ""]
         };
       } else if (field === "correct_options") {
@@ -670,10 +691,24 @@ const NewJob = () => {
           category: value
         };
       } else if (field === "time_seconds" && prev.mcq_timing_mode === 'per_question') {
-        // Only update time_seconds if in per_question mode
         updatedQuestions[index] = {
           ...updatedQuestions[index],
           time_seconds: value
+        };
+      } else if (field === "hasImage") {
+        updatedQuestions[index] = {
+          ...updatedQuestions[index],
+          hasImage: value,
+          // Clear image when toggling off
+          image: value ? updatedQuestions[index].image : null,
+          imageUrl: value ? updatedQuestions[index].imageUrl : undefined
+        };
+      } else if (field === "image") {
+        updatedQuestions[index] = {
+          ...updatedQuestions[index],
+          image: value,
+          // Generate a preview URL for the image
+          imageUrl: value ? URL.createObjectURL(value) : undefined
         };
       } else {
         updatedQuestions[index] = {
@@ -772,21 +807,43 @@ const NewJob = () => {
   const handleSaveJobDetails = async () => {
     setIsSaving(true);
     try {
+      // Define base required fields
       const jobDetailsFields = [
         'title', 'department', 'city', 'location', 'type',
         'min_experience', 'max_experience', 'duration_months',
-        'key_qualification', 'salary_min', 'salary_max',
-        'show_salary', 'description', 'requirements', 'benefits',
-        'mcq_timing_mode', 'quiz_time_minutes'
+        'key_qualification', 'description', 'requirements', 'benefits',
+        'mcq_timing_mode'
       ];
+
+      // Only add salary fields to required fields if show_salary is true
+      if (jobData.show_salary) {
+        jobDetailsFields.push('salary_min', 'salary_max', 'currency');
+      }
+
+      // Only add quiz_time_minutes to required fields if MCQ is enabled and timing mode is whole_test
+      if (jobData.requires_mcq && jobData.mcq_timing_mode === 'whole_test') {
+        jobDetailsFields.push('quiz_time_minutes');
+      }
+
+      // Debug log to see current job data
+      console.log('Current job data:', jobData);
 
       // First check if any required fields are empty
       const emptyFields = jobDetailsFields.filter(field => {
         const value = jobData[field as keyof typeof jobData];
-        return value === undefined || value === null || value === '';
+        // For salary fields, only check if show_salary is true
+        if (field === 'salary_min' || field === 'salary_max' || field === 'currency') {
+          if (!jobData.show_salary) return false;
+        }
+        const isEmpty = value === undefined || value === null || value === '';
+        if (isEmpty) {
+          console.log(`Field ${field} is empty:`, value);
+        }
+        return isEmpty;
       });
 
       if (emptyFields.length > 0) {
+        console.log('Empty fields found:', emptyFields);
         // Set errors for empty fields
         const newErrors: Record<string, string> = {};
         emptyFields.forEach(field => {
@@ -806,6 +863,8 @@ const NewJob = () => {
         return;
       }
 
+      // Debug log for validation
+      console.log('Validating job data with schema...');
       const validationSchema = z.object(
         Object.fromEntries(
           jobDetailsFields.map(field => [field, z.any()])
@@ -813,8 +872,8 @@ const NewJob = () => {
       );
 
       const validationResult = validationSchema.safeParse(jobData);
-
       if (!validationResult.success) {
+        console.log('Validation errors:', validationResult.error.errors);
         const newErrors: Record<string, string> = {};
         validationResult.error.errors.forEach((error) => {
           const path = error.path[0];
@@ -835,17 +894,20 @@ const NewJob = () => {
         return;
       }
 
+      console.log('Preparing to save job data...');
       let response;
       if (jobData.id) {
         // Update existing job
+        console.log('Updating existing job...');
         response = await jobAPI.updateJob(jobData.id.toString(), {
-        ...jobData,
-        status: 'draft',
-        mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
-        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
-      });
+          ...jobData,
+          status: 'draft',
+          mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
+          quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
+        });
       } else {
         // Create new job
+        console.log('Creating new job...');
         response = await jobAPI.createJob({
           ...jobData,
           status: 'draft',
@@ -853,6 +915,8 @@ const NewJob = () => {
           quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
         });
       }
+
+      console.log('Save response:', response);
 
       if (response.status >= 200 && response.status < 300) {
         toast.success(jobData.id ? "Job details updated successfully" : "Job details saved successfully");
@@ -1587,70 +1651,92 @@ const NewJob = () => {
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <Label>
-                      Salary Range <span className="text-destructive">*</span>
-                    </Label>
-                    <div className="flex gap-2">
-                      <Select
-                        onValueChange={handleCurrencyChange}
-                        value={jobData.currency}
-                      >
-                        <SelectTrigger className="w-[100px]">
-                          <SelectValue placeholder="Currency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableCurrencies.map((currency) => (
-                            <SelectItem key={currency.value} value={currency.value}>
-                              {currency.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="flex-1 grid grid-cols-2 gap-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          placeholder="Min salary"
-                          value={jobData.salary_min || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            // Only allow non-negative integers
-                            if (value === '' || /^\d+$/.test(value)) {
-                              handleChange("salary_min", value === '' ? null : Number(value));
-                            }
-                          }}
-                        />
-                        <Input
-                          type="number"
-                          min="0"
-                          placeholder="Max salary"
-                          value={jobData.salary_max || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            // Only allow non-negative integers
-                            if (value === '' || /^\d+$/.test(value)) {
-                              handleChange("salary_max", value === '' ? null : Number(value));
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Salary Range</Label>
+                      <div className="flex items-center space-x-2">
+                        <Label className="text-sm font-normal">
+                          Show salary in posting
+                        </Label>
+                        <Switch
+                          checked={jobData.show_salary}
+                          onCheckedChange={(checked) => {
+                            handleChange("show_salary", checked);
+                            if (!checked) {
+                              // Clear salary fields when show_salary is turned off
+                              handleChange("salary_min", null);
+                              handleChange("salary_max", null);
+                              handleChange("currency", null);
                             }
                           }}
                         />
                       </div>
                     </div>
-                    {(errors.salary_min || errors.salary_max || errors.currency) && (
+
+                    {jobData.show_salary && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="currency">Currency</Label>
+                            <Select
+                              value={jobData.currency || ""}
+                              onValueChange={(value) => handleChange("currency", value)}
+                            >
+                              <SelectTrigger id="currency">
+                                <SelectValue placeholder="Select currency" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="INR">INR (₹)</SelectItem>
+                                <SelectItem value="USD">USD ($)</SelectItem>
+                                <SelectItem value="EUR">EUR (€)</SelectItem>
+                                <SelectItem value="GBP">GBP (£)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="salary_min">Minimum Salary</Label>
+                            <Input
+                              id="salary_min"
+                              type="number"
+                              min="0"
+                              placeholder="e.g. 60000"
+                              value={jobData.salary_min || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || /^\d+$/.test(value)) {
+                                  handleChange("salary_min", value === '' ? null : Number(value));
+                                }
+                              }}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="salary_max">Maximum Salary</Label>
+                            <Input
+                              id="salary_max"
+                              type="number"
+                              min="0"
+                              placeholder="e.g. 80000"
+                              value={jobData.salary_max || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || /^\d+$/.test(value)) {
+                                  handleChange("salary_max", value === '' ? null : Number(value));
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {(errors.salary_min || errors.salary_max || errors.currency || errors.show_salary) && (
                       <p className="text-sm text-destructive">
-                        {errors.salary_min || errors.salary_max || errors.currency}
+                        {errors.salary_min || errors.salary_max || errors.currency || errors.show_salary}
                       </p>
                     )}
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={jobData.show_salary}
-                      onCheckedChange={(checked) =>
-                        handleChange("show_salary", checked)
-                      }
-                    />
-                    <Label>Show Salary in Job Posting</Label>
                   </div>
                 </CardContent>
               </Card>
@@ -2053,6 +2139,43 @@ const NewJob = () => {
                                     placeholder="Enter your question"
                                   />
                                 </div>
+
+                                {/* Image upload section */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center space-x-2">
+                                    <Switch
+                                      id={`has-image-${index}`}
+                                      checked={question.hasImage || false}
+                                      onCheckedChange={(checked) => handleMcqQuestionUpdate(index, "hasImage", checked)}
+                                    />
+                                    <Label htmlFor={`has-image-${index}`}>Include Image</Label>
+                                  </div>
+                                  
+                                  {question.hasImage && (
+                                    <div className="space-y-2">
+                                      <Input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            handleMcqQuestionUpdate(index, "image", file);
+                                          }
+                                        }}
+                                      />
+                                      {question.imageUrl && (
+                                        <div className="mt-2">
+                                          <img 
+                                            src={question.imageUrl} 
+                                            alt="Question preview" 
+                                            className="max-w-xs max-h-48 object-contain rounded-md border border-gray-200"
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
                                 <div className="grid gap-2">
                                   <Label>Question Type</Label>
                                   <Select
@@ -2069,6 +2192,7 @@ const NewJob = () => {
                                     </SelectContent>
                                   </Select>
                                 </div>
+
                                 <div className="grid gap-2">
                                   <Label>Category</Label>
                                   <Select
@@ -2084,15 +2208,20 @@ const NewJob = () => {
                                     </SelectContent>
                                   </Select>
                                 </div>
-                                <div className="grid gap-2">
-                                  <Label>Time Limit (seconds)</Label>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={question.time_seconds?.toString() || "30"}
-                                    onChange={(e) => handleMcqQuestionUpdate(index, "time_seconds", parseInt(e.target.value))}
-                                  />
-                                </div>
+
+                                {jobData.mcq_timing_mode === 'per_question' && (
+                                  <div className="grid gap-2">
+                                    <Label>Time Limit (seconds)</Label>
+                                    <Input
+                                      type="number"
+                                      min="30"
+                                      max="180"
+                                      value={question.time_seconds?.toString() || "60"}
+                                      onChange={(e) => handleMcqQuestionUpdate(index, "time_seconds", parseInt(e.target.value))}
+                                    />
+                                  </div>
+                                )}
+
                                 <div className="grid gap-2">
                                   <Label>Options</Label>
                                   {question.type === "true_false" ? (
@@ -2143,6 +2272,7 @@ const NewJob = () => {
                                     ))
                                   )}
                                 </div>
+
                                 <div className="flex justify-end">
                                   <Button
                                     variant="destructive"

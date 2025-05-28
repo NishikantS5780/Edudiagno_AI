@@ -49,6 +49,8 @@ const InterviewPage = () => {
           salaryMin: data.salary_min,
           salaryMax: data.salary_max,
           currency: data.currency,
+          min_experience: data.min_experience,
+          max_experience: data.max_experience,
 
           companyId: data.company_id,
           companyName: data.company_name,
@@ -151,7 +153,13 @@ const InterviewPage = () => {
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Work Experience</span>
               </div>
-              <div className="font-medium">Mid Level (1-4 Years)</div>
+              <div className="font-medium">
+                {jobDetails?.min_experience === 0 && jobDetails?.max_experience === 0
+                  ? "Fresher"
+                  : jobDetails?.min_experience === 5 && jobDetails?.max_experience === 5
+                  ? "5+ years"
+                  : `${jobDetails?.min_experience}-${jobDetails?.max_experience} years`}
+              </div>
             </div>
           </div>
 
