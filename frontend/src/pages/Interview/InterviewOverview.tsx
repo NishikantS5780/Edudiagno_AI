@@ -1,11 +1,13 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CheckCircle, Code, Video, BookOpen, Clock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { jobAPI } from '@/lib/api';
 import { api } from '@/lib/api';
+import { toast } from "sonner";
+import { ResumeUploadStage } from "@/components/interview/stages/ResumeUploadStage";
 
 const InterviewOverview = () => {
   const navigate = useNavigate();
@@ -32,31 +34,45 @@ const InterviewOverview = () => {
   });
 
   const handleStartInterview = async () => {
-    let interviewUrl = '';
-    if (jobData?.hasQuiz) {
-      interviewUrl = `/mcq?i_id=${interviewId}&company=${companyName}`;
-    } else if (jobData?.hasDSATest) {
-      interviewUrl = `/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`;
-    } else {
-      interviewUrl = `/interview/video?i_id=${interviewId}&company=${companyName}`;
-    }
+    try {
+      // Check if we have a valid screen stream ID
+      const urlParams = new URLSearchParams(window.location.search);
+      const streamId = urlParams.get('stream_id');
+      const storedStreamId = localStorage.getItem('screenStreamId');
 
-    // First navigate to the interview page
-    navigate(interviewUrl);
-
-    // Then request fullscreen after a short delay to ensure the page has loaded
-    setTimeout(() => {
-      const element = document.documentElement;
-      if (element.requestFullscreen) {
-        element.requestFullscreen().catch(err => {
-          console.error(`Error attempting to enable fullscreen: ${err.message}`);
-        });
-      } else if ((element as any).webkitRequestFullscreen) {
-        (element as any).webkitRequestFullscreen();
-      } else if ((element as any).msRequestFullscreen) {
-        (element as any).msRequestFullscreen();
+      if (!streamId || !storedStreamId || streamId !== storedStreamId) {
+        throw new Error('Invalid or missing screen stream ID');
       }
-    }, 100);
+
+      let interviewUrl = '';
+      if (jobData?.hasQuiz) {
+        interviewUrl = `/mcq?i_id=${interviewId}&company=${companyName}&stream_id=${streamId}`;
+      } else if (jobData?.hasDSATest) {
+        interviewUrl = `/interview/dsa-playground?i_id=${interviewId}&company=${companyName}&stream_id=${streamId}`;
+      } else {
+        interviewUrl = `/interview/video?i_id=${interviewId}&company=${companyName}&stream_id=${streamId}`;
+      }
+
+      // Navigate to the interview page
+      navigate(interviewUrl);
+
+      // Request fullscreen after a short delay to ensure the page has loaded
+      setTimeout(() => {
+        const element = document.documentElement;
+        if (element.requestFullscreen) {
+          element.requestFullscreen().catch(err => {
+            console.error(`Error attempting to enable fullscreen: ${err.message}`);
+          });
+        } else if ((element as any).webkitRequestFullscreen) {
+          (element as any).webkitRequestFullscreen();
+        } else if ((element as any).msRequestFullscreen) {
+          (element as any).msRequestFullscreen();
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Error starting interview:', error);
+      toast.error('Failed to start interview. Please try again.');
+    }
   };
 
   if (isLoading) {

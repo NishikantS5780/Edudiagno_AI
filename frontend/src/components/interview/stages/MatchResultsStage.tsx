@@ -34,9 +34,28 @@ export function MatchResultsStage({
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const navigate = useNavigate();
 
-  const handleStartInterview = () => {
-    const interviewUrl = `/interview/overview?i_id=${interviewId}&company=${companyName}`;
-    window.open(interviewUrl, '_blank', 'fullscreen=yes');
+  const handleStartInterview = async () => {
+    try {
+      // Request screen sharing first
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true
+      });
+
+      // Store the screen stream in localStorage for the new tab to access
+      const streamId = Date.now().toString();
+      localStorage.setItem('screenStreamId', streamId);
+      
+      // Open interview in new tab
+      const interviewUrl = `/interview/overview?i_id=${interviewId}&company=${companyName}&stream_id=${streamId}`;
+      window.open(interviewUrl, '_blank', 'fullscreen=yes');
+
+      // Stop the screen share in this tab since it will be used in the new tab
+      screenStream.getTracks().forEach(track => track.stop());
+    } catch (error) {
+      console.error('Error starting screen share:', error);
+      toast.error('Failed to start screen sharing. Please try again.');
+    }
   };
 
   const handleScheduleLater = () => {

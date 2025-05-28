@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import {
   BrowserRouter,
   Routes,
@@ -70,6 +70,25 @@ import Jobs4 from "@/pages/Jobs4";
 import Analytics4 from "@/pages/Analytics4";
 import Settings4 from "@/pages/Settings4";
 
+// Import admin routes
+import { adminRoutes } from "@/routes/admin";
+
+// Import admin components
+import AdminLayout from "@/pages/Admin/AdminLayout";
+import AdminDashboard from "@/pages/Admin/Dashboard";
+import UserManagement from "@/pages/Admin/Users";
+import DevelopmentManagement from "@/pages/Admin/Development";
+import ContentManagement from "@/pages/Admin/Content";
+import SecurityCompliance from "@/pages/Admin/Security";
+import SystemHealth from "@/pages/Admin/Health";
+import SystemSettings from "@/pages/Admin/Settings";
+import PlatformAnalytics from "@/pages/Admin/Analytics";
+import BillingManagement from "@/pages/Admin/Billing";
+import IntegrationManagement from "@/pages/Admin/Integrations";
+import SupportManagement from "@/pages/Admin/Support";
+
+import { interviewAPI, jobAPI } from "@/lib/api";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -83,10 +102,16 @@ const App = () => {
   const userContext = useContext(UserContext);
   const isLoading = userContext?.isLoading ?? false;
 
+  useEffect(() => {
+    console.log("Admin routes:", adminRoutes);
+  }, []);
+
   if (isLoading) {
-    <div className="min-h-screen flex items-center justify-center">
-      <LoadingSpinner size="lg" />
-    </div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
   }
 
   return (
@@ -99,16 +124,12 @@ const App = () => {
               <Sonner />
               <ScrollToTop />
               <Routes>
+                {/* Public Routes */}
                 <Route path="/" element={<Landing />} />
                 <Route path="/landing1" element={<Landing1 />} />
                 <Route path="/landing2" element={<Landing2 />} />
                 <Route path="/landing4" element={<Landing4 />} />
                 <Route path="/features" element={<Features />} />
-                {/* Case Studies, About, and Pricing pages temporarily hidden
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/case-studies" element={<CaseStudies />} />
-                */}
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/careers" element={<Careers />} />
@@ -120,21 +141,19 @@ const App = () => {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/recruiter-email-verification" element={<RecruiterEmailVerification />} />
 
-
+                {/* Interview Routes */}
                 <Route path="/interview" element={<InterviewPage />} />
-                <Route
-                  path="/interview/compatibility"
-                  element={<InterviewFlow />}
-                />
-                <Route
-                  path="/interview/setup"
-                  element={<CandidatePreCheck />}
-                />
-                <Route
-                  path="/interview/video-interview"
-                  element={<VideoInterview />}
-                />
+                <Route path="/interview/compatibility" element={<InterviewFlow />} />
+                <Route path="/interview/setup" element={<CandidatePreCheck />} />
+                <Route path="/interview/video-interview" element={<VideoInterview />} />
+                <Route path="/interview/flow" element={<InterviewFlow />} />
+                <Route path="/interview/precheck" element={<CandidatePreCheck />} />
+                <Route path="/interview/dsa-playground" element={<DSAPlayground />} />
+                <Route path="/interview/video" element={<VideoInterview />} />
+                <Route path="/interview/overview" element={<InterviewOverview />} />
+                <Route path="/mcq" element={<MCQTest />} />
 
+                {/* Protected Dashboard Routes */}
                 <Route
                   path="/dashboard"
                   element={
@@ -143,7 +162,6 @@ const App = () => {
                     </RequireAuth>
                   }
                 />
-
                 <Route
                   path="/dashboard/jobs"
                   element={
@@ -182,7 +200,6 @@ const App = () => {
                     </RequireAuth>
                   }
                 />
-
                 <Route
                   path="/dashboard/interviews"
                   element={
@@ -199,7 +216,6 @@ const App = () => {
                     </RequireAuth>
                   }
                 />
-
                 <Route
                   path="/dashboard/interviews/new"
                   element={
@@ -210,7 +226,14 @@ const App = () => {
                     </RequireAuth>
                   }
                 />
-
+                <Route
+                  path="/dashboard/interviews/:id/report"
+                  element={
+                    <RequireAuth>
+                      <InterviewReportWrapper />
+                    </RequireAuth>
+                  }
+                />
                 <Route
                   path="/dashboard/profile"
                   element={
@@ -236,37 +259,33 @@ const App = () => {
                   }
                 />
 
-                <Route path="/interview" element={<PublicInterview />} />
-                <Route path="/interview/flow" element={<InterviewFlow />} />
-                <Route
-                  path="/interview/precheck"
-                  element={<CandidatePreCheck />}
-                />
-                <Route
-                  path="/interview/dsa-playground"
-                  element={<DSAPlayground />}
-                />
-                <Route path="/interview/video" element={<VideoInterview />} />
+                {/* Admin Routes */}
+                <Route path="/admin-test/*" element={
+                  <RequireAuth>
+                    <AdminLayout />
+                  </RequireAuth>
+                }>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="users" element={<UserManagement />} />
+                  <Route path="development" element={<DevelopmentManagement />} />
+                  <Route path="content" element={<ContentManagement />} />
+                  <Route path="security" element={<SecurityCompliance />} />
+                  <Route path="health" element={<SystemHealth />} />
+                  <Route path="settings" element={<SystemSettings />} />
+                  <Route path="analytics" element={<PlatformAnalytics />} />
+                  <Route path="billing" element={<BillingManagement />} />
+                  <Route path="integrations" element={<IntegrationManagement />} />
+                  <Route path="support" element={<SupportManagement />} />
+                </Route>
 
-                <Route path="/mcq" element={<MCQTest />} />
-
-                <Route
-                  path="/dashboard/interviews/:id/report"
-                  element={
-                    <RequireAuth>
-                      <InterviewReport />
-                    </RequireAuth>
-                  }
-                />
-
-                <Route path="/interview/overview" element={<InterviewOverview />} />
-
+                {/* Legacy Routes */}
                 <Route path="/dashboard4" element={<Dashboard4 />} />
                 <Route path="/candidates4" element={<Candidates4 />} />
                 <Route path="/jobs4" element={<Jobs4 />} />
                 <Route path="/analytics4" element={<Analytics4 />} />
                 <Route path="/settings4" element={<Settings4 />} />
 
+                {/* 404 Route */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </TooltipProvider>
@@ -275,6 +294,31 @@ const App = () => {
       </ThemeProvider>
     </QueryClientProvider>
   );
+};
+
+// Add wrapper component for InterviewReport
+const InterviewReportWrapper = () => {
+  const { id } = useParams();
+  const { data: interview } = useQuery({
+    queryKey: ['interview', id],
+    queryFn: async () => {
+      const response = await interviewAPI.getInterviews();
+      return response.data.find((i: any) => i.id.toString() === id);
+    },
+    enabled: !!id,
+  });
+
+  const { data: job } = useQuery({
+    queryKey: ['job', interview?.job_id],
+    queryFn: async () => {
+      const response = await jobAPI.recruiterGetJob(interview?.job_id.toString());
+      return response.data;
+    },
+    enabled: !!interview?.job_id,
+  });
+
+  if (!interview || !job) return null;
+  return <InterviewReport jobTitle={job.title} />;
 };
 
 export default App;

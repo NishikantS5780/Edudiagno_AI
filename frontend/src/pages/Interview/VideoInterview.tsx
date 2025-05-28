@@ -908,7 +908,21 @@ export default function VideoInterview() {
         audio: true,
       });
 
-      // Get screen capture stream for recording
+      // Get screen stream from URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const streamId = urlParams.get('stream_id');
+      
+      if (!streamId) {
+        throw new Error('No screen stream ID provided');
+      }
+
+      // Get screen stream from localStorage
+      const storedStreamId = localStorage.getItem('screenStreamId');
+      if (storedStreamId !== streamId) {
+        throw new Error('Invalid screen stream ID');
+      }
+
+      // Request screen sharing again in this tab
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: true,
@@ -950,21 +964,34 @@ export default function VideoInterview() {
       });
       fullInterviewRecorderRef.current = fullInterviewRecorder;
 
-      // Set up video data handler
+      // Start full interview recording immediately
+      fullInterviewRecorder.start(1000);
+      setIsFullInterviewRecording(true);
+
+      // Start screenshot capture after devices are initialized
+      if (screenshotIntervalRef.current) {
+        console.log("[Screenshot] Clearing existing interval");
+        clearInterval(screenshotIntervalRef.current);
+      }
+      console.log("[Screenshot] Starting screenshot interval (30s)");
+      screenshotIntervalRef.current = setInterval(
+        captureAndSendScreenshot,
+        30000
+      );
+
+      // Set up all the event handlers and data handlers as before
       videoRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           recordedChunksRef.current.push(e.data);
         }
       };
 
-      // Set up audio data handler
       audioRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data);
         }
       };
 
-      // Set up stop handler for video recorder
       videoRecorder.onstop = () => {
         const videoBlob = new Blob(recordedChunksRef.current, {
           type: "video/webm",
@@ -980,7 +1007,6 @@ export default function VideoInterview() {
         }
       };
 
-      // Set up stop handler for audio recorder
       audioRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: "audio/webm",
@@ -994,7 +1020,6 @@ export default function VideoInterview() {
         }
       };
 
-      // Set up full interview data handler
       fullInterviewRecorder.ondataavailable = async (e) => {
         if (e.data.size > 0) {
           // Send the video to the backend
@@ -1015,7 +1040,6 @@ export default function VideoInterview() {
         }
       };
 
-      // Set up stop handler for full interview recorder
       fullInterviewRecorder.onstop = async () => {
         try {
           console.log("Video uploaded, starting conversion...");
@@ -1037,7 +1061,6 @@ export default function VideoInterview() {
         }
       };
 
-      // Set up error handlers
       videoRecorder.onerror = (error) => {
         toast.error("Recording error occurred");
         setIsRecording(false);
@@ -1051,21 +1074,6 @@ export default function VideoInterview() {
       fullInterviewRecorder.onerror = (error) => {
         console.error("Full interview recording error:", error);
       };
-
-      // Start full interview recording
-      fullInterviewRecorder.start(1000);
-      setIsFullInterviewRecording(true);
-
-      // Start screenshot capture after devices are initialized
-      if (screenshotIntervalRef.current) {
-        console.log("[Screenshot] Clearing existing interval");
-        clearInterval(screenshotIntervalRef.current);
-      }
-      console.log("[Screenshot] Starting screenshot interval (30s)");
-      screenshotIntervalRef.current = setInterval(
-        captureAndSendScreenshot,
-        30000
-      );
 
       setIsDevicesInitialized(true);
       toast.success("Camera and microphone initialized successfully");

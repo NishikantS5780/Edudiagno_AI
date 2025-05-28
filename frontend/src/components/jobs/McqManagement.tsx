@@ -195,17 +195,21 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
       for (const question of questions) {
         if (question.id < 0) {
           // New question
+          const formData = new FormData();
+          formData.append('description', question.description);
+          formData.append('type', question.type);
+          formData.append('category', question.category);
+          formData.append('job_id', jobId.toString());
+          formData.append('time_seconds', timingMode === 'per_question' ? question.time_seconds?.toString() || '60' : '0');
+
           const questionResponse = await api.post(
             "/quiz-question",
+            formData,
             {
-              description: question.description,
-              type: question.type,
-              category: question.category,
-              job_id: jobId,
-              time_seconds: timingMode === 'per_question' ? question.time_seconds : null,
-            },
-            {
-              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+              headers: { 
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+                'Content-Type': 'multipart/form-data'
+              },
             }
           );
 
@@ -225,17 +229,21 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
           }
         } else {
           // Existing question
+          const formData = new FormData();
+          formData.append('description', question.description);
+          formData.append('type', question.type);
+          formData.append('category', question.category);
+          formData.append('time_seconds', timingMode === 'per_question' ? question.time_seconds?.toString() || '60' : '0');
+          formData.append('id', question.id.toString());
+
           await api.put(
             "/quiz-question",
+            formData,
             {
-              description: question.description,
-              type: question.type,
-              category: question.category,
-              time_seconds: timingMode === 'per_question' ? question.time_seconds : null,
-              id: question.id,
-            },
-            {
-              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+              headers: { 
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+                'Content-Type': 'multipart/form-data'
+              },
             }
           );
 
