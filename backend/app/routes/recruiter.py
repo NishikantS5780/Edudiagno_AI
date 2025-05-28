@@ -175,7 +175,8 @@ async def verify_recruiter_access_token(
 async def send_otp(
     send_otp_data: schemas.RecruiterSendEmailOtp, db: Session = Depends(database.get_db)
 ):
-    otp = int(random.random() * 1000000)
+    otp = str(int(random.random() * 1000000))
+    otp = otp + "0" * (6 - len(otp))
 
     brevo.send_otp_email(send_otp_data.email, otp, "1 min")
     stmt = (

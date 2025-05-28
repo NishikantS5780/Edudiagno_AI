@@ -259,7 +259,8 @@ async def send_otp(
     stmt = select(Interview.email).where(Interview.id == interview_id)
     interview = db.execute(stmt).mappings().one()
 
-    otp = int(random.random() * 1000000)
+    otp = str(int(random.random() * 1000000))
+    otp = otp + "0" * (6 - len(otp))
 
     brevo.send_otp_email(
         interview["email"],
