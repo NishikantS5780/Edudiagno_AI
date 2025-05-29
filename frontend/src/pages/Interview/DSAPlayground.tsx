@@ -4,7 +4,14 @@ import DsaQuestion from "../DsaLab/DsaQuestion";
 import CodeExecutionPanel from "../DsaLab/CodeExecutionPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Code, Clock, CheckCircle, Terminal, Timer } from "lucide-react";
+import {
+  ArrowRight,
+  Code,
+  Clock,
+  CheckCircle,
+  Terminal,
+  Timer,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -49,29 +56,37 @@ const DSAPlayground = () => {
   // Add fullscreen effect hook with other useEffect hooks
   useEffect(() => {
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && 
-          !(document as any).webkitFullscreenElement && 
-          !(document as any).msFullscreenElement) {
+      if (
+        !document.fullscreenElement &&
+        !(document as any).webkitFullscreenElement &&
+        !(document as any).msFullscreenElement
+      ) {
         toast.warning("Please stay in fullscreen mode during the assessment");
       }
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("msfullscreenchange", handleFullscreenChange);
 
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange
+      );
+      document.removeEventListener(
+        "msfullscreenchange",
+        handleFullscreenChange
+      );
     };
   }, []);
 
   React.useEffect(() => {
     const socket = new WebSocket(
       import.meta.env.VITE_WS_BASE_URL +
-      "?i_token=" +
-      localStorage.getItem("i_token")
+        "?i_token=" +
+        localStorage.getItem("i_token")
     );
 
     socket.onopen = () => {
@@ -84,12 +99,22 @@ const DSAPlayground = () => {
       if (data.event == "execution_result") {
         if (data.status == "successful") {
           console.log("Total Test Cases Passed: ", data.passed_count);
-          setCompilationStatus("Passed All Test Cases " + data.passed_count + "/" + data.passed_count);
+          setCompilationStatus(
+            "Passed All Test Cases " +
+              data.passed_count +
+              "/" +
+              data.passed_count
+          );
         } else if (data.status == "failed") {
           console.log("Failed Test Case: ", data.failed_test_case);
           setCompilationStatus(
-            "Failed a test case \nInput: " + data.failed_test_case.input + "\nExpected output: " +
-            data.failed_test_case.expected_output + "\nYour Output: " + data.failed_test_case.output
+            "Failed a test case \nInput: " +
+              data.failed_test_case.input +
+              "\nExpected output: " +
+              data.failed_test_case.expected_output +
+              "\nYour Output: " +
+              data.failed_test_case.output ||
+              data.failed_test_case.compilation_output
           );
         }
       }
@@ -160,36 +185,48 @@ const DSAPlayground = () => {
   };
 
   // Add loggers before rendering navigation buttons
-  console.log('DSA Questions:', dsaQuestions);
-  console.log('Current Question Index:', currentQuestionIndex);
-  console.log('Current Question:', currentQuestion);
+  console.log("DSA Questions:", dsaQuestions);
+  console.log("Current Question Index:", currentQuestionIndex);
+  console.log("Current Question:", currentQuestion);
 
   // Calculate total time based on questions' time_minutes
   const calculateTotalTime = (questions: DSAQuestion[]) => {
-    console.log('Calculating total time for DSA questions:', questions);
+    console.log("Calculating total time for DSA questions:", questions);
     const totalTime = questions.reduce((total, question) => {
       const questionTime = question.time_minutes || 30;
       console.log(`DSA Question ${question.id}: ${questionTime} minutes`);
       return total + questionTime;
     }, 0);
     const totalSeconds = totalTime * 60;
-    console.log('Total time calculated:', totalTime, 'minutes (', totalSeconds, 'seconds)');
+    console.log(
+      "Total time calculated:",
+      totalTime,
+      "minutes (",
+      totalSeconds,
+      "seconds)"
+    );
     return totalSeconds;
   };
 
   useEffect(() => {
     if (dsaQuestions && dsaQuestions.length > 0) {
-      console.log('Setting up timer for DSA questions:', dsaQuestions);
+      console.log("Setting up timer for DSA questions:", dsaQuestions);
       const totalTime = calculateTotalTime(dsaQuestions);
-      console.log('Setting total time for DSA assessment:', totalTime, 'seconds');
+      console.log(
+        "Setting total time for DSA assessment:",
+        totalTime,
+        "seconds"
+      );
       setTimeLeft(totalTime);
       setIsTestStarted(true);
 
       // Request fullscreen when test starts
       const element = document.documentElement;
       if (element.requestFullscreen) {
-        element.requestFullscreen().catch(err => {
-          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        element.requestFullscreen().catch((err) => {
+          console.error(
+            `Error attempting to enable fullscreen: ${err.message}`
+          );
         });
       } else if ((element as any).webkitRequestFullscreen) {
         (element as any).webkitRequestFullscreen();
@@ -201,24 +238,24 @@ const DSAPlayground = () => {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    
+
     if (isTestStarted && timeLeft > 0) {
       timer = setInterval(() => {
         setTimeLeft((prev) => {
           const newTime = prev - 1;
-          
+
           // Show warning when 5 minutes is left
           if (newTime === 300 && !warningShown) {
-            console.log('5 minutes remaining warning triggered');
+            console.log("5 minutes remaining warning triggered");
             toast.warning("5 minutes remaining!");
             setWarningShown(true);
           }
-          
+
           return newTime;
         });
       }, 1000);
     } else if (isTestStarted && timeLeft === 0) {
-      console.log('Time is up, submitting DSA assessment');
+      console.log("Time is up, submitting DSA assessment");
       // Time's up, submit the test
       handleSubmit();
     }
@@ -234,7 +271,9 @@ const DSAPlayground = () => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${hours > 0 ? `${hours}:` : ''}${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${hours > 0 ? `${hours}:` : ""}${minutes
+      .toString()
+      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   if (isLoadingInterview || isLoadingQuestions || isLoadingTestCases) {
@@ -254,10 +293,18 @@ const DSAPlayground = () => {
   }
 
   if (!currentQuestion) {
-    console.error('Current question is undefined! Index:', currentQuestionIndex, 'Questions:', dsaQuestions);
+    console.error(
+      "Current question is undefined! Index:",
+      currentQuestionIndex,
+      "Questions:",
+      dsaQuestions
+    );
     return (
       <div className="h-screen flex items-center justify-center">
-        <p className="text-red-500">Error: Current question is undefined. Please refresh or contact support.</p>
+        <p className="text-red-500">
+          Error: Current question is undefined. Please refresh or contact
+          support.
+        </p>
       </div>
     );
   }
@@ -272,7 +319,7 @@ const DSAPlayground = () => {
             <span className="font-medium">{formatTime(timeLeft)}</span>
           </div>
         </div>
-        
+
         <div className="h-screen flex flex-col">
           <div className="flex-1 overflow-hidden">
             <Tabs
@@ -323,8 +370,9 @@ const DSAPlayground = () => {
                             <div>
                               <h3 className="font-medium">Problem Solving</h3>
                               <p className="text-muted-foreground text-sm">
-                                You'll be given a coding problem to solve. Take your
-                                time to understand the requirements and constraints.
+                                You'll be given a coding problem to solve. Take
+                                your time to understand the requirements and
+                                constraints.
                               </p>
                             </div>
                           </div>
@@ -345,7 +393,9 @@ const DSAPlayground = () => {
                               <CheckCircle className="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                              <h3 className="font-medium">Evaluation Criteria</h3>
+                              <h3 className="font-medium">
+                                Evaluation Criteria
+                              </h3>
                               <p className="text-muted-foreground text-sm">
                                 Your solution will be evaluated on correctness,
                                 efficiency, and code quality.
@@ -368,14 +418,19 @@ const DSAPlayground = () => {
                           <li>Read the problem statement carefully</li>
                           <li>Understand the test cases and constraints</li>
                           <li>Write your solution in the code editor</li>
-                          <li>Test your solution using the provided test cases</li>
+                          <li>
+                            Test your solution using the provided test cases
+                          </li>
                           <li>Submit when you're confident in your solution</li>
                         </ol>
                       </CardContent>
                     </Card>
 
                     <div className="flex justify-end pt-2">
-                      <Button onClick={() => setActiveTab("playground")} size="lg">
+                      <Button
+                        onClick={() => setActiveTab("playground")}
+                        size="lg"
+                      >
                         Start Assessment
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
@@ -390,54 +445,58 @@ const DSAPlayground = () => {
               >
                 <PanelGroup direction="horizontal" className="h-full">
                   <Panel defaultSize={50} minSize={30}>
-                  <Card className="h-full flex flex-col">
+                    <Card className="h-full flex flex-col">
                       <CardHeader className="pb-3 shrink-0">
-                      <div className="flex items-center gap-2">
-                        <Terminal className="h-5 w-5 text-primary" />
-                        <CardTitle>DSA Assessment</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-auto">
-                      <DsaQuestion
-                        title={`Question ${currentQuestionIndex + 1} of ${dsaQuestions.length}`}
-                        successRate={successRate}
-                        questionNumber={`${currentQuestionIndex + 1}.`}
-                        questionTitle={currentQuestion.title}
-                        difficulty={currentQuestion.difficulty}
-                        description={currentQuestion.description}
-                        testCases={testCases.map((testCase: TestCase) => ({
-                          input: testCase.input,
-                          expectedOutput: testCase.expected_output,
-                        }))}
-                        constraints={currentQuestion.constraints}
-                        compilationStatus={compilationStatus}
-                      />
-                    </CardContent>
-                  </Card>
+                        <div className="flex items-center gap-2">
+                          <Terminal className="h-5 w-5 text-primary" />
+                          <CardTitle>DSA Assessment</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex-1 overflow-auto">
+                        <DsaQuestion
+                          title={`Question ${currentQuestionIndex + 1} of ${
+                            dsaQuestions.length
+                          }`}
+                          successRate={successRate}
+                          questionNumber={`${currentQuestionIndex + 1}.`}
+                          questionTitle={currentQuestion.title}
+                          difficulty={currentQuestion.difficulty}
+                          description={currentQuestion.description}
+                          testCases={testCases.map((testCase: TestCase) => ({
+                            input: testCase.input,
+                            expectedOutput: testCase.expected_output,
+                          }))}
+                          constraints={currentQuestion.constraints}
+                          compilationStatus={compilationStatus}
+                        />
+                      </CardContent>
+                    </Card>
                   </Panel>
 
                   <PanelResizeHandle className="w-2 bg-border hover:bg-primary/50 transition-colors" />
 
                   <Panel defaultSize={50} minSize={30}>
-                  <Card className="h-full">
-                    <CardContent className="p-0 h-full">
-                      <CodeExecutionPanel
-                        questionId={currentQuestion.id}
-                        expectedOutput={testCases[0]?.expected_output || ""}
-                        setCompilationStatus={setCompilationStatus}
-                        onCompilationStatusChange={setCompilationStatus}
-                        onSuccessRateChange={setSuccessRate}
-                        compilationStatus={compilationStatus}
-                        onNext={handleNext}
-                        onSubmit={handleSubmit}
-                        isLastQuestion={currentQuestionIndex === dsaQuestions.length - 1}
-                        isOnlyQuestion={dsaQuestions.length === 1}
-                        isFirstQuestion={currentQuestionIndex === 0}
-                        currentQuestionIndex={currentQuestionIndex}
-                        totalQuestions={dsaQuestions.length}
-                      />
-                    </CardContent>
-                  </Card>
+                    <Card className="h-full">
+                      <CardContent className="p-0 h-full">
+                        <CodeExecutionPanel
+                          questionId={currentQuestion.id}
+                          expectedOutput={testCases[0]?.expected_output || ""}
+                          setCompilationStatus={setCompilationStatus}
+                          onCompilationStatusChange={setCompilationStatus}
+                          onSuccessRateChange={setSuccessRate}
+                          compilationStatus={compilationStatus}
+                          onNext={handleNext}
+                          onSubmit={handleSubmit}
+                          isLastQuestion={
+                            currentQuestionIndex === dsaQuestions.length - 1
+                          }
+                          isOnlyQuestion={dsaQuestions.length === 1}
+                          isFirstQuestion={currentQuestionIndex === 0}
+                          currentQuestionIndex={currentQuestionIndex}
+                          totalQuestions={dsaQuestions.length}
+                        />
+                      </CardContent>
+                    </Card>
                   </Panel>
                 </PanelGroup>
               </TabsContent>

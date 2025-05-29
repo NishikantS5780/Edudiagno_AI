@@ -155,6 +155,9 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
 
     taskUID = data["taskUniqueId"]
     runStatus = data["runResult"]["runStatus"]
+    compilationOutput = data["runResult"][
+        "compilerOutputAfterCompilationBase64UrlEncoded"
+    ]
     output = data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
     input = data["runConfig"]["stdinStringAsBase64UrlEncoded"]
 
@@ -166,7 +169,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     )
     result = db.execute(stmt)
     db.commit()
-    dsa_response_id = result.all()[0]._mapping["dsa_response_id"]
+    dsa_response_id = result.mappings().one()["dsa_response_id"]
 
     if runStatus != "successful":
         stmt = (
@@ -209,6 +212,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 "failed_test_case": {
                     "test_case_id": data["dsa_test_case_id"],
                     "status": data["status"],
+                    "compilation_output": compilationOutput,
                     "input": data["input"],
                     "expected_output": data["expected_output"],
                     "output": base64.urlsafe_b64decode(
