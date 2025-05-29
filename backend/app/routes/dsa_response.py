@@ -164,7 +164,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
         if data["runResult"]["programRunData"]
         else ""
     )
-    input = data["runConfig"]["stdinStringAsBase64UrlEncoded"]
+    input = data["runConfig"]["programRunData"]["stdinStringAsBase64UrlEncoded"]
 
     stmt = (
         update(DSATestCaseResponse)
