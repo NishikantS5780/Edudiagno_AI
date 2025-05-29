@@ -158,7 +158,11 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     compilationOutput = data["runResult"][
         "compilerOutputAfterCompilationBase64UrlEncoded"
     ]
-    output = data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
+    output = (
+        data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
+        if data["runResult"]["programRunData"]
+        else ""
+    )
     input = data["runConfig"]["stdinStringAsBase64UrlEncoded"]
 
     stmt = (
