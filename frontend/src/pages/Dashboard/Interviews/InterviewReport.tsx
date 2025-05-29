@@ -26,8 +26,8 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { QuizResponse, QuizQuestion } from "@/types/quiz";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+// import jsPDF from 'jspdf';
+// import html2canvas from 'html2canvas';
 
 interface InterviewReportProps {
   jobTitle: string;
@@ -270,12 +270,12 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
       });
 
       // Create PDF with improved quality
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
+      // const pdf = new jsPDF({
+      //   orientation: 'p',
+      //   unit: 'mm',
+      //   format: 'a4',
+      //   compress: true
+      // });
 
       const imgWidth = 210; // A4 width in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
