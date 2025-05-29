@@ -113,10 +113,9 @@ const DSAPlayground = () => {
               "\nExpected output: " +
               data.failed_test_case.expected_output +
               "\nYour Output: " +
-              data.failed_test_case.status ==
-              "compilation-error"
-              ? data.failed_test_case.compilation_output
-              : data.failed_test_case.output
+              (data.failed_test_case.status == "compilation-error"
+                ? data.failed_test_case.compilation_output
+                : data.failed_test_case.output)
           );
         }
       }
