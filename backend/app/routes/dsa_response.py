@@ -158,13 +158,13 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     compilation_output = data["runResult"][
         "compilerOutputAfterCompilationBase64UrlEncoded"
     ]
-    execution_err = data["runResult"]["stderrBase64UrlEncoded"]
+    execution_err = data["runResult"]["programRunData"]["stderrBase64UrlEncoded"]
     output = (
         data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
         if data["runResult"]["programRunData"]
         else ""
     )
-    input = data["runConfig"]["programRunData"]["stdinStringAsBase64UrlEncoded"]
+    input = data["runConfig"]["stdinStringAsBase64UrlEncoded"]
 
     stmt = (
         update(DSATestCaseResponse)
