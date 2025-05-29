@@ -217,7 +217,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 "failed_test_case": {
                     "test_case_id": data["dsa_test_case_id"],
                     "status": data["status"],
-                    "execution_rr": (
+                    "execution_err": (
                         base64.urlsafe_b64decode(
                             execution_err + ((40 - (len(execution_err) % 4)) * "=")
                         ).decode()
