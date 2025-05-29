@@ -106,18 +106,18 @@ const DSAPlayground = () => {
               data.passed_count
           );
         } else if (data.status == "failed") {
-          console.log("Failed Test Case: ", data.failed_test_case);
+          let compilationStatus = "Your Output: ";
           setCompilationStatus(
             "Failed a test case \nInput: " +
               data.failed_test_case.input +
               "\nExpected output: " +
               data.failed_test_case.expected_output +
               "\nYour Output: " +
-              (data.failed_test_case.status == "compilation-error"
-                ? data.failed_test_case.compilation_output +
+              (data.failed_test_case.status == "wrong-answer"
+                ? data.failed_test_case.output
+                : data.failed_test_case.compilation_output +
                   "\nError: " +
-                  data.failed_test_case.execution_err
-                : data.failed_test_case.output)
+                  data.failed_test_case.execution_err)
           );
         }
       }
