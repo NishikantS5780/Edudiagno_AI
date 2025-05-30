@@ -8,7 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ArrowLeft,
   Edit,
@@ -65,14 +71,14 @@ const JobDetail = () => {
         title: data.title,
         description: data.description,
         department: data.department,
-        city: data.city || '',
+        city: data.city || "",
         location: data.location,
         type: data.type,
         min_experience: data.min_experience || 0,
         max_experience: data.max_experience || 0,
         salary_min: data.salary_min,
         salary_max: data.salary_max,
-        currency: data.currency || 'USD',
+        currency: data.currency || "USD",
         show_salary: data.show_salary || false,
         requirements: data.requirements,
         benefits: data.benefits,
@@ -80,7 +86,7 @@ const JobDetail = () => {
         createdAt: data.created_at,
         requires_dsa: data.requires_dsa || false,
         dsa_questions: data.dsa_questions || [],
-        requires_mcq: data.requires_mcq || false
+        requires_mcq: data.requires_mcq || false,
       });
       setEditedJob({});
     } catch (error) {
@@ -94,25 +100,27 @@ const JobDetail = () => {
   const fetchInterviews = async () => {
     try {
       const response = await interviewAPI.getInterviews({ job_id: id });
-      const formattedInterviews = response.data.map((interview: any) => ({
-        id: interview.id,
-        status: interview.status,
-        firstName: interview.first_name,
-        lastName: interview.last_name,
-        email: interview.email,
-        phone: interview.phone,
-        workExperience: interview.work_experience,
-        education: interview.education,
-        skills: interview.skills,
-        location: interview.location,
-        linkedinUrl: interview.linkedin_url,
-        portfolioUrl: interview.portfolio_url,
-        resumeUrl: interview.resume_url,
-        resumeMatchScore: interview.resume_match_score,
-        resumeMatchFeedback: interview.resume_match_feedback,
-        overallScore: interview.overall_score,
-        feedback: interview.feedback
-      }));
+      const formattedInterviews = response.data.interviews.map(
+        (interview: any) => ({
+          id: interview.id,
+          status: interview.status,
+          firstName: interview.first_name,
+          lastName: interview.last_name,
+          email: interview.email,
+          phone: interview.phone,
+          workExperience: interview.work_experience,
+          education: interview.education,
+          skills: interview.skills,
+          location: interview.location,
+          linkedinUrl: interview.linkedin_url,
+          portfolioUrl: interview.portfolio_url,
+          resumeUrl: interview.resume_url,
+          resumeMatchScore: interview.resume_match_score,
+          resumeMatchFeedback: interview.resume_match_feedback,
+          overallScore: interview.overall_score,
+          feedback: interview.feedback,
+        })
+      );
       setInterviews(formattedInterviews);
     } catch (error) {
       console.error("Error fetching interviews:", error);
@@ -170,10 +178,13 @@ const JobDetail = () => {
     }
   };
 
-  const handleJobChange = (field: keyof JobData, value: string | number | boolean) => {
-    setEditedJob(prev => ({
+  const handleJobChange = (
+    field: keyof JobData,
+    value: string | number | boolean
+  ) => {
+    setEditedJob((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -300,11 +311,12 @@ const JobDetail = () => {
                     <div className="space-y-4">
                       <h3 className="font-medium">Salary Range</h3>
                       <p className="text-muted-foreground">
-                        {job.currency === 'INR' && '₹'}
-                        {job.currency === 'USD' && '$'}
-                        {job.currency === 'EUR' && '€'}
-                        {job.currency === 'GBP' && '£'}
-                        {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()} {job.currency}
+                        {job.currency === "INR" && "₹"}
+                        {job.currency === "USD" && "$"}
+                        {job.currency === "EUR" && "€"}
+                        {job.currency === "GBP" && "£"}
+                        {job.salary_min.toLocaleString()} -{" "}
+                        {job.salary_max.toLocaleString()} {job.currency}
                       </p>
                     </div>
                   )}
@@ -326,7 +338,9 @@ const JobDetail = () => {
                     {interviews.length === 0 ? (
                       <div className="text-center py-8">
                         <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-muted-foreground">No candidates yet</p>
+                        <p className="text-muted-foreground">
+                          No candidates yet
+                        </p>
                       </div>
                     ) : (
                       interviews.map((interview) => (
@@ -364,7 +378,9 @@ const JobDetail = () => {
                                   </div>
                                   <div className="flex items-center gap-2 text-sm">
                                     <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                    {interview.workExperience ? `${interview.workExperience} years experience` : 'Experience not specified'}
+                                    {interview.workExperience
+                                      ? `${interview.workExperience} years experience`
+                                      : "Experience not specified"}
                                   </div>
                                 </div>
 
@@ -400,7 +416,9 @@ const JobDetail = () => {
 
                               {interview.resumeMatchScore && (
                                 <div className="mt-4">
-                                  <h4 className="font-medium mb-2">Resume Match Score</h4>
+                                  <h4 className="font-medium mb-2">
+                                    Resume Match Score
+                                  </h4>
                                   <div className="flex items-center gap-2">
                                     <div className="w-full bg-muted rounded-full h-2">
                                       <div
@@ -424,7 +442,9 @@ const JobDetail = () => {
 
                               {interview.overallScore && (
                                 <div className="mt-4">
-                                  <h4 className="font-medium mb-2">Interview Score</h4>
+                                  <h4 className="font-medium mb-2">
+                                    Interview Score
+                                  </h4>
                                   <div className="flex items-center gap-2">
                                     <div className="w-full bg-muted rounded-full h-2">
                                       <div

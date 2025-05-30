@@ -75,21 +75,25 @@ const InterviewsPage = () => {
   const [scoreFilter, setScoreFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [interviewToDelete, setInterviewToDelete] = useState<number | null>(null);
+  const [interviewToDelete, setInterviewToDelete] = useState<number | null>(
+    null
+  );
   const itemsPerPage = 10;
 
   const { data: interviewsData, isLoading } = useQuery({
-    queryKey: ['interviews', currentPage, itemsPerPage],
+    queryKey: ["interviews", currentPage, itemsPerPage],
     queryFn: async () => {
       const res = await interviewAPI.getInterviews({
         start: (currentPage - 1) * itemsPerPage,
-        limit: itemsPerPage
+        limit: itemsPerPage,
       });
-      
+
       // Fetch job titles for all interviews
-      const jobIds = res.data.map((interview: any) => interview.job_id) as number[];
+      const jobIds = res.data.interviews.map(
+        (interview: any) => interview.job_id
+      ) as number[];
       const uniqueJobIds = Array.from(new Set(jobIds));
-      
+
       const jobTitlePromises = uniqueJobIds.map(async (jobId) => {
         try {
           const jobRes = await jobAPI.recruiterGetJob(jobId.toString());
@@ -106,11 +110,12 @@ const InterviewsPage = () => {
         return acc;
       }, {} as Record<number, string>);
 
-      const totalCount = res.headers['x-total-count'] || res.data.length;
+      const totalCount =
+        res.headers["x-total-count"] || res.data.interviews.length;
       setTotalPages(Math.ceil(totalCount / itemsPerPage));
 
       return {
-        interviews: res.data.map((interview: any) => ({
+        interviews: res.data.interviews.map((interview: any) => ({
           id: interview.id,
           status: interview.status,
           firstName: interview.first_name,
@@ -131,21 +136,21 @@ const InterviewsPage = () => {
           createdAt: interview.created_at,
           jobId: interview.job_id,
         })),
-        jobTitles: jobTitlesMap
+        jobTitles: jobTitlesMap,
       };
-    }
+    },
   });
 
   const deleteInterviewMutation = useMutation({
     mutationFn: (id: number) => interviewAPI.deleteInterview(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      queryClient.invalidateQueries({ queryKey: ["interviews"] });
       toast.success("Interview deleted successfully");
     },
     onError: (error) => {
       console.error("Error deleting interview:", error);
       toast.error("Failed to delete interview");
-    }
+    },
   });
 
   const handleDeleteInterview = (id: number) => {
@@ -203,272 +208,301 @@ const InterviewsPage = () => {
   return (
     <DashboardLayout>
       <div className="container mx-auto py-6">
-      <PageHeader
+        <PageHeader
           title="Interviews"
           description="Manage and track all your interviews"
-      />
+        />
 
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search candidates or jobs..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Select value={scoreFilter} onValueChange={setScoreFilter}>
-            <SelectTrigger className="w-[140px]">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Score" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Scores</SelectItem>
-              <SelectItem value="90-100">90-100%</SelectItem>
-              <SelectItem value="80-89">80-89%</SelectItem>
-              <SelectItem value="70-79">70-79%</SelectItem>
-              <SelectItem value="60-69">60-69%</SelectItem>
-              <SelectItem value="0-59">0-59%</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search candidates or jobs..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Select value={scoreFilter} onValueChange={setScoreFilter}>
+              <SelectTrigger className="w-[140px]">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Score" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Scores</SelectItem>
+                <SelectItem value="90-100">90-100%</SelectItem>
+                <SelectItem value="80-89">80-89%</SelectItem>
+                <SelectItem value="70-79">70-79%</SelectItem>
+                <SelectItem value="60-69">60-69%</SelectItem>
+                <SelectItem value="0-59">0-59%</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-            <SelectTrigger className="w-[150px] hidden">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Department" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Departments</SelectItem>
-              {/* {departments.map((dept) => (
+            <Select
+              value={departmentFilter}
+              onValueChange={setDepartmentFilter}
+            >
+              <SelectTrigger className="w-[150px] hidden">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {/* {departments.map((dept) => (
                 <SelectItem key={dept} value={dept}>
                   {dept}
                 </SelectItem>
               ))} */}
-            </SelectContent>
-          </Select>
+              </SelectContent>
+            </Select>
 
-          <Select value={jobFilter} onValueChange={setJobFilter}>
-            <SelectTrigger className="w-[180px] hidden">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Job" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Jobs</SelectItem>
-              {/* {jobs.map((job) => (
+            <Select value={jobFilter} onValueChange={setJobFilter}>
+              <SelectTrigger className="w-[180px] hidden">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Job" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Jobs</SelectItem>
+                {/* {jobs.map((job) => (
                 <SelectItem key={job} value={job}>
                   {job}
                 </SelectItem>
               ))} */}
-            </SelectContent>
-          </Select>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
 
-      {/* Interviews Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Candidate</TableHead>
-              <TableHead>Job Role</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Score</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {interviewsData && interviewsData.interviews.length > 0 ? (
-              interviewsData.interviews
-                .filter((interview: InterviewData) => {
-                  console.log('Filtering interview:', interview);
-                  // Filter by score
-                  if (scoreFilter !== "all") {
-                    const score = interview.overallScore || 0;
-                    const [min, max] = scoreFilter.split("-").map(Number);
-                    console.log('Score filter:', { score, min, max });
-                    if (score < min || score > max) {
-                      console.log('Interview filtered out by score');
-                      return false;
+        {/* Interviews Table */}
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Candidate</TableHead>
+                <TableHead>Job Role</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Score</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {interviewsData && interviewsData.interviews.length > 0 ? (
+                interviewsData.interviews
+                  .filter((interview: InterviewData) => {
+                    console.log("Filtering interview:", interview);
+                    // Filter by score
+                    if (scoreFilter !== "all") {
+                      const score = interview.overallScore || 0;
+                      const [min, max] = scoreFilter.split("-").map(Number);
+                      console.log("Score filter:", { score, min, max });
+                      if (score < min || score > max) {
+                        console.log("Interview filtered out by score");
+                        return false;
+                      }
                     }
-                  }
 
-                  // Filter by search query
-                  if (searchQuery) {
-                    const searchLower = searchQuery.toLowerCase();
-                    const matches = (
-                      interview.firstName?.toLowerCase().includes(searchLower) ||
-                      interview.lastName?.toLowerCase().includes(searchLower) ||
-                      interview.email?.toLowerCase().includes(searchLower)
-                    );
-                    console.log('Search filter:', { searchLower, matches });
-                    if (!matches) {
-                      console.log('Interview filtered out by search');
-                      return false;
+                    // Filter by search query
+                    if (searchQuery) {
+                      const searchLower = searchQuery.toLowerCase();
+                      const matches =
+                        interview.firstName
+                          ?.toLowerCase()
+                          .includes(searchLower) ||
+                        interview.lastName
+                          ?.toLowerCase()
+                          .includes(searchLower) ||
+                        interview.email?.toLowerCase().includes(searchLower);
+                      console.log("Search filter:", { searchLower, matches });
+                      if (!matches) {
+                        console.log("Interview filtered out by search");
+                        return false;
+                      }
                     }
-                  }
 
-                  console.log('Interview passed all filters');
-                  return true;
-                })
-                .map((interview: InterviewData) => (
-                  <TableRow key={interview.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={undefined} alt={interview.firstName} />
-                          <AvatarFallback>
-                            {interview.firstName?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <Link
-                            to={`/dashboard/interviews/${interview.id}`}
-                            className="font-medium hover:underline"
-                          >
-                            {interview.firstName} {interview.lastName}
-                          </Link>
-                          <div className="text-xs text-muted-foreground">
-                            {interview.email}
+                    console.log("Interview passed all filters");
+                    return true;
+                  })
+                  .map((interview: InterviewData) => (
+                    <TableRow key={interview.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage
+                              src={undefined}
+                              alt={interview.firstName}
+                            />
+                            <AvatarFallback>
+                              {interview.firstName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <Link
+                              to={`/dashboard/interviews/${interview.id}`}
+                              className="font-medium hover:underline"
+                            >
+                              {interview.firstName} {interview.lastName}
+                            </Link>
+                            <div className="text-xs text-muted-foreground">
+                              {interview.email}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {interview.jobId ? (
-                        <Link
-                          to={`/dashboard/jobs/${interview.jobId}`}
-                          className="text-sm hover:underline"
-                        >
-                          {interviewsData.jobTitles[interview.jobId] || "Loading..."}
-                        </Link>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(interview.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      {interview.overallScore ? (
-                        <span className={getScoreColor(interview.overallScore)}>
-                          {interview.overallScore}%
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      </TableCell>
+                      <TableCell>
+                        {interview.jobId ? (
+                          <Link
+                            to={`/dashboard/jobs/${interview.jobId}`}
+                            className="text-sm hover:underline"
+                          >
+                            {interviewsData.jobTitles[interview.jobId] ||
+                              "Loading..."}
+                          </Link>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            -
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(interview.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {interview.overallScore ? (
+                          <span
+                            className={getScoreColor(interview.overallScore)}
+                          >
+                            {interview.overallScore}%
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem>
                               <Link
                                 to={`/dashboard/interviews/${interview.id}`}
                                 className="flex items-center"
                               >
                                 <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </Link>
-                          </DropdownMenuItem>
+                                View Details
+                              </Link>
+                            </DropdownMenuItem>
                             <DropdownMenuItem>
-                                <Link
-                                  to={`/dashboard/interviews/${interview.id}/report`}
+                              <Link
+                                to={`/dashboard/interviews/${interview.id}/report`}
                                 className="flex items-center"
-                                >
+                              >
                                 <FileText className="mr-2 h-4 w-4" />
-                                  View Report
-                                </Link>
-                              </DropdownMenuItem>
+                                View Report
+                              </Link>
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-red-600"
-                              onClick={() => handleDeleteInterview(interview.id!)}
+                              onClick={() =>
+                                handleDeleteInterview(interview.id!)
+                              }
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete Interview
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="text-center py-10 text-muted-foreground"
-                >
-                  No interviews found matching your criteria
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="text-center py-10 text-muted-foreground"
+                  >
+                    No interviews found matching your criteria
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination className="mt-6">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious 
-                href="#" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage > 1) setCurrentPage(currentPage - 1);
-                }}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <PaginationItem key={page}>
-                <PaginationLink 
-                  href="#" 
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Pagination className="mt-6">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    setCurrentPage(page);
+                    if (currentPage > 1) setCurrentPage(currentPage - 1);
                   }}
-                  isActive={currentPage === page}
-                >
-                  {page}
-                </PaginationLink>
+                  className={
+                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                  }
+                />
               </PaginationItem>
-            ))}
-            <PaginationItem>
-              <PaginationNext 
-                href="#" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                }}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(page);
+                      }}
+                      isActive={currentPage === page}
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages)
+                      setCurrentPage(currentPage + 1);
+                  }}
+                  className={
+                    currentPage === totalPages
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
       </div>
 
       {/* Confirmation Dialog */}
-      <AlertDialog open={interviewToDelete !== null} onOpenChange={() => setInterviewToDelete(null)}>
+      <AlertDialog
+        open={interviewToDelete !== null}
+        onOpenChange={() => setInterviewToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Interview</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this interview? This action cannot be undone.
+              Are you sure you want to delete this interview? This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={confirmDelete}
             >

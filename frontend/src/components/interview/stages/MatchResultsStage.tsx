@@ -1,13 +1,38 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, Calendar, Clock, Mail, ArrowRight, Star, Zap, Briefcase, Award, Check } from "lucide-react";
+import {
+  CheckCircle2,
+  Calendar,
+  Clock,
+  Mail,
+  ArrowRight,
+  Star,
+  Zap,
+  Briefcase,
+  Award,
+  Check,
+} from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
 interface MatchResultsStageProps {
@@ -28,7 +53,6 @@ export function MatchResultsStage({
   onScheduleLater,
 }: MatchResultsStageProps) {
   const [showRatingModal, setShowRatingModal] = useState(false);
-  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
@@ -36,51 +60,26 @@ export function MatchResultsStage({
   const navigate = useNavigate();
 
   const handleStartInterview = async () => {
-    setShowPermissionDialog(true);
-  };
-
-  const handlePermissionConfirm = async () => {
     try {
       // Request screen sharing first
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
-        audio: true
+        audio: true,
       });
 
       // Store the screen stream in localStorage for the new tab to access
       const streamId = Date.now().toString();
-      localStorage.setItem('screenStreamId', streamId);
-      
+      localStorage.setItem("screenStreamId", streamId);
+
       // Open interview in new tab
       const interviewUrl = `/interview/overview?i_id=${interviewId}&company=${companyName}&stream_id=${streamId}`;
-      const interviewWindow = window.open(interviewUrl, '_blank', 'fullscreen=yes');
+      window.open(interviewUrl, "fullscreen=yes");
 
-      if (interviewWindow) {
-        // Add event listener for when the window is closed
-        const checkWindow = setInterval(() => {
-          if (interviewWindow.closed) {
-            clearInterval(checkWindow);
-            toast.error("Interview window was closed. Please keep the window open during the interview.");
-          }
-        }, 1000);
-
-        // Stop the screen share in this tab since it will be used in the new tab
-        screenStream.getTracks().forEach(track => {
-          track.onended = () => {
-            if (!interviewWindow.closed) {
-              toast.error("Screen sharing was stopped. Please keep sharing your screen during the interview.");
-            }
-          };
-          track.stop();
-        });
-      } else {
-        toast.error("Failed to open interview window. Please allow popups for this site.");
-      }
+      // Stop the screen share in this tab since it will be used in the new tab
+      screenStream.getTracks().forEach((track) => track.stop());
     } catch (error) {
-      console.error('Error starting screen share:', error);
-      toast.error('Failed to start screen sharing. Please try again.');
-    } finally {
-      setShowPermissionDialog(false);
+      console.error("Error starting screen share:", error);
+      toast.error("Failed to start screen sharing. Please try again.");
     }
   };
 
@@ -135,9 +134,12 @@ export function MatchResultsStage({
   };
 
   const getMatchDescription = (score: number) => {
-    if (score >= 80) return "Your profile strongly aligns with the job requirements.";
-    if (score >= 60) return "Your profile matches well with most of the job requirements.";
-    if (score >= 40) return "Your profile has some alignment with the job requirements.";
+    if (score >= 80)
+      return "Your profile strongly aligns with the job requirements.";
+    if (score >= 60)
+      return "Your profile matches well with most of the job requirements.";
+    if (score >= 40)
+      return "Your profile has some alignment with the job requirements.";
     return "Your profile has limited alignment with the job requirements.";
   };
 
@@ -147,7 +149,8 @@ export function MatchResultsStage({
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-2">Resume Match Results</h1>
         <p className="text-muted-foreground">
-          We've analyzed your resume against the {jobTitle} position at {companyName}
+          We've analyzed your resume against the {jobTitle} position at{" "}
+          {companyName}
         </p>
       </div>
 
@@ -175,7 +178,9 @@ export function MatchResultsStage({
                     cy="50"
                   />
                   <circle
-                    className={`${getMatchColor(matchScore)} transition-all duration-500 ease-in-out`}
+                    className={`${getMatchColor(
+                      matchScore
+                    )} transition-all duration-500 ease-in-out`}
                     strokeWidth="10"
                     strokeDasharray={251.2}
                     strokeDashoffset={251.2 - (251.2 * matchScore) / 100}
@@ -192,7 +197,9 @@ export function MatchResultsStage({
                   <span className="text-sm text-muted-foreground">Match</span>
                 </div>
               </div>
-              <h3 className="text-2xl font-semibold mt-4">{getMatchText(matchScore)}</h3>
+              <h3 className="text-2xl font-semibold mt-4">
+                {getMatchText(matchScore)}
+              </h3>
               <p className="text-center text-muted-foreground mt-2">
                 {getMatchDescription(matchScore)}
               </p>
@@ -222,7 +229,9 @@ export function MatchResultsStage({
                 </div>
                 <div>
                   <p className="font-medium">Interview Type</p>
-                  <p className="text-sm text-muted-foreground">AI-Powered Video Interview</p>
+                  <p className="text-sm text-muted-foreground">
+                    AI-Powered Video Interview
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -242,9 +251,7 @@ export function MatchResultsStage({
         <Card className="shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xl">Next Steps</CardTitle>
-            <CardDescription>
-              Choose how you'd like to proceed
-            </CardDescription>
+            <CardDescription>Choose how you'd like to proceed</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -259,7 +266,7 @@ export function MatchResultsStage({
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex gap-3">
                 <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <span className="text-sm font-medium">2</span>
@@ -271,7 +278,7 @@ export function MatchResultsStage({
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex gap-3">
                 <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <span className="text-sm font-medium">3</span>
@@ -285,11 +292,20 @@ export function MatchResultsStage({
               </div>
 
               <div className="pt-4 space-y-3">
-                <Button onClick={handleStartInterview} size="lg" className="w-full">
+                <Button
+                  onClick={handleStartInterview}
+                  size="lg"
+                  className="w-full"
+                >
                   <Zap className="mr-2 h-5 w-5" />
                   Take Interview Now
                 </Button>
-                <Button onClick={handleScheduleLater} variant="outline" size="lg" className="w-full hidden">
+                <Button
+                  onClick={handleScheduleLater}
+                  variant="outline"
+                  size="lg"
+                  className="w-full hidden"
+                >
                   <Calendar className="mr-2 h-5 w-5" />
                   Schedule for Later
                 </Button>
@@ -345,7 +361,8 @@ export function MatchResultsStage({
           <DialogHeader>
             <DialogTitle>Schedule Interview for Later</DialogTitle>
             <DialogDescription>
-              We'll send you an email with instructions to complete your interview within 48 hours.
+              We'll send you an email with instructions to complete your
+              interview within 48 hours.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center space-y-4 py-4">
@@ -353,53 +370,17 @@ export function MatchResultsStage({
               <Mail className="h-8 w-8 text-primary" />
             </div>
             <p className="text-center text-muted-foreground">
-              A confirmation email has been sent to your registered email address with instructions to complete your interview.
+              A confirmation email has been sent to your registered email
+              address with instructions to complete your interview.
             </p>
             <p className="text-center text-sm font-medium">
-              Please complete your interview within 48 hours to ensure your application is considered.
+              Please complete your interview within 48 hours to ensure your
+              application is considered.
             </p>
           </div>
           <DialogFooter>
             <Button onClick={handleScheduleConfirm} className="w-full">
               Got it, thanks!
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Permission Dialog */}
-      <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Interview Requirements</DialogTitle>
-            <DialogDescription>
-              Before starting the interview, please ensure you:
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <h4 className="font-medium">Important Instructions:</h4>
-              <ul className="list-disc pl-5 space-y-2 text-sm">
-                <li>You will need to share your screen during the interview</li>
-                <li>The interview must be conducted in fullscreen mode</li>
-                <li>Do not minimize or close the interview window</li>
-                <li>Keep your screen sharing active throughout the interview</li>
-                <li>Ensure you have a stable internet connection</li>
-                <li>Use a quiet environment with good lighting</li>
-              </ul>
-            </div>
-            <div className="bg-yellow-50 dark:bg-yellow-950/50 p-4 rounded-lg">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                <strong>Note:</strong> Closing the interview window or stopping screen sharing will result in an incomplete interview.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPermissionDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handlePermissionConfirm}>
-              I Understand, Start Interview
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -443,4 +424,4 @@ export function MatchResultsStage({
       </Dialog>
     </div>
   );
-} 
+}
