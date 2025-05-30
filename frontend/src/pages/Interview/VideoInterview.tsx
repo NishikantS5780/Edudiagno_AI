@@ -1653,22 +1653,9 @@ export default function VideoInterview() {
               <Clock className="h-4 w-4" />
               <span>Time remaining: {editTimer}s</span>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (editTimerRef.current) {
-                    clearInterval(editTimerRef.current);
-                  }
-                  setShowEditDialog(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleSubmitEditedResponse}>
-                Confirm & Submit
-              </Button>
-            </div>
+            <Button onClick={handleSubmitEditedResponse}>
+              Confirm & Submit
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

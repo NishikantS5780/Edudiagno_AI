@@ -14,8 +14,11 @@ async def get_country(keyword: str = "", db: Session = Depends(database.get_db))
         select(Country.id, Country.name, Country.currency)
         .where(Country.name.ilike(f"%{keyword}%"))
         .order_by(Country.name)
-        .offset(0)
-        .limit(10)
     )
+    
+    # Only apply limit when searching with a keyword
+    if keyword:
+        stmt = stmt.offset(0).limit(10)
+    
     countries = db.execute(stmt).mappings().all()
     return countries

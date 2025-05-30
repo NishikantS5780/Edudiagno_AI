@@ -64,7 +64,7 @@ const jobFormSchema = z.object({
     .string()
     .min(10, { message: "Requirements must be at least 10 characters" })
     .nonempty({ message: "Job requirements are required" }),
-  benefits: z.string().nonempty({ message: "Benefits are required" }),
+  benefits: z.string().optional(),
   status: z.string().default("active"),
   requires_dsa: z.boolean().default(false),
   requires_mcq: z.boolean().default(false),
@@ -293,6 +293,9 @@ const NewJob = () => {
   const [cities, setCities] = useState<Array<{ id: number; name: string }>>([]);
   const [citySearchTerm, setCitySearchTerm] = useState("");
   const [cityPopupOpen, setCityPopupOpen] = useState(false);
+  // Add state for currency search
+  const [currencySearchTerm, setCurrencySearchTerm] = useState("");
+  const [currencyPopupOpen, setCurrencyPopupOpen] = useState(false);
 
   // Fetch recruiter data when component mounts
   useEffect(() => {
@@ -442,80 +445,32 @@ const NewJob = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrors({});
 
     try {
-      // Validate all required fields
+      // Validate form data
       const validationResult = jobFormSchema.safeParse(jobData);
       if (!validationResult.success) {
         const newErrors: Record<string, string> = {};
-        const errorMessages: string[] = [];
-        
-        validationResult.error.errors.forEach(error => {
-          const fieldName = error.path[0];
-          newErrors[fieldName] = error.message;
-          
-          // Create user-friendly field names
-          const fieldDisplayNames: Record<string, string> = {
-            title: "Job Title",
-            department: "Department",
-            city: "City",
-            location: "Location Type",
-            type: "Job Type",
-            min_experience: "Minimum Experience",
-            max_experience: "Maximum Experience",
-            duration_months: "Job Duration",
-            key_qualification: "Required Qualification",
-            description: "Job Description",
-            requirements: "Job Requirements",
-            benefits: "Benefits",
-            currency: "Currency",
-            mcq_timing_mode: "MCQ Timing Mode",
-            quiz_time_minutes: "Total Quiz Time",
-            dsa_questions: "DSA Questions",
-            mcq_questions: "MCQ Questions"
-          };
-
-          const displayName = fieldDisplayNames[fieldName] || fieldName;
-          errorMessages.push(`${displayName}: ${error.message}`);
+        validationResult.error.errors.forEach((error) => {
+          const path = error.path[0];
+          if (typeof path === 'string') {
+            newErrors[path] = error.message;
+          }
         });
-
         setErrors(newErrors);
-        
-        // Show all validation errors in a toast
-        toast.error(
-          <div className="space-y-2">
-            <p className="font-semibold">Please fix the following fields:</p>
-            <ul className="list-disc pl-4">
-              {errorMessages.map((msg, index) => (
-                <li key={index}>{msg}</li>
-              ))}
-            </ul>
-          </div>
-        );
-
-        // Scroll to the first error field
-        const firstErrorField = Object.keys(newErrors)[0];
-        const element = document.getElementById(firstErrorField);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
         setIsSubmitting(false);
         return;
       }
 
-      // Prepare job data based on timing mode
+      // Prepare job data without MCQ questions
+      const { mcq_questions, ...jobDataWithoutMcq } = jobData;
       const jobDataToSubmit = {
-        ...jobData,
+        ...jobDataWithoutMcq,
         status: "active",
         mcq_timing_mode: jobData.mcq_timing_mode || 'per_question',
         // Only include quiz_time_minutes if in whole_test mode
-        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null,
-        // Update MCQ questions based on timing mode
-        mcq_questions: jobData.mcq_questions?.map(q => ({
-          ...q,
-          time_seconds: jobData.mcq_timing_mode === 'per_question' ? q.time_seconds : undefined
-        }))
+        quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
       };
 
       // Always update the existing draft job
@@ -524,49 +479,22 @@ const NewJob = () => {
       }
       const response = await jobAPI.updateJob(jobData.id.toString(), jobDataToSubmit);
 
-      if (response.status >= 200 && response.status < 300) {
-        // If MCQ questions are enabled, save them
-        if (jobData.requires_mcq && jobData.mcq_questions && jobData.mcq_questions.length > 0) {
-          // Update the job with MCQ questions and timing information
-          const updatedJobData = {
-            ...jobDataToSubmit,
-            id: response.data.id,
-            mcq_timing_mode: jobData.mcq_timing_mode,
-            quiz_time_minutes: jobData.mcq_timing_mode === 'whole_test' ? jobData.quiz_time_minutes : null
-          };
-          
-          // First update the job with timing information
-          await jobAPI.updateJob(response.data.id.toString(), updatedJobData);
-          
-          // Then save the MCQ questions
-          await saveMcqQuestions(response.data.id, jobData.mcq_questions, updatedJobData);
-        }
-
-        addNotification({
-          type: 'job',
-          title: 'New Job Created',
-          message: `Your job posting "${jobData.title}" is now live.${jobData.requires_dsa ? ' DSA questions have been added.' : ''
-            }${jobData.requires_mcq ? ' MCQ questions have been added.' : ''}`
-        });
-        toast.success("Job created successfully");
-        // Clear saved job data after successful creation
-        localStorage.removeItem('draftJobData');
-        navigate("/dashboard/jobs");
-      } else {
-        throw new Error("Failed to create job");
+      // If there are MCQ questions, save them separately
+      if (jobData.mcq_questions && jobData.mcq_questions.length > 0) {
+        await saveMcqQuestions(jobData.id, jobData.mcq_questions, jobData);
       }
+
+      toast.success("Job saved successfully!");
+      navigate("/dashboard/jobs");
     } catch (error: any) {
-      console.error("Error creating job:", error);
-      let errorMessage = "Failed to create job";
-
-      // Handle specific error messages
+      console.error("Error saving job:", error);
       if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error.message) {
-        errorMessage = error.message;
+        toast.error(Array.isArray(error.response.data.detail) 
+          ? error.response.data.detail.map((err: any) => err.msg).join(', ')
+          : error.response.data.detail);
+      } else {
+        toast.error(error.message || "Failed to save job");
       }
-
-      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -674,17 +602,29 @@ const NewJob = () => {
           )
         };
       } else if (field === "type") {
+        // When changing question type, reset correct options based on type
         updatedQuestions[index] = {
           ...updatedQuestions[index],
           type: value,
+          // For single choice and true/false, only one correct option
           correct_options: [0],
           options: value === "true_false" ? ["True", "False"] : ["", "", "", ""]
         };
       } else if (field === "correct_options") {
-        updatedQuestions[index] = {
-          ...updatedQuestions[index],
-          correct_options: value
-        };
+        // Handle correct options based on question type
+        if (updatedQuestions[index].type === "single" || updatedQuestions[index].type === "true_false") {
+          // For single choice and true/false, only allow one correct option
+          updatedQuestions[index] = {
+            ...updatedQuestions[index],
+            correct_options: [value[0]] // Take only the first selected option
+          };
+        } else {
+          // For multiple choice, allow multiple correct options
+          updatedQuestions[index] = {
+            ...updatedQuestions[index],
+            correct_options: value
+          };
+        }
       } else if (field === "category") {
         updatedQuestions[index] = {
           ...updatedQuestions[index],
@@ -699,7 +639,6 @@ const NewJob = () => {
         updatedQuestions[index] = {
           ...updatedQuestions[index],
           hasImage: value,
-          // Clear image when toggling off
           image: value ? updatedQuestions[index].image : null,
           imageUrl: value ? updatedQuestions[index].imageUrl : undefined
         };
@@ -707,7 +646,6 @@ const NewJob = () => {
         updatedQuestions[index] = {
           ...updatedQuestions[index],
           image: value,
-          // Generate a preview URL for the image
           imageUrl: value ? URL.createObjectURL(value) : undefined
         };
       } else {
@@ -811,7 +749,7 @@ const NewJob = () => {
       const jobDetailsFields = [
         'title', 'department', 'city', 'location', 'type',
         'min_experience', 'max_experience', 'duration_months',
-        'key_qualification', 'description', 'requirements', 'benefits',
+        'key_qualification', 'description', 'requirements',
         'mcq_timing_mode'
       ];
 
@@ -1046,80 +984,178 @@ const NewJob = () => {
     }));
   };
 
+  // Add these interfaces at the top with other interfaces
   interface Currency {
     value: string;
     label: string;
+    symbol: string;
+    name: string;
   }
 
-  // State for available currencies
+  interface LocationCurrency {
+    currency: string;
+    symbol: string;
+    name: string;
+  }
+
+  // Update the currency symbols mapping to be more comprehensive
+  const CURRENCY_SYMBOLS: Record<string, string> = {
+    'USD': '$',
+    'INR': '₹',
+    'EUR': '€',
+    'GBP': '£',
+    'CNY': '¥',
+    'JPY': '¥',
+    'AUD': 'A$',
+    'CAD': 'C$',
+    'SGD': 'S$',
+    'CHF': 'Fr',
+    'AED': 'د.إ',
+    'SAR': '﷼',
+    'BRL': 'R$',
+    'RUB': '₽',
+    'ZAR': 'R',
+    'MXN': '$',
+    'KRW': '₩',
+    'TRY': '₺',
+    'SEK': 'kr',
+    'NOK': 'kr',
+    'DKK': 'kr',
+    'PLN': 'zł',
+    'ILS': '₪',
+    'HKD': 'HK$',
+    'TWD': 'NT$',
+    'THB': '฿',
+    'MYR': 'RM',
+    'PHP': '₱',
+    'IDR': 'Rp',
+    'VND': '₫'
+  };
+
+  // Add state for available currencies
   const [availableCurrencies, setAvailableCurrencies] = useState<Currency[]>([
-    { value: 'USD', label: '$ USD' },
-    { value: 'INR', label: '₹ INR' }
+    { value: 'USD', label: '$ USD', symbol: '$', name: 'US Dollar' },
+    { value: 'INR', label: '₹ INR', symbol: '₹', name: 'Indian Rupee' }
   ]);
 
-  // Get currency based on country
-  const getCountryCurrency = async (countryName: string) => {
+  // Add this function to get currency info for a location
+  const getLocationCurrency = async (city: string, country: string): Promise<LocationCurrency | null> => {
     try {
-      const response = await api.get(`country?keyword=${encodeURIComponent(countryName)}`);
-      const data = response.data;
+      // First try to get currency from city
+      const cityResponse = await api.get(`/city?keyword=${encodeURIComponent(city)}`);
+      const cityData = cityResponse.data;
+      const cityMatch = cityData.find((c: any) => c.name.toLowerCase() === city.toLowerCase());
       
-      // Find the exact country match
-      const country = data.find((c: any) => c.name.toLowerCase() === countryName.toLowerCase());
-      
-      if (!country) {
-        return 'USD';
+      if (cityMatch?.currency) {
+        return {
+          currency: cityMatch.currency,
+          symbol: CURRENCY_SYMBOLS[cityMatch.currency] || cityMatch.currency,
+          name: cityMatch.currency_name || cityMatch.currency
+        };
       }
+
+      // If no city currency, try country
+      const countryResponse = await api.get(`/country?keyword=${encodeURIComponent(country)}`);
+      const countryData = countryResponse.data;
+      const countryMatch = countryData.find((c: any) => c.name.toLowerCase() === country.toLowerCase());
       
-      return country.currency || 'USD';
+      if (countryMatch?.currency) {
+        return {
+          currency: countryMatch.currency,
+          symbol: CURRENCY_SYMBOLS[countryMatch.currency] || countryMatch.currency,
+          name: countryMatch.currency_name || countryMatch.currency
+        };
+      }
+
+      return null;
     } catch (error) {
-      return 'USD';
+      console.error('Error fetching location currency:', error);
+      return null;
     }
   };
 
-  // Get available currencies
+  // Update the getAvailableCurrencies function
   const getAvailableCurrencies = async (): Promise<Currency[]> => {
     const currencies: Currency[] = [
-      { value: 'USD', label: '$ USD' },
-      { value: 'INR', label: '₹ INR' }
+      { value: 'USD', label: '$ USD', symbol: '$', name: 'US Dollar' },
+      { value: 'INR', label: '₹ INR', symbol: '₹', name: 'Indian Rupee' }
     ];
 
     try {
-      // Add user's country currency if it's different from USD and INR
-      if (recruiter?.country) {
-        const userCountryCurrency = await getCountryCurrency(recruiter.country);
-        
-        if (userCountryCurrency && userCountryCurrency !== 'USD' && userCountryCurrency !== 'INR') {
-          const currencySymbols: Record<string, string> = {
-            'GBP': '£',
-            'EUR': '€',
-            'CNY': '¥',
-            'JPY': '¥',
-            'AUD': 'A$',
-            'CAD': 'C$',
-            'SGD': 'S$',
-            'CHF': 'Fr',
-            'AED': 'د.إ',
-            'SAR': '﷼'
-          };
-          const symbol = currencySymbols[userCountryCurrency] || '';
-          currencies.push({ value: userCountryCurrency, label: `${symbol} ${userCountryCurrency}` });
+      // Fetch all countries to get their currencies
+      const response = await api.get('/country');
+      const countries = response.data || [];
+
+      // Create a Set to track unique currencies
+      const uniqueCurrencies = new Set<string>();
+      
+      // Add location-based currency first if available
+      if (jobData.city && recruiter?.country) {
+        const locationCurrency = await getLocationCurrency(jobData.city, recruiter.country);
+        if (locationCurrency) {
+          uniqueCurrencies.add(locationCurrency.currency);
+          currencies.push({
+            value: locationCurrency.currency,
+            label: `${locationCurrency.symbol} ${locationCurrency.currency}`,
+            symbol: locationCurrency.symbol,
+            name: locationCurrency.name
+          });
         }
       }
+
+      // Add currencies from all countries
+      for (const country of countries) {
+        if (country.currency && !uniqueCurrencies.has(country.currency)) {
+          uniqueCurrencies.add(country.currency);
+          const symbol = CURRENCY_SYMBOLS[country.currency] || country.currency;
+          currencies.push({
+            value: country.currency,
+            label: `${symbol} ${country.currency}`,
+            symbol: symbol,
+            name: country.currency_name || country.currency
+          });
+        }
+      }
+
+      // Sort currencies alphabetically by code
+      currencies.sort((a, b) => a.value.localeCompare(b.value));
+
     } catch (error) {
-      // Handle error silently
+      console.error('Error fetching available currencies:', error);
     }
 
     return currencies;
   };
 
-  // Fetch available currencies when component mounts or recruiter data changes
+  // Add effect to fetch currencies when component mounts
   useEffect(() => {
     const fetchCurrencies = async () => {
       const currencies = await getAvailableCurrencies();
       setAvailableCurrencies(currencies);
     };
     fetchCurrencies();
-  }, [recruiter?.country]);
+  }, []); // Only run once when component mounts
+
+  // Add effect to update currency when city changes
+  useEffect(() => {
+    const updateCurrencyForLocation = async () => {
+      if (jobData.city && recruiter?.country) {
+        const locationCurrency = await getLocationCurrency(jobData.city, recruiter.country);
+        if (locationCurrency) {
+          // Update available currencies
+          const currencies = await getAvailableCurrencies();
+          setAvailableCurrencies(currencies);
+          
+          // Set the currency if it's not already set
+          if (!jobData.currency) {
+            handleChange("currency", locationCurrency.currency);
+          }
+        }
+      }
+    };
+
+    updateCurrencyForLocation();
+  }, [jobData.city, recruiter?.country]);
 
   // Add logger for currency selection
   const handleCurrencyChange = (value: string) => {
@@ -1675,24 +1711,70 @@ const NewJob = () => {
 
                     {jobData.show_salary && (
                       <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="currency">Currency</Label>
-                            <Select
-                              value={jobData.currency || ""}
-                              onValueChange={(value) => handleChange("currency", value)}
-                            >
-                              <SelectTrigger id="currency">
-                                <SelectValue placeholder="Select currency" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="INR">INR (₹)</SelectItem>
-                                <SelectItem value="USD">USD ($)</SelectItem>
-                                <SelectItem value="EUR">EUR (€)</SelectItem>
-                                <SelectItem value="GBP">GBP (£)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="currency">Currency</Label>
+                          <Popover open={currencyPopupOpen} onOpenChange={setCurrencyPopupOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                  "w-full justify-between",
+                                  !jobData.currency && "text-muted-foreground"
+                                )}
+                              >
+                                {jobData.currency 
+                                  ? availableCurrencies.find(c => c.value === jobData.currency)?.label 
+                                  : "Select currency"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput
+                                  placeholder="Search currency..."
+                                  value={currencySearchTerm}
+                                  onValueChange={setCurrencySearchTerm}
+                                />
+                                <CommandList>
+                                  <CommandEmpty>No currency found.</CommandEmpty>
+                                  <CommandGroup className="max-h-[300px] overflow-auto">
+                                    {availableCurrencies
+                                      .filter(currency => 
+                                        currency.value.toLowerCase().includes(currencySearchTerm.toLowerCase()) ||
+                                        currency.name.toLowerCase().includes(currencySearchTerm.toLowerCase())
+                                      )
+                                      .map((currency) => (
+                                        <CommandItem
+                                          key={currency.value}
+                                          value={currency.value}
+                                          onSelect={() => {
+                                            handleChange("currency", currency.value);
+                                            setCurrencyPopupOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              jobData.currency === currency.value ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          {currency.label}
+                                          <span className="ml-2 text-muted-foreground">
+                                            {currency.name}
+                                          </span>
+                                        </CommandItem>
+                                      ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          {jobData.currency && (
+                            <p className="text-sm text-muted-foreground">
+                              {availableCurrencies.find(c => c.value === jobData.currency)?.name}
+                            </p>
+                          )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -1808,11 +1890,11 @@ const NewJob = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Benefits</Label>
+                    <Label>Benefits (Optional)</Label>
                     <Textarea
                       id="benefits"
                       className="min-h-[150px]"
-                      placeholder="List the benefits and perks offered..."
+                      placeholder="List the benefits and perks offered (optional)..."
                       value={jobData.benefits}
                       onChange={(e) => handleChange("benefits", e.target.value)}
                     />
@@ -2253,21 +2335,30 @@ const NewJob = () => {
                                           })}
                                           placeholder={`Option ${optionIndex + 1}`}
                                         />
-                                        <Checkbox
-                                          checked={question.correct_options.includes(optionIndex)}
-                                          onCheckedChange={(checked) => {
-                                            const currentCorrect = [...question.correct_options];
-                                            if (checked) {
-                                              currentCorrect.push(optionIndex);
-                                            } else {
-                                              const index = currentCorrect.indexOf(optionIndex);
-                                              if (index > -1) {
-                                                currentCorrect.splice(index, 1);
+                                        {question.type === "single" ? (
+                                          <RadioGroup
+                                            value={question.correct_options[0]?.toString()}
+                                            onValueChange={(value) => handleMcqQuestionUpdate(index, "correct_options", [parseInt(value)])}
+                                          >
+                                            <RadioGroupItem value={optionIndex.toString()} id={`option-${index}-${optionIndex}`} />
+                                          </RadioGroup>
+                                        ) : (
+                                          <Checkbox
+                                            checked={question.correct_options.includes(optionIndex)}
+                                            onCheckedChange={(checked) => {
+                                              const currentCorrect = [...question.correct_options];
+                                              if (checked) {
+                                                currentCorrect.push(optionIndex);
+                                              } else {
+                                                const index = currentCorrect.indexOf(optionIndex);
+                                                if (index > -1) {
+                                                  currentCorrect.splice(index, 1);
+                                                }
                                               }
-                                            }
-                                            handleMcqQuestionUpdate(index, "correct_options", currentCorrect);
-                                          }}
-                                        />
+                                              handleMcqQuestionUpdate(index, "correct_options", currentCorrect);
+                                            }}
+                                          />
+                                        )}
                                       </div>
                                     ))
                                   )}

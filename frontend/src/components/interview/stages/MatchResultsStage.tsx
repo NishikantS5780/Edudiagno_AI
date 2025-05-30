@@ -28,6 +28,7 @@ export function MatchResultsStage({
   onScheduleLater,
 }: MatchResultsStageProps) {
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
@@ -35,6 +36,10 @@ export function MatchResultsStage({
   const navigate = useNavigate();
 
   const handleStartInterview = async () => {
+    setShowPermissionDialog(true);
+  };
+
+  const handlePermissionConfirm = async () => {
     try {
       // Request screen sharing first
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
@@ -48,13 +53,34 @@ export function MatchResultsStage({
       
       // Open interview in new tab
       const interviewUrl = `/interview/overview?i_id=${interviewId}&company=${companyName}&stream_id=${streamId}`;
-      window.open(interviewUrl, '_blank', 'fullscreen=yes');
+      const interviewWindow = window.open(interviewUrl, '_blank', 'fullscreen=yes');
 
-      // Stop the screen share in this tab since it will be used in the new tab
-      screenStream.getTracks().forEach(track => track.stop());
+      if (interviewWindow) {
+        // Add event listener for when the window is closed
+        const checkWindow = setInterval(() => {
+          if (interviewWindow.closed) {
+            clearInterval(checkWindow);
+            toast.error("Interview window was closed. Please keep the window open during the interview.");
+          }
+        }, 1000);
+
+        // Stop the screen share in this tab since it will be used in the new tab
+        screenStream.getTracks().forEach(track => {
+          track.onended = () => {
+            if (!interviewWindow.closed) {
+              toast.error("Screen sharing was stopped. Please keep sharing your screen during the interview.");
+            }
+          };
+          track.stop();
+        });
+      } else {
+        toast.error("Failed to open interview window. Please allow popups for this site.");
+      }
     } catch (error) {
       console.error('Error starting screen share:', error);
       toast.error('Failed to start screen sharing. Please try again.');
+    } finally {
+      setShowPermissionDialog(false);
     }
   };
 
@@ -336,6 +362,44 @@ export function MatchResultsStage({
           <DialogFooter>
             <Button onClick={handleScheduleConfirm} className="w-full">
               Got it, thanks!
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permission Dialog */}
+      <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Interview Requirements</DialogTitle>
+            <DialogDescription>
+              Before starting the interview, please ensure you:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <h4 className="font-medium">Important Instructions:</h4>
+              <ul className="list-disc pl-5 space-y-2 text-sm">
+                <li>You will need to share your screen during the interview</li>
+                <li>The interview must be conducted in fullscreen mode</li>
+                <li>Do not minimize or close the interview window</li>
+                <li>Keep your screen sharing active throughout the interview</li>
+                <li>Ensure you have a stable internet connection</li>
+                <li>Use a quiet environment with good lighting</li>
+              </ul>
+            </div>
+            <div className="bg-yellow-50 dark:bg-yellow-950/50 p-4 rounded-lg">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <strong>Note:</strong> Closing the interview window or stopping screen sharing will result in an incomplete interview.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPermissionDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handlePermissionConfirm}>
+              I Understand, Start Interview
             </Button>
           </DialogFooter>
         </DialogContent>

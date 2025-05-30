@@ -81,7 +81,7 @@ class CreateJob(BaseModel):
     show_salary: bool = False
     key_qualification: str
     requirements: str
-    benefits: str
+    benefits: Optional[str] = None
     status: str
     quiz_time_minutes: Optional[int] = None
 

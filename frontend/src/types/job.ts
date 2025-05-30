@@ -24,6 +24,7 @@ export interface JobData {
     title: string;
     description: string;
     difficulty: string;
+    time_minutes?: number;
     test_cases: Array<{
       input: string;
       expected_output: string;
@@ -63,6 +64,7 @@ export interface CandidateJobData {
     title: string;
     description: string;
     difficulty: string;
+    time_minutes?: number;
     test_cases: Array<{
       input: string;
       expected_output: string;

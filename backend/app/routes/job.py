@@ -1,8 +1,9 @@
 from typing import Literal
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import asc, case, delete, desc, select, and_, update
+from sqlalchemy import asc, case, delete, desc, select, and_, update, func
 from fastapi import HTTPException, status
+from fastapi.responses import JSONResponse
 
 from app import schemas, database
 from app.lib.errors import CustomException
@@ -147,10 +148,19 @@ async def get_all_job(
         .limit(limit_int)
         .offset(start_int)
     )
+
+    # Get total count of jobs for this recruiter
+    count_stmt = select(func.count()).select_from(Job).where(Job.company_id == recruiter_id)
+    total_count = db.execute(count_stmt).scalar()
+
     result = db.execute(stmt)
     jobs = result.all()
 
-    return [job._mapping for job in jobs]
+    response = [job._mapping for job in jobs]
+    return JSONResponse(
+        content=response,
+        headers={"X-Total-Count": str(total_count)}
+    )
 
 
 @router.get("/candidate-view")

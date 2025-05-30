@@ -111,8 +111,11 @@ const JobsPage = () => {
         start: (currentPage - 1) * itemsPerPage,
         limit: itemsPerPage
       });
-      console.log('Jobs API Response:', response.data);
+
       const data = response.data;
+      const totalCount = parseInt(response.headers['x-total-count'] || '0');
+      setTotalPages(Math.ceil(totalCount / itemsPerPage));
+
       const jobsData = data.map((jobData: {
         id: number;
         title: string;
@@ -134,9 +137,6 @@ const JobsPage = () => {
         };
       });
       setJobs(jobsData);
-      // Calculate total pages based on total count from API
-      const totalCount = response.headers['x-total-count'] || data.length;
-      setTotalPages(Math.ceil(totalCount / itemsPerPage));
     } catch (error) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to fetch jobs");

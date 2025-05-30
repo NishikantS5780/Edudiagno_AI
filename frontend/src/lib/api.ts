@@ -351,6 +351,7 @@ export const jobAPI = {
       requirements: data.requirements,
       benefits: data.benefits,
       status: data.status || "active",
+      requires_dsa: data.requires_dsa || false,
     };
 
     const jobResponse = await api.post("/job", jobData, {
@@ -358,17 +359,14 @@ export const jobAPI = {
     });
 
     // If job has DSA questions, create them
-    if (
-      data.requires_dsa &&
-      data.dsa_questions &&
-      data.dsa_questions.length > 0
-    ) {
+    if (data.requires_dsa && data.dsa_questions && data.dsa_questions.length > 0) {
       for (const question of data.dsa_questions) {
-        // Create DSA question
+        // Create DSA question with time_minutes
         const dsaQuestionData = {
           title: question.title,
           description: question.description,
           difficulty: question.difficulty,
+          time_minutes: question.time_minutes || 30, // Default to 30 minutes if not specified
           job_id: jobResponse.data.id,
         };
 
