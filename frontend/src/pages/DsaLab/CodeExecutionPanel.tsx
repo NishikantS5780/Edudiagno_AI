@@ -227,7 +227,10 @@ function CodeExecutionPanel({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="result" className="p-4 space-y-4 flex-1 overflow-auto">
+              <TabsContent
+                value="result"
+                className="p-4 space-y-4 flex-1 overflow-auto"
+              >
                 {codeError && (
                   <div className="text-red-500 bg-[#27272a] p-3 rounded-lg">
                     <h3 className="font-semibold mb-1 text-red-400">
@@ -253,8 +256,9 @@ function CodeExecutionPanel({
                     Compilation Status:
                   </span>
                   <pre
-                    className={`${!executionError ? "text-green-400" : "text-red-500"
-                      } font-mono`}
+                    className={`${
+                      !executionError ? "text-green-400" : "text-red-500"
+                    } font-mono`}
                   >
                     {compilationStatus}
                   </pre>
@@ -267,15 +271,34 @@ function CodeExecutionPanel({
 
       <div className="flex justify-end gap-2 p-4 shrink-0">
         {isOnlyQuestion ? (
-          <Button onClick={() => { console.log('Submit button (only question) clicked'); onSubmit && onSubmit(); }} variant="default">
+          <Button
+            onClick={() => {
+              console.log("Submit button (only question) clicked");
+              onSubmit && onSubmit();
+            }}
+            variant="default"
+          >
             Submit
           </Button>
         ) : !isLastQuestion ? (
-          <Button onClick={() => { console.log('Go to Next Question button clicked'); setCompilationStatus(""); onNext && onNext(); }} variant="default">
+          <Button
+            onClick={() => {
+              console.log("Go to Next Question button clicked");
+              setCompilationStatus("");
+              onNext && onNext();
+            }}
+            variant="default"
+          >
             Go to Next Question
           </Button>
         ) : (
-          <Button onClick={() => { console.log('Submit button (last question) clicked'); onSubmit && onSubmit(); }} variant="default">
+          <Button
+            onClick={() => {
+              console.log("Submit button (last question) clicked");
+              onSubmit && onSubmit();
+            }}
+            variant="default"
+          >
             Submit
           </Button>
         )}

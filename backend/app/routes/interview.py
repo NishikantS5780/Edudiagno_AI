@@ -6,6 +6,7 @@ import random
 import shutil
 import subprocess
 import time
+from typing import Literal, LiteralString
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -19,7 +20,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, delete, select, update
+from sqlalchemy import and_, asc, delete, desc, func, select, update
 
 from app import config, database, schemas
 from app import services
@@ -171,29 +172,90 @@ async def get_interview_recruiter_view(
 
 @router.get("/recruiter-view/all")
 async def get_interview(
-    request: Request,
     job_id: str = None,
+    interview_status: str = None,
+    location: str = None,
+    sort_by: Literal[
+        "interview_status",
+        "work_experience",
+        "resume_match_score",
+        "overall_score",
+        "created_at",
+    ] = None,
+    sort_order: Literal["asc", "desc"] = "desc",
+    limit: str = "10",
+    offset: str = "0",
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
     stmt = select(Interview)
+    count = 0
+
+    order_column = Interview.id
+    if sort_by == "interview_status":
+        order_column = Interview.status
+    elif sort_by == "work_experience":
+        order_column = Interview.work_experience
+    elif sort_by == "resume_match_score":
+        order_column = Interview.resume_match_score
+    elif sort_by == "overall_score":
+        order_column = Interview.overall_score
+    elif sort_by == "created_at":
+        order_column = Interview.created_at
 
     if job_id:
-        stmt = stmt.join(Job).where(
+        stmt = (
+            stmt.join(Job)
+            .where(
+                and_(
+                    Job.company_id == recruiter_id,
+                    Interview.job_id == int(job_id),
+                    Interview.status == interview_status if interview_status else True,
+                    Interview.location == location if location else True,
+                )
+            )
+            .limit(int(limit))
+            .offset(int(offset))
+            .order_by(desc(order_column) if sort_order == "desc" else asc(order_column))
+        )
+        count_stmt = select(func.count(Interview.id).label("count")).where(
             and_(
                 Job.company_id == recruiter_id,
-                Interview.job_id == int(job_id) if job_id else True,
+                Interview.job_id == int(job_id),
+                Interview.status == interview_status if interview_status else True,
+                Interview.location == location if location else True,
             )
         )
     else:
         stmt = (
             stmt.join(Job, Job.id == Interview.job_id)
             .join(Recruiter, Recruiter.id == Job.company_id)
-            .where(Recruiter.id == recruiter_id)
+            .where(
+                Recruiter.id == recruiter_id,
+                Interview.status == interview_status if interview_status else True,
+                Interview.location == location if location else True,
+            )
+            .limit(int(limit))
+            .offset(int(offset))
+            .order_by(desc(order_column) if sort_order == "desc" else asc(order_column))
+        )
+        count_stmt = (
+            select(func.count(Interview.id).label("count"))
+            .join(Job, Job.id == Interview.job_id)
+            .join(Recruiter, Recruiter.id == Job.company_id)
+            .where(
+                and_(
+                    Recruiter.id == recruiter_id,
+                    Interview.status == interview_status if interview_status else True,
+                    Interview.location == location if location else True,
+                )
+            )
         )
     result = db.execute(stmt)
     interviews = result.scalars().all()
-    return interviews
+    count = db.execute(count_stmt).mappings().one()
+
+    return {"interviews": interviews, "count": count["count"]}
 
 
 @router.put("/upload-resume")

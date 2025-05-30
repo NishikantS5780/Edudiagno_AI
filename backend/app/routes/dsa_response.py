@@ -155,7 +155,15 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
 
     taskUID = data["taskUniqueId"]
     runStatus = data["runResult"]["runStatus"]
-    output = data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
+    compilation_output = data["runResult"][
+        "compilerOutputAfterCompilationBase64UrlEncoded"
+    ]
+    execution_err = data["runResult"]["programRunData"]["stderrBase64UrlEncoded"]
+    output = (
+        data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
+        if data["runResult"]["programRunData"]
+        else ""
+    )
     input = data["runConfig"]["stdinStringAsBase64UrlEncoded"]
 
     stmt = (
@@ -166,7 +174,7 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     )
     result = db.execute(stmt)
     db.commit()
-    dsa_response_id = result.all()[0]._mapping["dsa_response_id"]
+    dsa_response_id = result.mappings().one()["dsa_response_id"]
 
     if runStatus != "successful":
         stmt = (
@@ -209,6 +217,21 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
                 "failed_test_case": {
                     "test_case_id": data["dsa_test_case_id"],
                     "status": data["status"],
+                    "execution_err": (
+                        base64.urlsafe_b64decode(
+                            execution_err + ((40 - (len(execution_err) % 4)) * "=")
+                        ).decode()
+                        if execution_err
+                        else ""
+                    ),
+                    "compilation_output": (
+                        base64.urlsafe_b64decode(
+                            compilation_output
+                            + ((40 - (len(compilation_output) % 4)) * "=")
+                        ).decode()
+                        if compilation_output
+                        else ""
+                    ),
                     "input": data["input"],
                     "expected_output": data["expected_output"],
                     "output": base64.urlsafe_b64decode(
