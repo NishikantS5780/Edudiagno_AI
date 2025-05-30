@@ -158,7 +158,11 @@ async def execution_callback(request: Request, db: Session = Depends(database.ge
     compilation_output = data["runResult"][
         "compilerOutputAfterCompilationBase64UrlEncoded"
     ]
-    execution_err = data["runResult"]["programRunData"]["stderrBase64UrlEncoded"]
+    execution_err = (
+        data["runResult"]["programRunData"]["stderrBase64UrlEncoded"]
+        if data["runResult"]["programRunData"]
+        else ""
+    )
     output = (
         data["runResult"]["programRunData"]["stdoutBase64UrlEncoded"]
         if data["runResult"]["programRunData"]

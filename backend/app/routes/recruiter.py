@@ -279,3 +279,8 @@ async def get_interview_question_response_by_interview(
     return services.interview_question_response.get_interview_question_response_by_interview_id(
         interview_id, db
     )
+
+
+@router.get("/analytics")
+async def get_analytics():
+    return {}
