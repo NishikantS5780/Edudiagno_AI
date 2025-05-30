@@ -154,11 +154,16 @@ async def get_all_job(
     total_count = db.execute(count_stmt).scalar()
 
     result = db.execute(stmt)
-    jobs = result.all()
+    jobs = []
+    for job in result.all():
+        job_dict = dict(job._mapping)
+        # Convert datetime to ISO format string
+        if job_dict.get('created_at'):
+            job_dict['created_at'] = job_dict['created_at'].isoformat()
+        jobs.append(job_dict)
 
-    response = [job._mapping for job in jobs]
     return JSONResponse(
-        content=response,
+        content=jobs,
         headers={"X-Total-Count": str(total_count)}
     )
 

@@ -189,88 +189,82 @@ const InterviewPage = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-2">
-            <Card>
+            <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Job Description</CardTitle>
+                <CardTitle className="text-xl">Job Description</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <p className={`text-muted-foreground whitespace-pre-wrap ${!expandedSections.description && "line-clamp-3"}`}>
-                    {jobDetails?.description || "No description available"}
-                  </p>
+              <CardContent>
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <div className={`space-y-4 ${!expandedSections.description && "max-h-[200px] overflow-hidden relative"}`}>
+                    <div className="whitespace-pre-wrap text-base leading-relaxed">
+                      {jobDetails?.description || "No description available"}
+                    </div>
+                    {!expandedSections.description && (
+                      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+                    )}
+                  </div>
                   <Button
                     variant="link"
-                    className="p-0 h-auto font-medium underline"
+                    className="p-0 h-auto font-medium text-primary hover:text-primary/80"
                     onClick={() => toggleSection('description')}
                   >
                     {expandedSections.description ? "Show Less" : "Read More"}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="space-y-4">
-                  <h3 className="font-medium">Requirements</h3>
-                  <p className={`text-muted-foreground whitespace-pre-wrap ${!expandedSections.requirements && "line-clamp-3"}`}>
-                    {jobDetails?.requirements || "No requirements listed"}
-                  </p>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Requirements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <div className={`space-y-4 ${!expandedSections.requirements && "max-h-[200px] overflow-hidden relative"}`}>
+                    <div className="whitespace-pre-wrap text-base leading-relaxed">
+                      {jobDetails?.requirements || "No requirements listed"}
+                    </div>
+                    {!expandedSections.requirements && (
+                      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+                    )}
+                  </div>
                   <Button
                     variant="link"
-                    className="p-0 h-auto font-medium underline"
+                    className="p-0 h-auto font-medium text-primary hover:text-primary/80"
                     onClick={() => toggleSection('requirements')}
                   >
                     {expandedSections.requirements ? "Show Less" : "Read More"}
                   </Button>
                 </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium">Benefits</h3>
-                  <p className={`text-muted-foreground whitespace-pre-wrap ${!expandedSections.benefits && "line-clamp-3"}`}>
-                    {jobDetails?.benefits || "No benefits listed"}
-                  </p>
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto font-medium underline"
-                    onClick={() => toggleSection('benefits')}
-                  >
-                    {expandedSections.benefits ? "Show Less" : "Read More"}
-                  </Button>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium">Compensation</h3>
-                  <p className="text-muted-foreground">
-                    {(() => {
-                      if (!jobDetails?.salaryMin || !jobDetails?.salaryMax || !jobDetails?.currency) {
-                        return "Not specified";
-                      }
-                      console.log('Current currency:', jobDetails.currency);
-                      const currencySymbols: Record<string, string> = {
-                        'INR': '₹',
-                        'USD': '$',
-                        'EUR': '€',
-                        'GBP': '£'
-                      };
-                      const currencySymbol = currencySymbols[jobDetails.currency] || '';
-                      console.log('Selected currency symbol:', currencySymbol);
-                      return `${currencySymbol}${jobDetails.salaryMin.toLocaleString()} - ${jobDetails.salaryMax.toLocaleString()} ${jobDetails.currency}`;
-                    })()}
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium">Interview Process</h3>
-                  <p className="text-muted-foreground">
-                    This interview will be conducted using our AI-powered platform.
-                    You'll be asked to:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                    <li>Upload your resume</li>
-                    <li>Complete a compatibility check</li>
-                    <li>Record video responses to interview questions</li>
-                    <li>Receive immediate feedback on your performance</li>
-                  </ul>
-                </div>
               </CardContent>
             </Card>
+
+            {jobDetails?.benefits && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="text-xl">Benefits</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <div className={`space-y-4 ${!expandedSections.benefits && "max-h-[200px] overflow-hidden relative"}`}>
+                      <div className="whitespace-pre-wrap text-base leading-relaxed">
+                        {jobDetails.benefits}
+                      </div>
+                      {!expandedSections.benefits && (
+                        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+                      )}
+                    </div>
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto font-medium text-primary hover:text-primary/80"
+                      onClick={() => toggleSection('benefits')}
+                    >
+                      {expandedSections.benefits ? "Show Less" : "Read More"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div className="space-y-6">
