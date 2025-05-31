@@ -1,23 +1,16 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  useParams,
-  useNavigate,
-} from "react-router-dom";
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
+import { Routes, Route, useParams } from "react-router-dom";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { AuthProvider } from "@/context/AuthContext";
 import RequireAuth from "@/components/common/RequireAuth";
-import { useState, useEffect, useContext } from "react";
-import { toast } from "sonner";
+import { useEffect, useContext } from "react";
 import VideoInterview from "@/pages/Interview/VideoInterview";
-import { AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import ScrollToTop from "@/components/common/ScrollToTop";
 
 import Landing from "@/pages/Landing";
@@ -25,8 +18,6 @@ import Landing1 from "@/pages/Landing1";
 import Landing2 from "@/pages/Landing2";
 import Landing4 from "@/pages/Landing4";
 import Features from "@/pages/Features";
-import About from "@/pages/About";
-import CaseStudies from "@/pages/CaseStudies";
 import Contact from "@/pages/Contact";
 import Privacy from "@/pages/Privacy";
 import Careers from "@/pages/Careers";
@@ -50,7 +41,6 @@ import RecruiterEmailVerification from "@/pages/Dashboard/RecruiterEmailVerifica
 import Settings from "@/pages/Dashboard/Settings";
 import Help from "@/pages/Dashboard/Help";
 
-import PublicInterview from "@/pages/Interview/InterviewPage";
 import InterviewFlow from "@/pages/Interview/InterviewFlow";
 import CandidatePreCheck from "@/components/interview/CandidatePreCheck";
 import DSAPlayground from "@/pages/Interview/DSAPlayground";
@@ -70,10 +60,8 @@ import Jobs4 from "@/pages/Jobs4";
 import Analytics4 from "@/pages/Analytics4";
 import Settings4 from "@/pages/Settings4";
 
-// Import admin routes
 import { adminRoutes } from "@/routes/admin";
 
-// Import admin components
 import AdminLayout from "@/pages/Admin/AdminLayout";
 import AdminDashboard from "@/pages/Admin/Dashboard";
 import UserManagement from "@/pages/Admin/Users";
@@ -139,18 +127,39 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/recruiter-email-verification" element={<RecruiterEmailVerification />} />
+                <Route
+                  path="/recruiter-email-verification"
+                  element={<RecruiterEmailVerification />}
+                />
 
                 {/* Interview Routes */}
                 <Route path="/interview" element={<InterviewPage />} />
-                <Route path="/interview/compatibility" element={<InterviewFlow />} />
-                <Route path="/interview/setup" element={<CandidatePreCheck />} />
-                <Route path="/interview/video-interview" element={<VideoInterview />} />
+                <Route
+                  path="/interview/compatibility"
+                  element={<InterviewFlow />}
+                />
+                <Route
+                  path="/interview/setup"
+                  element={<CandidatePreCheck />}
+                />
+                <Route
+                  path="/interview/video-interview"
+                  element={<VideoInterview />}
+                />
                 <Route path="/interview/flow" element={<InterviewFlow />} />
-                <Route path="/interview/precheck" element={<CandidatePreCheck />} />
-                <Route path="/interview/dsa-playground" element={<DSAPlayground />} />
+                <Route
+                  path="/interview/precheck"
+                  element={<CandidatePreCheck />}
+                />
+                <Route
+                  path="/interview/dsa-playground"
+                  element={<DSAPlayground />}
+                />
                 <Route path="/interview/video" element={<VideoInterview />} />
-                <Route path="/interview/overview" element={<InterviewOverview />} />
+                <Route
+                  path="/interview/overview"
+                  element={<InterviewOverview />}
+                />
                 <Route path="/mcq" element={<MCQTest />} />
 
                 {/* Protected Dashboard Routes */}
@@ -260,21 +269,30 @@ const App = () => {
                 />
 
                 {/* Admin Routes */}
-                <Route path="/admin-test/*" element={
-                  <RequireAuth>
-                    <AdminLayout />
-                  </RequireAuth>
-                }>
+                <Route
+                  path="/admin-test/*"
+                  element={
+                    <RequireAuth>
+                      <AdminLayout />
+                    </RequireAuth>
+                  }
+                >
                   <Route index element={<AdminDashboard />} />
                   <Route path="users" element={<UserManagement />} />
-                  <Route path="development" element={<DevelopmentManagement />} />
+                  <Route
+                    path="development"
+                    element={<DevelopmentManagement />}
+                  />
                   <Route path="content" element={<ContentManagement />} />
                   <Route path="security" element={<SecurityCompliance />} />
                   <Route path="health" element={<SystemHealth />} />
                   <Route path="settings" element={<SystemSettings />} />
                   <Route path="analytics" element={<PlatformAnalytics />} />
                   <Route path="billing" element={<BillingManagement />} />
-                  <Route path="integrations" element={<IntegrationManagement />} />
+                  <Route
+                    path="integrations"
+                    element={<IntegrationManagement />}
+                  />
                   <Route path="support" element={<SupportManagement />} />
                 </Route>
 
@@ -296,11 +314,10 @@ const App = () => {
   );
 };
 
-// Add wrapper component for InterviewReport
 const InterviewReportWrapper = () => {
   const { id } = useParams();
   const { data: interview } = useQuery({
-    queryKey: ['interview', id],
+    queryKey: ["interview", id],
     queryFn: async () => {
       const response = await interviewAPI.getInterviews();
       return response.data.find((i: any) => i.id.toString() === id);
@@ -309,9 +326,11 @@ const InterviewReportWrapper = () => {
   });
 
   const { data: job } = useQuery({
-    queryKey: ['job', interview?.job_id],
+    queryKey: ["job", interview?.job_id],
     queryFn: async () => {
-      const response = await jobAPI.recruiterGetJob(interview?.job_id.toString());
+      const response = await jobAPI.recruiterGetJob(
+        interview?.job_id.toString()
+      );
       return response.data;
     },
     enabled: !!interview?.job_id,
