@@ -35,22 +35,13 @@ const InterviewOverview = () => {
 
   const handleStartInterview = async () => {
     try {
-      // Check if we have a valid screen stream ID
-      const urlParams = new URLSearchParams(window.location.search);
-      const streamId = urlParams.get('stream_id');
-      const storedStreamId = localStorage.getItem('screenStreamId');
-
-      if (!streamId || !storedStreamId || streamId !== storedStreamId) {
-        throw new Error('Invalid or missing screen stream ID');
-      }
-
       let interviewUrl = '';
       if (jobData?.hasQuiz) {
-        interviewUrl = `/mcq?i_id=${interviewId}&company=${companyName}&stream_id=${streamId}`;
+        interviewUrl = `/mcq?i_id=${interviewId}&company=${companyName}`;
       } else if (jobData?.hasDSATest) {
-        interviewUrl = `/interview/dsa-playground?i_id=${interviewId}&company=${companyName}&stream_id=${streamId}`;
+        interviewUrl = `/interview/dsa-playground?i_id=${interviewId}&company=${companyName}`;
       } else {
-        interviewUrl = `/interview/video?i_id=${interviewId}&company=${companyName}&stream_id=${streamId}`;
+        interviewUrl = `/interview/video?i_id=${interviewId}&company=${companyName}`;
       }
 
       // Navigate to the interview page

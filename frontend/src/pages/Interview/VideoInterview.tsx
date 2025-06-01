@@ -206,6 +206,7 @@ export default function VideoInterview() {
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
   const recordingStartTimeRef = useRef<number>(0);
 
   // Add new state for screenshot interval
@@ -636,6 +637,14 @@ export default function VideoInterview() {
       audioStreamRef.current = null;
     }
 
+    if (screenStreamRef.current) {
+      console.log("[Screenshot] Stopping screen stream");
+      screenStreamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+      screenStreamRef.current = null;
+    }
+
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
@@ -830,16 +839,33 @@ export default function VideoInterview() {
   // Add screenshot capture function
   const captureAndSendScreenshot = async () => {
     try {
-      if (!videoRef.current) {
-        console.warn("[Screenshot] Video element not found");
+      if (!screenStreamRef.current) {
+        console.warn("[Screenshot] Screen stream not found");
         return;
       }
 
       console.log("[Screenshot] Starting capture process...");
       const startTime = performance.now();
 
-      const canvas = await html2canvas(videoRef.current);
-      console.log("[Screenshot] Canvas created successfully");
+      // Create a video element to capture the screen stream
+      const videoElement = document.createElement('video');
+      videoElement.srcObject = screenStreamRef.current;
+      videoElement.muted = true;
+      await videoElement.play();
+
+      // Create a canvas and draw the video frame
+      const canvas = document.createElement('canvas');
+      canvas.width = videoElement.videoWidth;
+      canvas.height = videoElement.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to get canvas context');
+      }
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+      // Stop the video element
+      videoElement.pause();
+      videoElement.srcObject = null;
 
       const blob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob((blob) => resolve(blob), "image/png");
@@ -899,25 +925,14 @@ export default function VideoInterview() {
         audio: true,
       });
 
-      // Get screen stream from URL parameters
-      const urlParams = new URLSearchParams(window.location.search);
-      const streamId = urlParams.get('stream_id');
-      
-      if (!streamId) {
-        throw new Error('No screen stream ID provided');
-      }
-
-      // Get screen stream from localStorage
-      const storedStreamId = localStorage.getItem('screenStreamId');
-      if (storedStreamId !== streamId) {
-        throw new Error('Invalid screen stream ID');
-      }
-
-      // Request screen sharing again in this tab
+      // Request screen sharing
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: true,
       });
+
+      // Store the screen stream
+      screenStreamRef.current = screenStream;
 
       // Get audio-only stream for better audio quality
       const audioStream = await navigator.mediaDevices.getUserMedia({
