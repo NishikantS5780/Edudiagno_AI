@@ -675,22 +675,13 @@ export default function VideoInterview() {
       };
 
       // Call the API to analyze the transcript
-      // Use PUT instead of POST for the generate-feedback endpoint
-      const response = await api.put(
-        "/interview/generate-feedback",
-        {
-          transcript: userTranscript,
-          job_requirements: jobData?.requirements || "",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("i_token")}`,
-          },
-        }
+      const response = await interviewAPI.generateFeedback(
+        userTranscript,
+        jobData?.requirements || ""
       );
 
       // Set the feedback state with the response data
-      setFeedback(response.data);
+      setFeedback(response);
 
       // Make sure to set showCompletionScreen to true
       setShowCompletionScreen(true);
