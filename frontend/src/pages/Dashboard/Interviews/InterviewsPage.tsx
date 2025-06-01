@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,6 @@ import {
   MoreHorizontal,
   Eye,
   FileText,
-  Share,
   Trash2,
   Calendar,
   Clock,
@@ -52,7 +50,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { interviewAPI } from "@/lib/api";
 import { InterviewData } from "@/types/interview";
 import { toast } from "sonner";
 import {
@@ -65,10 +62,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { jobAPI } from "@/lib/api";
 
 const InterviewsPage = () => {
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
@@ -80,89 +75,90 @@ const InterviewsPage = () => {
   );
   const itemsPerPage = 10;
 
-  const { data: interviewsData, isLoading } = useQuery({
-    queryKey: ["interviews", currentPage, itemsPerPage],
-    queryFn: async () => {
-      const res = await interviewAPI.getInterviews({
-        start: (currentPage - 1) * itemsPerPage,
-        limit: itemsPerPage,
-      });
+  useEffect(() => {}, []);
+  // const { data: interviewsData, isLoading } = useQuery({
+  //   queryKey: ["interviews", currentPage, itemsPerPage],
+  //   queryFn: async () => {
+  //     const res = await interviewAPI.getInterviews({
+  //       start: (currentPage - 1) * itemsPerPage,
+  //       limit: itemsPerPage,
+  //     });
 
-      // Fetch job titles for all interviews
-      const jobIds = res.data.interviews.map(
-        (interview: any) => interview.job_id
-      ) as number[];
-      const uniqueJobIds = Array.from(new Set(jobIds));
+  //     // Fetch job titles for all interviews
+  //     const jobIds = res.data.interviews.map(
+  //       (interview: any) => interview.job_id
+  //     ) as number[];
+  //     const uniqueJobIds = Array.from(new Set(jobIds));
 
-      const jobTitlePromises = uniqueJobIds.map(async (jobId) => {
-        try {
-          const jobRes = await jobAPI.recruiterGetJob(jobId.toString());
-          return { jobId, title: jobRes.data.title };
-        } catch (error) {
-          console.error(`Error fetching job ${jobId}:`, error);
-          return { jobId, title: "Unknown Job" };
-        }
-      });
+  //     const jobTitlePromises = uniqueJobIds.map(async (jobId) => {
+  //       try {
+  //         const jobRes = await jobAPI.recruiterGetJob(jobId.toString());
+  //         return { jobId, title: jobRes.data.title };
+  //       } catch (error) {
+  //         console.error(`Error fetching job ${jobId}:`, error);
+  //         return { jobId, title: "Unknown Job" };
+  //       }
+  //     });
 
-      const jobTitleResults = await Promise.all(jobTitlePromises);
-      const jobTitlesMap = jobTitleResults.reduce((acc, { jobId, title }) => {
-        acc[jobId] = title;
-        return acc;
-      }, {} as Record<number, string>);
+  //     const jobTitleResults = await Promise.all(jobTitlePromises);
+  //     const jobTitlesMap = jobTitleResults.reduce((acc, { jobId, title }) => {
+  //       acc[jobId] = title;
+  //       return acc;
+  //     }, {} as Record<number, string>);
 
-      const totalCount =
-        res.headers["x-total-count"] || res.data.interviews.length;
-      setTotalPages(Math.ceil(totalCount / itemsPerPage));
+  //     const totalCount =
+  //       res.headers["x-total-count"] || res.data.interviews.length;
+  //     setTotalPages(Math.ceil(totalCount / itemsPerPage));
 
-      return {
-        interviews: res.data.interviews.map((interview: any) => ({
-          id: interview.id,
-          status: interview.status,
-          firstName: interview.first_name,
-          lastName: interview.last_name,
-          email: interview.email,
-          phone: interview.phone,
-          workExperience: interview.work_experience,
-          education: interview.education,
-          skills: interview.skills,
-          location: interview.location,
-          linkedinUrl: interview.linkedin_url,
-          portfolioUrl: interview.portfolio_url,
-          resumeUrl: interview.resume_url,
-          resumeMatchScore: interview.resume_match_score,
-          resumeMatchFeedback: interview.resume_match_feedback,
-          overallScore: interview.overall_score,
-          feedback: interview.feedback,
-          createdAt: interview.created_at,
-          jobId: interview.job_id,
-        })),
-        jobTitles: jobTitlesMap,
-      };
-    },
-  });
+  //     return {
+  //       interviews: res.data.interviews.map((interview: any) => ({
+  //         id: interview.id,
+  //         status: interview.status,
+  //         firstName: interview.first_name,
+  //         lastName: interview.last_name,
+  //         email: interview.email,
+  //         phone: interview.phone,
+  //         workExperience: interview.work_experience,
+  //         education: interview.education,
+  //         skills: interview.skills,
+  //         location: interview.location,
+  //         linkedinUrl: interview.linkedin_url,
+  //         portfolioUrl: interview.portfolio_url,
+  //         resumeUrl: interview.resume_url,
+  //         resumeMatchScore: interview.resume_match_score,
+  //         resumeMatchFeedback: interview.resume_match_feedback,
+  //         overallScore: interview.overall_score,
+  //         feedback: interview.feedback,
+  //         createdAt: interview.created_at,
+  //         jobId: interview.job_id,
+  //       })),
+  //       jobTitles: jobTitlesMap,
+  //     };
+  //   },
+  // });
 
-  const deleteInterviewMutation = useMutation({
-    mutationFn: (id: number) => interviewAPI.deleteInterview(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["interviews"] });
-      toast.success("Interview deleted successfully");
-    },
-    onError: (error) => {
-      console.error("Error deleting interview:", error);
-      toast.error("Failed to delete interview");
-    },
-  });
+  // const deleteInterviewMutation = useMutation({
+  //   mutationFn: (id: number) => interviewAPI.deleteInterview(id),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ["interviews"] });
+  //     toast.success("Interview deleted successfully");
+  //   },
+  //   onError: (error) => {
+  //     console.error("Error deleting interview:", error);
+  //     toast.error("Failed to delete interview");
+  //   },
+  // });
 
   const handleDeleteInterview = (id: number) => {
     setInterviewToDelete(id);
   };
 
-  const confirmDelete = () => {
-    if (interviewToDelete) {
-      deleteInterviewMutation.mutate(interviewToDelete);
-      setInterviewToDelete(null);
-    }
-  };
+  // const confirmDelete = () => {
+  //   if (interviewToDelete) {
+  //     deleteInterviewMutation.mutate(interviewToDelete);
+  //     setInterviewToDelete(null);
+  //   }
+  // };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -287,7 +283,7 @@ const InterviewsPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {interviewsData && interviewsData.interviews.length > 0 ? (
+              {/* {interviewsData && interviewsData.interviews.length > 0 ? (
                 interviewsData.interviews
                   .filter((interview: InterviewData) => {
                     console.log("Filtering interview:", interview);
@@ -430,7 +426,7 @@ const InterviewsPage = () => {
                     No interviews found matching your criteria
                   </TableCell>
                 </TableRow>
-              )}
+              )} */}
             </TableBody>
           </Table>
         </div>
@@ -502,12 +498,12 @@ const InterviewsPage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            {/* <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={confirmDelete}
             >
               Delete
-            </AlertDialogAction>
+            </AlertDialogAction> */}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

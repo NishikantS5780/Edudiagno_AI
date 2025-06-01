@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel
 from pydantic import validator
 
@@ -83,21 +83,6 @@ class CreateJob(BaseModel):
     requirements: str
     benefits: Optional[str] = None
     status: str
-    quiz_time_minutes: Optional[int] = None
-
-    @validator('currency', 'salary_min', 'salary_max')
-    def validate_salary_fields(cls, v, values):
-        if values.get('show_salary'):
-            if values.get('currency') is None:
-                raise ValueError('Currency is required when show_salary is True')
-            if values.get('salary_min') is None:
-                raise ValueError('Minimum salary is required when show_salary is True')
-            if values.get('salary_max') is None:
-                raise ValueError('Maximum salary is required when show_salary is True')
-            if values.get('salary_min') is not None and values.get('salary_max') is not None:
-                if values.get('salary_min') > values.get('salary_max'):
-                    raise ValueError('Minimum salary cannot be greater than maximum salary')
-        return v
 
 
 class UpdateJob(BaseModel):
@@ -202,12 +187,19 @@ class UpdateInterviewQuestionResponse(BaseModel):
     answer: str
 
 
+class CreateDSATestCase(BaseModel):
+    input: str
+    expected_output: str
+    dsa_question_id: Optional[int] = None
+
+
 class CreateDSAQuestion(BaseModel):
     title: str
     description: str
     difficulty: str
     time_minutes: Optional[int] = None
     job_id: int
+    test_cases: List[CreateDSATestCase]
 
 
 class UpdateDSAQuestion(BaseModel):
@@ -216,18 +208,6 @@ class UpdateDSAQuestion(BaseModel):
     description: Optional[str] = None
     difficulty: Optional[str] = None
     time_minutes: Optional[int] = None
-
-
-class CreateDSATestCase(BaseModel):
-    input: str
-    expected_output: str
-    dsa_question_id: int
-
-
-class UpdateDSATestCase(BaseModel):
-    input: Optional[str] = None
-    expected_output: Optional[str] = None
-    id: int
 
 
 class CreateDSAResponse(BaseModel):

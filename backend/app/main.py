@@ -95,7 +95,6 @@ from app.routes import (
     city,
     country,
     dsa_response,
-    dsa_test_case,
     interview_question_and_response,
     public,
     quiz_option,
@@ -125,9 +124,6 @@ app.include_router(text.router, prefix="/api/text", tags=["Text"])
 app.include_router(audio.router, prefix="/api/audio", tags=["Audio"])
 app.include_router(
     dsa_question.router, prefix="/api/dsa-question", tags=["DSA Question"]
-)
-app.include_router(
-    dsa_test_case.router, prefix="/api/dsa-test-case", tags=["DSA Test Case"]
 )
 app.include_router(
     dsa_response.router, prefix="/api/dsa-response", tags=["DSA Response"]

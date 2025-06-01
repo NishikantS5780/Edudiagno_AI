@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
-import { jobAPI } from "@/lib/api";
+import { jobAPI } from "@/services/jobApi";
 
 interface AIGeneratePopupProps {
   title: string;

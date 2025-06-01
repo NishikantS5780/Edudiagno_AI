@@ -1,5 +1,5 @@
-import React, { useContext, useEffect, useState } from "react";
-import { Link, replace, useNavigate } from "react-router-dom";
+import React, { useContext, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import RegularLayout from "@/components/layout/RegularLayout";
-import { UserContext } from "@/context/UserContext";
+import { AuthContext } from "@/context/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -18,14 +18,17 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const { login } = useContext(UserContext);
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    return toast.error("Something went wrong");
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await login({ email, password });
+      await authContext.login({ email, password });
       toast.success("Login successful");
       navigate("/dashboard");
     } catch (error: any) {
