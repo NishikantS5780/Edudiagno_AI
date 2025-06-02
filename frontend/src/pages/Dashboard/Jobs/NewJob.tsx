@@ -57,6 +57,7 @@ import {
 import { autoCompletionApi } from "@/services/autoCompletionApi";
 import { dsaAPI } from "@/services/dsaApi";
 import { quizAPI } from "@/services/quizApi";
+import { interviewQuestionAPI } from "@/services/interviewQuestionApi";
 
 const NewJob = () => {
   const navigate = useNavigate();
@@ -84,22 +85,30 @@ const NewJob = () => {
     benefits: "",
     status: "active",
     mcq_timing_mode: "whole_test",
+    quiz_time_minutes: 60,
   });
   const [newDSAQuestion, setNewDSAQuestion] = useState<DSAQuestion>();
   const [newTestCase, setNewTestCase] = useState<TestCase>();
   const [newQuizQuestion, setNewQuizQuestion] = useState<MCQuestion>({
-    time_seconds: 60,
     type: "single",
   });
-  const [quizImageFile, setQuizImageFile] = useState<File>();
+  const [quizImageFile, setQuizImageFile] = useState<File | null>();
   const [newQuizOptions, setNewQuizOptions] = useState<
     {
       label?: string;
       correct?: boolean;
     }[]
-  >([]);
+  >([
+    { label: "", correct: false },
+    { label: "", correct: false },
+    { label: "", correct: false },
+    { label: "", correct: false },
+  ]);
   const [newCustomInterviewQuestion, setNewCustomInterviewQuestion] =
-    useState<DSAQuestion>();
+    useState<InterviewQuestion>({
+      question: "",
+      question_type: "problem_solving",
+    });
 
   const [cities, setCities] = useState<Array<{ id: number; name: string }>>([]);
   const [citySearchTerm, setCitySearchTerm] = useState("");
@@ -199,137 +208,11 @@ const NewJob = () => {
     title: z.string().optional(),
     type: z.enum(["single", "multiple", "true_false"]).optional(),
     category: z.enum(["technical", "aptitude"]).optional(),
-    time_seconds: z.number().min(30).max(180).optional(),
+    time_seconds: z.number().optional(),
     options: z
       .array(z.object({ label: z.string(), correct: z.boolean() }))
       .optional(),
   });
-
-  const saveMcqQuestions = async (
-    jobId: number,
-    questions: any[],
-    jobData: JobData
-  ) => {
-    try {
-      // First update the job with timing information
-      // const jobUpdateData: Partial<JobData> = {
-      //   ...jobData,
-      //   mcq_timing_mode: jobData.mcq_timing_mode || "per_question",
-      //   // Only include quiz_time_minutes if in whole_test mode
-      //   quiz_time_minutes:
-      //     jobData.mcq_timing_mode === "whole_test"
-      //       ? jobData.quiz_time_minutes
-      //       : null,
-      // };
-
-      // Remove fields that should not be sent in the update
-      // const { status, mcq_timing_mode, quiz_time_minutes, ...updateData } =
-      //   jobUpdateData;
-
-      // await jobAPI.updateJob(jobId.toString(), updateData);
-
-      for (const question of questions) {
-        // Create form data for the request
-        const formData = new FormData();
-        formData.append("description", question.title);
-        formData.append("job_id", jobId.toString());
-        formData.append("type", question.type);
-        formData.append("category", question.category);
-
-        // Handle time_seconds based on timing mode
-        // if (jobData.mcq_timing_mode === "whole_test") {
-        //   // For whole test mode, don't send time_seconds as it's not used
-        //   formData.append("time_seconds", "0");
-        // } else {
-        //   // For per_question mode, use the question's time_seconds or default to 60
-        //   formData.append(
-        //     "time_seconds",
-        //     (question.time_seconds || 60).toString()
-        //   );
-        // }
-
-        // Only append image if the question has an image
-        if (question.hasImage && question.image) {
-          formData.append("image", question.image);
-        }
-
-        // Create the quiz question
-        // const questionResponse = await api.post("/quiz-question", formData, {
-        //   headers: {
-        //     Authorization: `Bearer ${localStorage.getItem("token")}`,
-        //     "Content-Type": "multipart/form-data",
-        //   },
-        // });
-
-        // const questionId = questionResponse.data.id;
-
-        // Handle options based on question type
-        if (question.type === "true_false") {
-          // For true/false questions, create only two options
-          // await api.post(
-          //   "/quiz-option",
-          //   {
-          //     label: "True",
-          //     correct: question.correct_options[0] === 0,
-          //     question_id: questionId,
-          //   },
-          //   {
-          //     headers: {
-          //       Authorization: `Bearer ${localStorage.getItem("token")}`,
-          //     },
-          //   }
-          // );
-          //   await api.post(
-          //     "/quiz-option",
-          //     {
-          //       label: "False",
-          //       correct: question.correct_options[0] === 1,
-          //       question_id: questionId,
-          //     },
-          //     {
-          //       headers: {
-          //         Authorization: `Bearer ${localStorage.getItem("token")}`,
-          //       },
-          //     }
-          //   );
-          // } else {
-          //   // For single and multiple choice questions, create all options
-          //   for (let i = 0; i < question.options.length; i++) {
-          //     const option = question.options[i];
-          //     let isCorrect = false;
-          //     if (question.type === "single") {
-          //       isCorrect = question.correct_options[0] === i;
-          //     } else if (question.type === "multiple") {
-          //       isCorrect = question.correct_options.includes(i);
-          //     }
-          //     await api.post(
-          //       "/quiz-option",
-          //       {
-          //         label: option,
-          //         correct: isCorrect,
-          //         question_id: questionId,
-          //       },
-          //       {
-          //         headers: {
-          //           Authorization: `Bearer ${localStorage.getItem("token")}`,
-          //         },
-          //       }
-          //     );
-          //   }
-        }
-      }
-    } catch (error: any) {
-      console.error("Error saving MCQ questions:", error);
-      if (error.response?.data?.detail) {
-        throw new Error(
-          Array.isArray(error.response.data.detail)
-            ? error.response.data.detail.map((err: any) => err.msg).join(", ")
-            : error.response.data.detail
-        );
-      }
-      throw error;
-    }
-  };
 
   useEffect(() => {
     if (citySearchTerm) {
@@ -339,24 +222,6 @@ const NewJob = () => {
         .catch((_) => toast.error("Error while fetching cities"));
     }
   }, [citySearchTerm]);
-
-  // Add effect to handle timing mode changes
-  // useEffect(() => {
-  //   if (
-  //     jobData.mcq_timing_mode === "whole_test" &&
-  //     !jobData.quiz_time_minutes
-  //   ) {
-  //     setJobData((prev) => ({
-  //       ...prev,
-  //       quiz_time_minutes: 30, // Default to 30 minutes when switching to whole_test mode
-  //     }));
-  //   } else if (jobData.mcq_timing_mode === "per_question") {
-  //     setJobData((prev) => ({
-  //       ...prev,
-  //       quiz_time_minutes: null, // Clear quiz_time_minutes when switching to per_question mode
-  //     }));
-  //   }
-  // }, [jobData.mcq_timing_mode]);
 
   const validateField = (field: keyof JobData, value: any) => {
     try {
@@ -375,81 +240,11 @@ const NewJob = () => {
     validateField(field, value);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrors({});
-
-    try {
-      // Validate form data
-      const validationResult = jobFormSchema.safeParse(jobData);
-      if (!validationResult.success) {
-        const newErrors: Record<string, string> = {};
-        validationResult.error.errors.forEach((error) => {
-          const path = error.path[0];
-          if (typeof path === "string") {
-            newErrors[path] = error.message;
-          }
-        });
-        setErrors(newErrors);
-        return;
-      }
-
-      // Prepare job data without MCQ questions
-      // const { mcq_questions, ...jobDataWithoutMcq } = jobData;
-      // const jobDataToSubmit = {
-      //   ...jobDataWithoutMcq,
-      //   status: "active",
-      //   mcq_timing_mode: jobData.mcq_timing_mode || "per_question",
-      //   // Only include quiz_time_minutes if in whole_test mode
-      //   quiz_time_minutes:
-      //     jobData.mcq_timing_mode === "whole_test"
-      //       ? jobData.quiz_time_minutes
-      //       : null,
-      // };
-
-      // Always update the existing draft job
-      if (!jobData.id) {
-        throw new Error("Please save job details first");
-      }
-      // const response = await jobAPI.updateJob(
-      //   jobData.id.toString(),
-      //   jobDataToSubmit
-      // );
-
-      // If there are MCQ questions, save them separately
-      // if (jobData.mcq_questions && jobData.mcq_questions.length > 0) {
-      //   await saveMcqQuestions(jobData.id, jobData.mcq_questions, jobData);
-      // }
-
-      toast.success("Job saved successfully!");
-      navigate("/dashboard/jobs");
-    } catch (error: any) {
-      console.error("Error saving job:", error);
-      if (error.response?.data?.detail) {
-        toast.error(
-          Array.isArray(error.response.data.detail)
-            ? error.response.data.detail.map((err: any) => err.msg).join(", ")
-            : error.response.data.detail
-        );
-      } else {
-        toast.error(error.message || "Failed to save job");
-      }
-    } finally {
-      // setIsSubmitting(false);
-    }
-  };
-
-  // const handleGeneratedContent = (
-  //   field: keyof JobFormValues,
-  //   content: string
-  // ) => {
-  //   setJobData({ ...jobData, [field]: content });
-  // };
-
   const handleCreateDSAQuestion = () => {
     if (!jobData.id || !newDSAQuestion) {
       return;
     }
+    console.log(newDSAQuestion);
     let validationResult = dsaQuestionFormSchema.safeParse(newDSAQuestion);
     if (!validationResult.success) {
       const newErrors: Record<string, string> = {};
@@ -486,11 +281,8 @@ const NewJob = () => {
         toast.error("Error while adding dsa question");
       });
   };
-  useEffect(() => {
-    console.log(newDSAQuestion);
-  }, [newDSAQuestion]);
 
-  const handleNewDsaQuestionChange = (field: string, value: any) => {
+  const handleNewDsaQuestionChange = (field: keyof DSAQuestion, value: any) => {
     setNewDSAQuestion({ ...newDSAQuestion, [field]: value });
   };
 
@@ -501,7 +293,7 @@ const NewJob = () => {
     });
   };
 
-  const handleTestCaseAdd = () => {
+  const handleSaveTestCase = () => {
     if (!newTestCase) {
       return;
     }
@@ -551,26 +343,6 @@ const NewJob = () => {
       });
   };
 
-  const handleMcqQuestionAdd = () => {
-    //   const newQuestion: MCQQuestion = {
-    //     title: "",
-    //     type: "single",
-    //     category: "technical",
-    //     time_seconds: jobData.mcq_timing_mode === "per_question" ? 60 : undefined,
-    //     options: ["", "", "", ""],
-    //     correct_options: [0],
-    //     hasImage: false,
-    //     image: null,
-    //     imageUrl: undefined,
-    //   };
-    //   setJobData((prev) => ({
-    //     ...prev,
-    //     mcq_questions: prev.mcq_questions
-    //       ? [...prev.mcq_questions, newQuestion]
-    //       : [newQuestion],
-    //   }));
-  };
-
   const handleMcqQuestionChange = (field: keyof MCQuestion, value: any) => {
     if (!newQuizQuestion) {
       return;
@@ -578,57 +350,14 @@ const NewJob = () => {
     setNewQuizQuestion({ ...newQuizQuestion, [field]: value });
   };
 
-  const renderCustomQuestion = (question: InterviewQuestion, index: number) => {
-    return (
-      <Card key={index} className="mb-4">
-        <CardContent className="pt-6">
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor={`question-${index}`}>Question</Label>
-              <Textarea
-                id={`question-${index}`}
-                value={question.question}
-                // onChange={(e) =>
-                //   handleCustomQuestionUpdate(index, "question", e.target.value)
-                // }
-                placeholder="Enter your interview question"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Question Type</Label>
-              <Select
-                value={question.question_type}
-                // onValueChange={(value) =>
-                //   handleCustomQuestionUpdate(index, "question_type", value)
-                // }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select question type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="technical">Technical</SelectItem>
-                  <SelectItem value="behavioral">Behavioral</SelectItem>
-                  <SelectItem value="problem_solving">
-                    Problem Solving
-                  </SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                variant="destructive"
-                size="sm"
-                // onClick={() => handleCustomQuestionDelete(index)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Question
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  const handleCustomQuestionChange = (
+    field: keyof InterviewQuestion,
+    value: any
+  ) => {
+    setNewCustomInterviewQuestion({
+      ...newCustomInterviewQuestion,
+      [field]: value,
+    });
   };
 
   const handleSaveJobDetails = async () => {
@@ -695,28 +424,6 @@ const NewJob = () => {
     }
   };
 
-  const handleExcelImport = (importedQuestions: any[]) => {
-    // Prevent form submission
-    event?.preventDefault();
-    event?.stopPropagation();
-
-    // setJobData((prev) => ({
-    //   ...prev,
-    //   mcq_questions: [
-    //     ...(prev.mcq_questions || []),
-    //     ...importedQuestions.map((q) => ({
-    //       title: q.title,
-    //       type: q.type,
-    //       category: q.category,
-    //       time_seconds: q.time_seconds,
-    //       options: q.options,
-    //       correct_options: q.correct_options,
-    //     })),
-    //   ],
-    // }));
-  };
-
-  // Add these interfaces at the top with other interfaces
   interface Currency {
     value: string;
     label: string;
@@ -730,148 +437,10 @@ const NewJob = () => {
     name: string;
   }
 
-  // Update the currency symbols mapping to be more comprehensive
-  const CURRENCY_SYMBOLS: Record<string, string> = {
-    USD: "$",
-    INR: "₹",
-    EUR: "€",
-    GBP: "£",
-    CNY: "¥",
-    JPY: "¥",
-    AUD: "A$",
-    CAD: "C$",
-    SGD: "S$",
-    CHF: "Fr",
-    AED: "د.إ",
-    SAR: "﷼",
-    BRL: "R$",
-    RUB: "₽",
-    ZAR: "R",
-    MXN: "$",
-    KRW: "₩",
-    TRY: "₺",
-    SEK: "kr",
-    NOK: "kr",
-    DKK: "kr",
-    PLN: "zł",
-    ILS: "₪",
-    HKD: "HK$",
-    TWD: "NT$",
-    THB: "฿",
-    MYR: "RM",
-    PHP: "₱",
-    IDR: "Rp",
-    VND: "₫",
-  };
-
-  // Add state for available currencies
   const [availableCurrencies, setAvailableCurrencies] = useState<Currency[]>([
     { value: "USD", label: "$ USD", symbol: "$", name: "US Dollar" },
     { value: "INR", label: "₹ INR", symbol: "₹", name: "Indian Rupee" },
   ]);
-
-  // Add this function to get currency info for a location
-  const getLocationCurrency = async (
-    city: string,
-    country: string
-  ): Promise<LocationCurrency | null> => {
-    try {
-      // First try to get currency from city
-      // const cityResponse = await api.get(
-      //   `/city?keyword=${encodeURIComponent(city)}`
-      // );
-      // const cityData = cityResponse.data;
-      // const cityMatch = cityData.find(
-      //   (c: any) => c.name.toLowerCase() === city.toLowerCase()
-      // );
-
-      // if (cityMatch?.currency) {
-      //   return {
-      //     currency: cityMatch.currency,
-      //     symbol: CURRENCY_SYMBOLS[cityMatch.currency] || cityMatch.currency,
-      //     name: cityMatch.currency_name || cityMatch.currency,
-      //   };
-      // }
-
-      // If no city currency, try country
-      // const countryResponse = await api.get(
-      //   `/country?keyword=${encodeURIComponent(country)}`
-      // );
-      // const countryData = countryResponse.data;
-      // const countryMatch = countryData.find(
-      //   (c: any) => c.name.toLowerCase() === country.toLowerCase()
-      // );
-
-      // if (countryMatch?.currency) {
-      //   return {
-      //     currency: countryMatch.currency,
-      //     symbol:
-      //       CURRENCY_SYMBOLS[countryMatch.currency] || countryMatch.currency,
-      //     name: countryMatch.currency_name || countryMatch.currency,
-      //   };
-      // }
-
-      return null;
-    } catch (error) {
-      console.error("Error fetching location currency:", error);
-      return null;
-    }
-  };
-
-  // Update the getAvailableCurrencies function
-  const getAvailableCurrencies = async (): Promise<Currency[]> => {
-    const currencies: Currency[] = [
-      { value: "USD", label: "$ USD", symbol: "$", name: "US Dollar" },
-      { value: "INR", label: "₹ INR", symbol: "₹", name: "Indian Rupee" },
-    ];
-
-    try {
-      // Fetch all countries to get their currencies
-      // const response = await api.get("/country");
-      // const countries = response.data || [];
-
-      // Create a Set to track unique currencies
-      const uniqueCurrencies = new Set<string>();
-
-      // Add location-based currency first if available
-      // if (jobData.city && recruiter?.country) {
-      //   const locationCurrency = await getLocationCurrency(
-      //     jobData.city,
-      //     recruiter.country
-      //   );
-      //   if (locationCurrency) {
-      //     uniqueCurrencies.add(locationCurrency.currency);
-      //     currencies.push({
-      //       value: locationCurrency.currency,
-      //       label: `${locationCurrency.symbol} ${locationCurrency.currency}`,
-      //       symbol: locationCurrency.symbol,
-      //       name: locationCurrency.name,
-      //     });
-      //   }
-      // }
-
-      // Add currencies from all countries
-      // for (const country of countries) {
-      //   if (country.currency && !uniqueCurrencies.has(country.currency)) {
-      //     uniqueCurrencies.add(country.currency);
-      //     const symbol = CURRENCY_SYMBOLS[country.currency] || country.currency;
-      //     currencies.push({
-      //       value: country.currency,
-      //       label: `${symbol} ${country.currency}`,
-      //       symbol: symbol,
-      //       name: country.currency_name || country.currency,
-      //     });
-      //   }
-      // }
-
-      // Sort currencies alphabetically by code
-      // currencies.sort((a, b) => a.value.localeCompare(b.value));
-    } catch (error) {
-      console.error("Error fetching available currencies:", error);
-    }
-
-    return currencies;
-  };
 
   // Add effect to update currency when city changes
   // useEffect(() => {
@@ -897,12 +466,6 @@ const NewJob = () => {
   //   updateCurrencyForLocation();
   // }, [jobData.city, recruiter?.country]);
 
-  // Add logger for currency selection
-  // const handleCurrencyChange = (value: string) => {
-  //   handleChange("currency", value);
-  // };
-
-  // Update the timing mode change handler
   const handleTimingModeChange = (value: "per_question" | "whole_test") => {
     setJobData((prev) => ({
       ...prev,
@@ -910,8 +473,7 @@ const NewJob = () => {
       quiz_time_minutes: value === "whole_test" ? 60 : null,
       mcq_questions: prev.mcq_questions?.map((q) => ({
         ...q,
-        time_seconds:
-          value === "per_question" ? q.time_seconds || 60 : undefined,
+        time_seconds: value === "per_question" ? q.time_seconds : undefined,
       })),
     }));
   };
@@ -924,14 +486,17 @@ const NewJob = () => {
     }));
   };
 
-  const handleSaveMcqQuestions = async () => {
+  const handleSaveMcqQuestion = async () => {
     try {
-      setIsSavingMcq(true);
+      setIsSaving(true);
       if (!jobData.id) {
         return;
       }
-      newQuizQuestion.options = newQuizOptions;
-      const validationResult = mcqQuestionFormSchema.safeParse(newQuizQuestion);
+      let quizData = { ...newQuizQuestion, options: [...newQuizOptions] };
+      if (jobData.mcq_timing_mode == "per_question" && !quizData.time_seconds) {
+        throw new Error("Please select proper time for mcq question");
+      }
+      const validationResult = mcqQuestionFormSchema.safeParse(quizData);
       if (!validationResult.success) {
         const newErrors: Record<string, string> = {};
         validationResult.error.errors.forEach((error) => {
@@ -941,33 +506,46 @@ const NewJob = () => {
           }
         });
         setErrors(newErrors);
-        throw new Error("Please fill in all required fields for MCQ questions");
+        const firstError = Object.entries(newErrors)[0];
+        throw new Error(`${firstError[0]} ${firstError[1]}`);
       }
 
       const response = await quizAPI.createQuizQuestions(
-        newQuizQuestion,
+        quizData,
         jobData.id,
-        quizImageFile
+        quizImageFile || undefined
       );
       if (!response) {
-        throw new Error("Failed to save MCQ questions");
+        throw new Error("Failed to save MCQ question");
       }
-      setNewQuizQuestion(response.data);
+      quizData = { ...quizData, ...response.data };
       const options = [];
-      for (const option of newQuizQuestion.options) {
-        const res = await quizAPI.createQuizOption(option, newQuizQuestion.id);
+      for (const option of newQuizOptions || []) {
+        const res = await quizAPI.createQuizOption(option, quizData.id);
+        console.log(res);
         if (!res) {
           throw new Error("Failed to save MCQ option");
         }
         options.push(res.data);
       }
-      newQuizQuestion.options = options;
+      quizData.options = options;
       setJobData({
         ...jobData,
-        mcq_questions: [...(jobData.mcq_questions || []), newQuizQuestion],
+        mcq_questions: [...(jobData.mcq_questions || []), quizData],
       });
-      setNewQuizQuestion({ time_seconds: 60, type: "single" });
-      setNewQuizOptions([{}, {}, {}, {}]);
+      setNewQuizQuestion({
+        description: "",
+        type: "single",
+        category: newQuizQuestion.category,
+        time_seconds: newQuizQuestion.time_seconds,
+      });
+      setNewQuizOptions([
+        { label: "", correct: false },
+        { label: "", correct: false },
+        { label: "", correct: false },
+        { label: "", correct: false },
+      ]);
+      setQuizImageFile(null);
 
       toast.success("MCQ questions saved successfully");
     } catch (error: any) {
@@ -980,81 +558,52 @@ const NewJob = () => {
       }
       toast.error(errorMessage);
     } finally {
-      setIsSavingMcq(false);
+      setIsSaving(false);
     }
   };
 
-  const handleSaveCustomQuestions = async () => {
+  const handleCreateCustomInterviewQuestion = async () => {
     if (!jobData.id) {
-      toast.error("Please save job details first");
       return;
     }
 
-    setIsSavingCustom(true);
     try {
-      // if (
-      //   !jobData.custom_interview_questions ||
-      //   jobData.custom_interview_questions.length === 0
-      // ) {
-      //   toast.error("Please add at least one custom question");
-      //   setIsSavingCustom(false);
-      //   return;
-      // }
+      const validationResult = customInterviewQuestionFormSchema.safeParse(
+        newCustomInterviewQuestion
+      );
+      if (!validationResult.success) {
+        const newErrors: Record<string, string> = {};
+        validationResult.error.errors.forEach((error) => {
+          const path = error.path[0];
+          if (typeof path === "string") {
+            newErrors[path] = error.message;
+          }
+        });
+        setErrors(newErrors);
+        console.log(errors);
+        throw new Error(
+          "Please fill in all required fields for custom questions"
+        );
+      }
 
-      // Validate custom questions
-      const customQuestionSchema = z.object({
-        question: z.string().nonempty({ message: "Question is required" }),
-        question_type: z.enum([
-          "technical",
-          "behavioral",
-          "problem_solving",
-          "custom",
-        ]),
-        order_number: z.number(),
+      const res = await interviewQuestionAPI.create(
+        newCustomInterviewQuestion,
+        jobData.id
+      );
+      if (res.status != 200) {
+        throw new Error("Could not create question");
+      }
+
+      setJobData({
+        ...jobData,
+        custom_interview_questions: [
+          ...(jobData.custom_interview_questions || []),
+          res.data,
+        ],
       });
 
-      const validationSchema = z.object({
-        custom_interview_questions: z.array(customQuestionSchema),
-      });
-
-      // const validationResult = validationSchema.safeParse({
-      //   custom_interview_questions: jobData.custom_interview_questions,
-      // });
-      // if (!validationResult.success) {
-      //   const newErrors: Record<string, string> = {};
-      //   validationResult.error.errors.forEach((error) => {
-      //     const path = error.path[0];
-      //     if (typeof path === "string") {
-      //       newErrors[path] = error.message;
-      //     }
-      //   });
-      //   setErrors(newErrors);
-      //   toast.error("Please fill in all required fields for custom questions");
-      //   setIsSavingCustom(false);
-      //   return;
-      // }
-
-      // Save each custom question
-      // for (const question of jobData.custom_interview_questions) {
-      //   await api.post(
-      //     "/recruiter/interview-question",
-      //     {
-      //       question: question.question,
-      //       question_type: question.question_type,
-      //       order_number: question.order_number,
-      //       job_id: jobData.id,
-      //     },
-      //     {
-      //       headers: {
-      //         Authorization: `Bearer ${localStorage.getItem("token")}`,
-      //       },
-      //     }
-      //   );
-      // }
-
-      toast.success("Custom questions saved successfully");
+      toast.success("Custom question saved successfully");
     } catch (error: any) {
-      console.error("Error saving custom questions:", error);
       let errorMessage = "Failed to save custom questions";
 
       if (error.response?.data?.detail) {
@@ -1065,13 +614,9 @@ const NewJob = () => {
 
       toast.error(errorMessage);
     } finally {
-      setIsSavingCustom(false);
+      setIsSaving(false);
     }
   };
-
-  // Add state for custom questions saving
-  const [isSavingCustom, setIsSavingCustom] = useState(false);
-  const [isSavingMcq, setIsSavingMcq] = useState(false);
 
   return (
     <DashboardLayout>
@@ -1702,9 +1247,7 @@ const NewJob = () => {
                             <div className="space-y-2">
                               <Label>Time Limit (minutes)</Label>
                               <Select
-                                value={
-                                  question.time_minutes?.toString() || "15"
-                                }
+                                value={question.time_minutes?.toString()}
                                 disabled
                               >
                                 <SelectTrigger>
@@ -1830,11 +1373,12 @@ const NewJob = () => {
                         <div className="space-y-2">
                           <Label>Time Limit (minutes)</Label>
                           <Select
-                            value={
-                              newDSAQuestion?.time_minutes?.toString() || "15"
-                            }
+                            value={newDSAQuestion?.time_minutes?.toString()}
                             onValueChange={(value) => {
-                              handleNewDsaQuestionChange("time_minutes", value);
+                              handleNewDsaQuestionChange(
+                                "time_minutes",
+                                parseInt(value)
+                              );
                             }}
                           >
                             <SelectTrigger>
@@ -1940,10 +1484,9 @@ const NewJob = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={handleTestCaseAdd}
+                            onClick={handleSaveTestCase}
                           >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Test Case
+                            Save Test Case
                           </Button>
                         </div>
                       </div>
@@ -1964,8 +1507,7 @@ const NewJob = () => {
 
                   <div className="flex justify-end mt-6">
                     <Button type="button" onClick={handleCreateDSAQuestion}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add DSA Question
+                      Save DSA Question
                     </Button>
                   </div>
 
@@ -2067,7 +1609,7 @@ const NewJob = () => {
                               </Label>
                               <Textarea
                                 id={`question-${index}`}
-                                value={question.title}
+                                value={question.description}
                                 disabled
                                 placeholder="Enter your question"
                               />
@@ -2075,11 +1617,13 @@ const NewJob = () => {
 
                             <div className="space-y-2">
                               <div className="mt-2">
-                                <img
-                                  src={question.imageUrl}
-                                  alt="Question preview"
-                                  className="max-w-xs max-h-48 object-contain rounded-md border border-gray-200"
-                                />
+                                {question.image_url && (
+                                  <img
+                                    src={question.image_url}
+                                    alt="Question preview"
+                                    className="max-w-xs max-h-48 object-contain rounded-md border border-gray-200"
+                                  />
+                                )}
                               </div>
                             </div>
 
@@ -2142,12 +1686,16 @@ const NewJob = () => {
                                 >
                                   <div
                                     className={
-                                      option.correct
-                                        ? "outline-1 outline-green-400"
-                                        : ""
+                                      "w-full p-2 rounded flex items-center" +
+                                      (option.correct
+                                        ? " border-green-400 border text-green-400"
+                                        : " ")
                                     }
                                   >
                                     {option.label}
+                                    {option.correct && (
+                                      <Check className="ml-auto" size={16} />
+                                    )}
                                   </div>
                                 </div>
                               ))}
@@ -2178,9 +1726,12 @@ const NewJob = () => {
                           <div className="grid gap-2">
                             <Label>Question</Label>
                             <Textarea
-                              value={newQuizQuestion?.title}
+                              value={newQuizQuestion?.description}
                               onChange={(e) =>
-                                handleMcqQuestionChange("title", e.target.value)
+                                handleMcqQuestionChange(
+                                  "description",
+                                  e.target.value
+                                )
                               }
                               placeholder="Enter your question"
                             />
@@ -2206,13 +1757,23 @@ const NewJob = () => {
                               onValueChange={(value) => {
                                 handleMcqQuestionChange("type", value);
                                 if (value == "single") {
-                                  setNewQuizOptions([{}, {}, {}, {}]);
+                                  setNewQuizOptions([
+                                    { label: "", correct: false },
+                                    { label: "", correct: false },
+                                    { label: "", correct: false },
+                                    { label: "", correct: false },
+                                  ]);
                                 } else if (value == "multiple") {
-                                  setNewQuizOptions([{}, {}, {}, {}]);
+                                  setNewQuizOptions([
+                                    { label: "", correct: false },
+                                    { label: "", correct: false },
+                                    { label: "", correct: false },
+                                    { label: "", correct: false },
+                                  ]);
                                 } else if (value == "true_false") {
                                   setNewQuizOptions([
-                                    { label: "True" },
-                                    { label: "False" },
+                                    { label: "True", correct: false },
+                                    { label: "False", correct: false },
                                   ]);
                                 }
                               }}
@@ -2282,7 +1843,7 @@ const NewJob = () => {
                                   value={
                                     newQuizOptions.filter(
                                       (option) => option.correct == true
-                                    )[0].label
+                                    )?.[0]?.label
                                   }
                                   onValueChange={(value) => {
                                     setNewQuizOptions([
@@ -2315,7 +1876,7 @@ const NewJob = () => {
                                 value={
                                   newQuizOptions.filter(
                                     (option) => option.correct == true
-                                  )?.[0].label
+                                  )?.[0]?.label
                                 }
                                 onValueChange={(value) => {
                                   let options = newQuizOptions;
@@ -2336,7 +1897,7 @@ const NewJob = () => {
                                   ]);
                                 }}
                               >
-                                <div>
+                                <div className="flex items-center gap-2">
                                   <RadioGroupItem
                                     value={newQuizOptions[0].label || ""}
                                   />
@@ -2356,7 +1917,7 @@ const NewJob = () => {
                                     placeholder={`Option 1`}
                                   />
                                 </div>
-                                <div>
+                                <div className="flex items-center gap-2">
                                   <RadioGroupItem
                                     value={newQuizOptions[1].label || ""}
                                   />
@@ -2376,7 +1937,7 @@ const NewJob = () => {
                                     placeholder={`Option 2`}
                                   />
                                 </div>
-                                <div>
+                                <div className="flex items-center gap-2">
                                   <RadioGroupItem
                                     value={newQuizOptions[2].label || ""}
                                   />
@@ -2396,7 +1957,7 @@ const NewJob = () => {
                                     placeholder={`Option 2`}
                                   />
                                 </div>
-                                <div>
+                                <div className="flex items-center gap-2">
                                   <RadioGroupItem
                                     value={newQuizOptions[3].label || ""}
                                   />
@@ -2420,60 +1981,122 @@ const NewJob = () => {
                             )}
                             {newQuizQuestion.type === "multiple" && (
                               <div>
-                                <Checkbox
-                                  checked={newQuizOptions[0].correct}
-                                  onCheckedChange={(checked) => {
-                                    let options = newQuizOptions;
-                                    if (checked) {
-                                      options[0].correct = true;
-                                    } else {
-                                      options[0].correct = false;
-                                    }
-                                    setNewQuizOptions([...options]);
-                                  }}
-                                />
-                                <Checkbox
-                                  checked={
-                                    newQuizQuestion?.options?.[1].correct
-                                  }
-                                  onCheckedChange={(checked) => {
-                                    let options = newQuizOptions;
-                                    if (checked) {
-                                      options[1].correct = true;
-                                    } else {
-                                      options[1].correct = false;
-                                    }
-                                    setNewQuizOptions([...options]);
-                                  }}
-                                />
-                                <Checkbox
-                                  checked={
-                                    newQuizQuestion?.options?.[2].correct
-                                  }
-                                  onCheckedChange={(checked) => {
-                                    let options = newQuizOptions;
-                                    if (checked) {
-                                      options[2].correct = true;
-                                    } else {
-                                      options[2].correct = false;
-                                    }
-                                    setNewQuizOptions([...options]);
-                                  }}
-                                />
-                                <Checkbox
-                                  checked={
-                                    newQuizQuestion?.options?.[3].correct
-                                  }
-                                  onCheckedChange={(checked) => {
-                                    let options = newQuizOptions;
-                                    if (checked) {
-                                      options[3].correct = true;
-                                    } else {
-                                      options[3].correct = false;
-                                    }
-                                    setNewQuizOptions([...options]);
-                                  }}
-                                />
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={newQuizOptions[0].correct}
+                                    onCheckedChange={(checked) => {
+                                      let options = newQuizOptions;
+                                      if (checked) {
+                                        options[0].correct = true;
+                                      } else {
+                                        options[0].correct = false;
+                                      }
+                                      setNewQuizOptions([...options]);
+                                    }}
+                                  />
+                                  <Input
+                                    value={newQuizOptions[0].label}
+                                    onChange={(e) => {
+                                      setNewQuizOptions([
+                                        {
+                                          label: e.target.value,
+                                          correct: newQuizOptions[0].correct,
+                                        },
+                                        newQuizOptions[1],
+                                        newQuizOptions[2],
+                                        newQuizOptions[3],
+                                      ]);
+                                    }}
+                                    placeholder={`Option 1`}
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={newQuizOptions[1].correct}
+                                    onCheckedChange={(checked) => {
+                                      let options = newQuizOptions;
+                                      if (checked) {
+                                        options[1].correct = true;
+                                      } else {
+                                        options[1].correct = false;
+                                      }
+                                      setNewQuizOptions([...options]);
+                                    }}
+                                  />
+                                  <Input
+                                    value={newQuizOptions[1].label}
+                                    onChange={(e) => {
+                                      setNewQuizOptions([
+                                        newQuizOptions[0],
+                                        {
+                                          label: e.target.value,
+                                          correct: newQuizOptions[1].correct,
+                                        },
+                                        newQuizOptions[2],
+                                        newQuizOptions[3],
+                                      ]);
+                                    }}
+                                    placeholder={`Option 2`}
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={newQuizOptions[2].correct}
+                                    onCheckedChange={(checked) => {
+                                      let options = newQuizOptions;
+                                      if (checked) {
+                                        options[2].correct = true;
+                                      } else {
+                                        options[2].correct = false;
+                                      }
+                                      setNewQuizOptions([...options]);
+                                    }}
+                                  />
+                                  <Input
+                                    value={newQuizOptions[2].label}
+                                    onChange={(e) => {
+                                      setNewQuizOptions([
+                                        newQuizOptions[0],
+                                        newQuizOptions[1],
+                                        {
+                                          label: e.target.value,
+                                          correct: newQuizOptions[2].correct,
+                                        },
+                                        newQuizOptions[3],
+                                      ]);
+                                    }}
+                                    placeholder={`Option 3`}
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={newQuizOptions[3].correct}
+                                    onCheckedChange={(checked) => {
+                                      let options = newQuizOptions;
+                                      if (checked) {
+                                        options[3].correct = true;
+                                      } else {
+                                        options[3].correct = false;
+                                      }
+                                      setNewQuizOptions([...options]);
+                                    }}
+                                  />
+                                  <Input
+                                    value={newQuizOptions[3].label}
+                                    onChange={(e) => {
+                                      setNewQuizOptions([
+                                        newQuizOptions[0],
+                                        newQuizOptions[1],
+                                        newQuizOptions[2],
+                                        {
+                                          label: e.target.value,
+                                          correct: newQuizOptions[3].correct,
+                                        },
+                                      ]);
+                                    }}
+                                    placeholder={`Option 4`}
+                                  />
+                                </div>
                               </div>
                             )}
                           </div>
@@ -2481,7 +2104,7 @@ const NewJob = () => {
                           <div className="flex justify-end mt-4">
                             <Button
                               type="button"
-                              onClick={handleSaveMcqQuestions}
+                              onClick={handleSaveMcqQuestion}
                               disabled={isSaving}
                               variant="outline"
                             >
@@ -2505,7 +2128,7 @@ const NewJob = () => {
                   <div className="flex justify-end mt-4">
                     <Button
                       type="button"
-                      onClick={handleSaveMcqQuestions}
+                      onClick={() => setActiveTab("custom")}
                       disabled={isSaving}
                       variant="outline"
                     >
@@ -2528,26 +2151,127 @@ const NewJob = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {/* <div className="space-y-4">
+                  <div className="space-y-4">
                     {jobData.custom_interview_questions?.map(
-                      (question, index) => renderCustomQuestion(question, index)
+                      (question, index) => (
+                        <Card key={index} className="mb-4">
+                          <CardContent className="pt-6">
+                            <div className="grid gap-4">
+                              <div className="grid gap-2">
+                                <Label htmlFor={`question-${index}`}>
+                                  Question
+                                </Label>
+                                <Textarea
+                                  id={`question-${index}`}
+                                  value={question.question}
+                                  disabled
+                                  placeholder="Enter your interview question"
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label>Question Type</Label>
+                                <Select value={question.question_type} disabled>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select question type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="technical">
+                                      Technical
+                                    </SelectItem>
+                                    <SelectItem value="behavioral">
+                                      Behavioral
+                                    </SelectItem>
+                                    <SelectItem value="problem_solving">
+                                      Problem Solving
+                                    </SelectItem>
+                                    <SelectItem value="custom">
+                                      Custom
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="flex justify-end">
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  // onClick={() => handleCustomQuestionDelete(index)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Question
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
                     )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      // onClick={handleCustomQuestionAdd}
-                      className="w-full"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Custom Question
-                    </Button>
-                    <div className="flex justify-end mt-4">
+                    <Card className="mb-4">
+                      <CardContent className="pt-6">
+                        <div className="grid gap-4">
+                          <div className="grid gap-2">
+                            <Label>Order</Label>
+                            <Input
+                              type="number"
+                              value={newCustomInterviewQuestion.order_number}
+                              onChange={(e) =>
+                                handleCustomQuestionChange(
+                                  "order_number",
+                                  parseInt(e.target.value)
+                                )
+                              }
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Question</Label>
+                            <Textarea
+                              value={newCustomInterviewQuestion.question}
+                              onChange={(e) =>
+                                handleCustomQuestionChange(
+                                  "question",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Enter your interview question"
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Question Type</Label>
+                            <Select
+                              value={newCustomInterviewQuestion.question_type}
+                              onValueChange={(value) =>
+                                handleCustomQuestionChange(
+                                  "question_type",
+                                  value
+                                )
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select question type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="technical">
+                                  Technical
+                                </SelectItem>
+                                <SelectItem value="behavioral">
+                                  Behavioral
+                                </SelectItem>
+                                <SelectItem value="problem_solving">
+                                  Problem Solving
+                                </SelectItem>
+                                <SelectItem value="custom">Custom</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <div className="flex justify-end">
                       <Button
                         type="button"
-                        onClick={handleSaveCustomQuestions}
-                        disabled={isSavingCustom}
+                        onClick={handleCreateCustomInterviewQuestion}
+                        disabled={isSaving}
                       >
-                        {isSavingCustom ? (
+                        {isSaving ? (
                           <>
                             <LoadingSpinner className="mr-2" />
                             Saving...
@@ -2555,12 +2279,22 @@ const NewJob = () => {
                         ) : (
                           <>
                             <Save className="h-4 w-4 mr-2" />
-                            Save Questions
+                            Save Question
                           </>
                         )}
                       </Button>
                     </div>
-                  </div> */}
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        type="button"
+                        onClick={() => navigate("/dashboard/jobs")}
+                        disabled={isSaving}
+                      >
+                        <Check />
+                        Finish
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

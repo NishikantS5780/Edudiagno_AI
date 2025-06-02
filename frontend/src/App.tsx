@@ -53,8 +53,6 @@ import Jobs4 from "@/pages/Jobs4";
 import Analytics4 from "@/pages/Analytics4";
 import Settings4 from "@/pages/Settings4";
 
-import { adminRoutes } from "@/routes/admin";
-
 import AdminLayout from "@/pages/Admin/AdminLayout";
 import AdminDashboard from "@/pages/Admin/Dashboard";
 import UserManagement from "@/pages/Admin/Users";
@@ -143,16 +141,16 @@ const App = () => {
             </RequireAuth>
           }
         />
-        {/* <Route
-              path="/dashboard/jobs/:id"
-              element={
-                <RequireAuth>
-                  <RequireProfileVerified>
-                    <JobDetail />
-                  </RequireProfileVerified>
-                </RequireAuth>
-              }
-            /> */}
+        <Route
+          path="/dashboard/jobs/:id"
+          element={
+            <RequireAuth>
+              <RequireProfileVerified>
+                <JobDetail />
+              </RequireProfileVerified>
+            </RequireAuth>
+          }
+        />
         {/* <Route
               path="/dashboard/jobs/:id/edit"
               element={

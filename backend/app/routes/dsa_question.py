@@ -42,17 +42,12 @@ async def create_dsa_question(
     data["test_cases"] = []
 
     for test_case in dsa_question_data.test_cases:
-        dsa_test_case = DSATestCase(
-            input=test_case.input,
-            expected_output=test_case.expected_output,
-            dsa_question_id=test_case.dsa_question_id,
-        )
         stmt = (
             insert(DSATestCase)
             .values(
                 input=test_case.input,
                 expected_output=test_case.expected_output,
-                dsa_question_id=test_case.dsa_question_id,
+                dsa_question_id=dsa_question["id"],
             )
             .returning(
                 DSATestCase.id,
@@ -70,15 +65,31 @@ async def create_dsa_question(
 
 @router.get("")
 async def get_dsa_question(job_id: str, db: Session = Depends(database.get_db)):
-    stmt = select(
-        DSAQuestion.id,
-        DSAQuestion.title,
-        DSAQuestion.description,
-        DSAQuestion.difficulty,
-        DSAQuestion.time_minutes,
-    ).where(DSAQuestion.job_id == int(job_id))
+    stmt = (
+        select(
+            DSAQuestion.id,
+            DSAQuestion.title,
+            DSAQuestion.description,
+            DSAQuestion.difficulty,
+            DSAQuestion.time_minutes,
+        )
+        .where(DSAQuestion.job_id == int(job_id))
+        .order_by(DSAQuestion.id)
+    )
     result = db.execute(stmt)
-    dsa_questions = result.mappings().all()
+    dsa_questions = [dict(q) for q in result.mappings().all()]
+
+    for question in dsa_questions:
+        stmt = select(
+            DSATestCase.id,
+            DSATestCase.expected_output,
+            DSATestCase.input,
+            DSATestCase.dsa_question_id,
+        ).where(DSATestCase.dsa_question_id == question["id"])
+        result = db.execute(stmt)
+        test_cases = [dict(t) for t in result.mappings().all()]
+        question["test_cases"] = test_cases
+
     return dsa_questions
 
 

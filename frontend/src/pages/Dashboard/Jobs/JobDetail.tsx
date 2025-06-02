@@ -5,16 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   ArrowLeft,
   Edit,
@@ -23,25 +13,21 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Video,
   Copy,
-  Share2,
   Mail,
   Phone,
   MapPin,
   GraduationCap,
   Briefcase,
   Link as LinkIcon,
-  BookOpen,
-  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
-import { jobAPI, interviewAPI } from "@/lib/api";
 import { JobData } from "@/types/job";
 import { InterviewData } from "@/types/interview";
 import DsaManagement from "@/components/jobs/DsaManagement";
 import McqManagement from "@/components/jobs/McqManagement";
+import { jobAPI } from "@/services/jobApi";
 
 const JobDetail = () => {
   const { id } = useParams();
@@ -64,7 +50,7 @@ const JobDetail = () => {
         toast.error("Job ID is required");
         return;
       }
-      const response = await jobAPI.recruiterGetJob(id as string);
+      const response = await jobAPI.getCurrentRecruiterJob(id);
       const data = response.data;
       setJob({
         id: data.id,
@@ -99,29 +85,29 @@ const JobDetail = () => {
 
   const fetchInterviews = async () => {
     try {
-      const response = await interviewAPI.getInterviews({ job_id: id });
-      const formattedInterviews = response.data.interviews.map(
-        (interview: any) => ({
-          id: interview.id,
-          status: interview.status,
-          firstName: interview.first_name,
-          lastName: interview.last_name,
-          email: interview.email,
-          phone: interview.phone,
-          workExperience: interview.work_experience,
-          education: interview.education,
-          skills: interview.skills,
-          location: interview.location,
-          linkedinUrl: interview.linkedin_url,
-          portfolioUrl: interview.portfolio_url,
-          resumeUrl: interview.resume_url,
-          resumeMatchScore: interview.resume_match_score,
-          resumeMatchFeedback: interview.resume_match_feedback,
-          overallScore: interview.overall_score,
-          feedback: interview.feedback,
-        })
-      );
-      setInterviews(formattedInterviews);
+      // const response = await interviewAPI.getInterviews({ job_id: id });
+      // const formattedInterviews = response.data.interviews.map(
+      //   (interview: any) => ({
+      //     id: interview.id,
+      //     status: interview.status,
+      //     firstName: interview.first_name,
+      //     lastName: interview.last_name,
+      //     email: interview.email,
+      //     phone: interview.phone,
+      //     workExperience: interview.work_experience,
+      //     education: interview.education,
+      //     skills: interview.skills,
+      //     location: interview.location,
+      //     linkedinUrl: interview.linkedin_url,
+      //     portfolioUrl: interview.portfolio_url,
+      //     resumeUrl: interview.resume_url,
+      //     resumeMatchScore: interview.resume_match_score,
+      //     resumeMatchFeedback: interview.resume_match_feedback,
+      //     overallScore: interview.overall_score,
+      //     feedback: interview.feedback,
+      //   })
+      // );
+      // setInterviews(formattedInterviews);
     } catch (error) {
       console.error("Error fetching interviews:", error);
       toast.error("Failed to load candidates");
@@ -133,9 +119,9 @@ const JobDetail = () => {
 
     if (window.confirm("Are you sure you want to delete this job?")) {
       try {
-        await jobAPI.deleteJob(job.id.toString());
-        toast.success("Job deleted successfully");
-        navigate("/dashboard/jobs");
+        // await jobAPI.deleteJob(job.id.toString());
+        // toast.success("Job deleted successfully");
+        // navigate("/dashboard/jobs");
       } catch (error) {
         console.error("Error deleting job:", error);
         toast.error("Failed to delete job");
@@ -192,11 +178,11 @@ const JobDetail = () => {
     if (!job) return;
 
     try {
-      setLoading(true);
-      await jobAPI.updateJob(job.id.toString(), editedJob);
-      toast.success("Job details updated successfully");
-      fetchJobDetails();
-      setIsEditMode(false);
+      // setLoading(true);
+      // await jobAPI.updateJob(job.id.toString(), editedJob);
+      // toast.success("Job details updated successfully");
+      // fetchJobDetails();
+      // setIsEditMode(false);
     } catch (error) {
       console.error("Error updating job:", error);
       toast.error("Failed to update job details");
@@ -244,7 +230,6 @@ const JobDetail = () => {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-bold">{job.title}</h1>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
@@ -289,7 +274,7 @@ const JobDetail = () => {
                     {job.department} • {job.location}
                   </p>
                 </div>
-                {getStatusBadge(job.status)}
+                {/* {getStatusBadge(job.status)} */}
               </div>
             </CardHeader>
             <CardContent>
@@ -299,6 +284,9 @@ const JobDetail = () => {
                   <TabsTrigger value="candidates">Candidates</TabsTrigger>
                   <TabsTrigger value="dsa">DSA Questions</TabsTrigger>
                   <TabsTrigger value="mcq">MCQ Questions</TabsTrigger>
+                  <TabsTrigger value="custom_interview_questions">
+                    Interview Questions
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" className="space-y-6">
                   <div className="space-y-4">
@@ -473,11 +461,12 @@ const JobDetail = () => {
                   </div>
                 </TabsContent>
                 <TabsContent value="dsa">
-                  {job && <DsaManagement jobId={job.id} />}
+                  {job.id && <DsaManagement jobId={job.id} />}
                 </TabsContent>
                 <TabsContent value="mcq">
-                  {job && <McqManagement jobId={job.id} />}
+                  {job.id && <McqManagement jobId={job.id} />}
                 </TabsContent>
+                <TabsContent value="custom_interview_questions"></TabsContent>
               </Tabs>
             </CardContent>
           </Card>

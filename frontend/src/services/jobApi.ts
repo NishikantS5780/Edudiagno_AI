@@ -60,6 +60,10 @@ export const jobAPI = {
     );
     return res;
   },
+  getCurrentRecruiterJob: (jobId: string) =>
+    axios.get(`${config.API_BASE_URL}/job?id=${jobId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    }),
   updateJob: async (jobId: string, data: JobData) => {
     const res = await axios.put(
       `${config.API_BASE_URL}/job`,

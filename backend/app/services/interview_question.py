@@ -8,9 +8,20 @@ from app.models import InterviewQuestion
 def create_interview_question(
     question_data: schemas.CreateInterviewQuestion, db: Session
 ):
-    stmt = insert(InterviewQuestion).values(question_data.model_dump())
-    db.execute(stmt)
+    stmt = (
+        insert(InterviewQuestion)
+        .values(question_data.model_dump())
+        .returning(
+            InterviewQuestion.id,
+            InterviewQuestion.job_id,
+            InterviewQuestion.order_number,
+            InterviewQuestion.question,
+            InterviewQuestion.question_type,
+        )
+    )
+    result = db.execute(stmt)
     db.commit()
+    return result.mappings().one()
 
 
 def get_interview_question_by_job_id(job_id: int, db: Session):

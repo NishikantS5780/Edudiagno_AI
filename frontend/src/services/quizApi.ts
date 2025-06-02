@@ -4,22 +4,20 @@ import axios from "axios";
 
 export const quizAPI = {
   createQuizQuestions: async (data: MCQuestion, jobId: number, file?: File) => {
-    const formData = new FormData();
-    if (
-      !data.title ||
-      !data.type ||
-      !data.category ||
-      !data.time_seconds ||
-      !file
-    ) {
-      return;
+    if (!data.description || !data.type || !data.category) {
+      throw new Error("Missing details")
     }
-    formData.append("description", data.title);
+    const formData = new FormData();
+    formData.append("description", data.description);
     formData.append("type", data.type);
     formData.append("category", data.category);
     formData.append("job_id", jobId.toString());
-    formData.append("time_seconds", data.time_seconds.toString());
-    formData.append("image", file);
+    if (data.time_seconds) {
+      formData.append("time_seconds", data.time_seconds.toString());
+    }
+    if (file) {
+      formData.append("image", file);
+    }
 
     const res = await axios.post(
       `${config.API_BASE_URL}/quiz-question`,
@@ -28,15 +26,17 @@ export const quizAPI = {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }
     );
-
     return res;
   },
   createQuizOption: async (
     option: { label?: string; correct?: boolean },
     question_id?: number
   ) => {
-    if (!option.label || !option.correct || !question_id) {
+    if (!option.label || !question_id) {
       return;
+    }
+    if (!option.correct) {
+      option.correct = false;
     }
 
     const res = await axios.post(
@@ -50,6 +50,15 @@ export const quizAPI = {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
+      }
+    );
+    return res;
+  },
+  getByJobId: async (jobId: string) => {
+    const res = await axios.get(
+      `${config.API_BASE_URL}/quiz-question?job_id=${jobId}`,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
       }
     );
     return res;

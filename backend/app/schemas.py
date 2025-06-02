@@ -193,6 +193,12 @@ class CreateDSATestCase(BaseModel):
     dsa_question_id: Optional[int] = None
 
 
+class UpdateDSATestCase(BaseModel):
+    input: Optional[str] = None
+    expected_output: Optional[str] = None
+    id: int
+
+
 class CreateDSAQuestion(BaseModel):
     title: str
     description: str

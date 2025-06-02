@@ -22,12 +22,19 @@ export interface DSAQuestion {
 
 export interface MCQuestion {
   id?: number;
-  title?: string;
+  description?: string;
   type?: "single" | "multiple" | "true_false";
   category?: "technical" | "aptitude";
   time_seconds?: number;
   options?: { id?: number; label?: string; correct?: boolean }[];
-  imageUrl?: string;
+  image_url?: string;
+}
+
+export interface MCQResponse {
+  id: number;
+  question_id: number;
+  option_id: number;
+  interview_id: number;
 }
 
 export interface JobData {

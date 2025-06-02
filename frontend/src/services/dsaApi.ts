@@ -1,5 +1,5 @@
 import { config } from "@/config";
-import { DSAQuestion } from "@/types/job";
+import { DSAQuestion, TestCase } from "@/types/job";
 import axios from "axios";
 
 export const dsaAPI = {
@@ -13,5 +13,26 @@ export const dsaAPI = {
       { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
     );
     return res;
+  },
+  createTestCase: async (data: TestCase, dsaQuestionId: number) => {
+    await axios.post(
+      `${config.API_BASE_URL}/dsa-test-case`,
+      { ...data, dsa_question_id: dsaQuestionId },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
+  },
+  update: async (data: DSAQuestion) => {
+    await axios.put(`${config.API_BASE_URL}/dsa-question`, data, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+  },
+  getDSAQuestion: async (jobId: string) => {
+    const response = await axios.get(`${config.API_BASE_URL}/dsa-question`, {
+      params: { job_id: jobId },
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    return response;
   },
 };

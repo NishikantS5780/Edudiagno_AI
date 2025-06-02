@@ -67,13 +67,12 @@ import { jobAPI } from "@/services/jobApi";
 
 const JobsPage = () => {
   const [jobs, setJobs] = useState<JobData[]>([]);
-  const [filteredJobs, setFilteredJobs] = useState<JobData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
-  const [jobToDelete, setJobToDelete] = useState<number | null>(null);
+  const [jobToDelete, setJobToDelete] = useState<number | null>();
   const [sortField, setSortField] = useState<
     "title" | "department" | "city" | "type" | "show_salary" | "status"
   >("title");
@@ -85,12 +84,12 @@ const JobsPage = () => {
   const itemsPerPage = 10;
 
   // Function to capitalize first letter of each word
-  const capitalizeWords = (str: string) => {
-    return str
-      .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-  };
+  // const capitalizeWords = (str: string) => {
+  //   return str
+  //     .split(" ")
+  //     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+  //     .join(" ");
+  // };
 
   // Get unique departments and cities from jobs data
   const departments = React.useMemo(() => {
@@ -153,69 +152,41 @@ const JobsPage = () => {
   };
 
   // Apply filters whenever jobs, searchQuery, or filters change
-  useEffect(() => {
-    let filtered = [...jobs];
+  // useEffect(() => {
+  //   let filtered = [...jobs];
 
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (job) =>
-          job.title.toLowerCase().includes(query) ||
-          job.department.toLowerCase().includes(query) ||
-          job.city.toLowerCase().includes(query)
-      );
-    }
+  //   // Apply search filter
+  //   if (searchQuery) {
+  //     const query = searchQuery.toLowerCase();
+  //     filtered = filtered.filter(
+  //       (job) =>
+  //         job.title.toLowerCase().includes(query) ||
+  //         job.department.toLowerCase().includes(query) ||
+  //         job.city.toLowerCase().includes(query)
+  //     );
+  //   }
 
-    // Apply department filter
-    if (departmentFilter !== "all") {
-      filtered = filtered.filter((job) => job.department === departmentFilter);
-    }
+  //   // Apply department filter
+  //   if (departmentFilter !== "all") {
+  //     filtered = filtered.filter((job) => job.department === departmentFilter);
+  //   }
 
-    // Apply city filter
-    if (cityFilter !== "all") {
-      filtered = filtered.filter((job) => job.city === cityFilter);
-    }
+  //   // Apply city filter
+  //   if (cityFilter !== "all") {
+  //     filtered = filtered.filter((job) => job.city === cityFilter);
+  //   }
 
-    // Apply status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((job) => job.status === statusFilter);
-    }
+  //   // Apply status filter
+  //   if (statusFilter !== "all") {
+  //     filtered = filtered.filter((job) => job.status === statusFilter);
+  //   }
 
-    setFilteredJobs(filtered);
-  }, [jobs, searchQuery, departmentFilter, cityFilter, statusFilter]);
+  //   setFilteredJobs(filtered);
+  // }, [jobs, searchQuery, departmentFilter, cityFilter, statusFilter]);
 
   useEffect(() => {
     fetchJobs();
   }, [sortField, sortOrder, currentPage]);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return (
-          <Badge variant="outline" className="bg-success/10 text-success">
-            <CheckCircle className="h-3 w-3 mr-1" /> Active
-          </Badge>
-        );
-      case "draft":
-        return (
-          <Badge variant="outline" className="bg-muted text-muted-foreground">
-            <Clock className="h-3 w-3 mr-1" /> Draft
-          </Badge>
-        );
-      case "closed":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-destructive/10 text-destructive"
-          >
-            <XCircle className="h-3 w-3 mr-1" /> Closed
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
 
   const handleDeleteJob = async (jobId: number) => {
     try {
@@ -232,15 +203,6 @@ const JobsPage = () => {
     } finally {
       setJobToDelete(null);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    // Format the date as MM/DD/YYYY
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
   };
 
   const copyInterviewLink = async (jobId: number) => {
@@ -293,7 +255,6 @@ const JobsPage = () => {
         </PageHeader>
 
         <div className="space-y-4">
-          {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -317,38 +278,8 @@ const JobsPage = () => {
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
-            <Select
-              value={departmentFilter}
-              onValueChange={setDepartmentFilter}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>
-                    {capitalizeWords(dept)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={cityFilter} onValueChange={setCityFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="City" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Cities</SelectItem>
-                {cities.map((city) => (
-                  <SelectItem key={city} value={city}>
-                    {capitalizeWords(city)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
-          {/* Jobs Table */}
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
@@ -418,28 +349,64 @@ const JobsPage = () => {
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
-                {loading ? (
+                {loading && (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
                       <LoadingSpinner />
                     </TableCell>
                   </TableRow>
-                ) : filteredJobs.length === 0 ? (
+                )}
+                {!loading && jobs.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
                       No jobs found
                     </TableCell>
                   </TableRow>
-                ) : (
-                  filteredJobs.map((job) => (
+                )}
+                {!loading &&
+                  jobs.length != 0 &&
+                  jobs.map((job) => (
                     <TableRow key={job.id}>
                       <TableCell className="font-medium">{job.title}</TableCell>
-                      <TableCell>{capitalizeWords(job.department)}</TableCell>
-                      <TableCell>{capitalizeWords(job.city)}</TableCell>
-                      <TableCell>{capitalizeWords(job.type)}</TableCell>
-                      <TableCell>{getStatusBadge(job.status)}</TableCell>
-                      <TableCell>{formatDate(job.createdAt)}</TableCell>
+                      <TableCell>{job.department}</TableCell>
+                      <TableCell>{job.city}</TableCell>
+                      <TableCell>{job.type}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={
+                            job.status == "active"
+                              ? "bg-success/10 text-success"
+                              : job.status == "draft"
+                              ? "bg-muted text-muted-foreground"
+                              : job.status == "closed"
+                              ? "bg-destructive/10 text-destructive"
+                              : ""
+                          }
+                        >
+                          {job.status == "active" && (
+                            <>
+                              <CheckCircle className="h-3 w-3 mr-1" /> Active
+                            </>
+                          )}
+                          {job.status == "draft" && (
+                            <>
+                              <Clock className="h-3 w-3 mr-1" /> Draft
+                            </>
+                          )}
+                          {job.status == "closed" && (
+                            <>
+                              <XCircle className="h-3 w-3 mr-1" /> Closed
+                            </>
+                          )}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {job.createdAt &&
+                          new Date(job.createdAt).toLocaleDateString()}
+                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -462,7 +429,7 @@ const JobsPage = () => {
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => copyInterviewLink(job.id)}
+                            // onClick={() => copyInterviewLink(job.id)}
                             >
                               <Share className="mr-2 h-4 w-4" />
                               Copy Interview Link
@@ -479,13 +446,11 @@ const JobsPage = () => {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  ))}
               </TableBody>
             </Table>
           </div>
 
-          {/* Pagination */}
           <div className="flex justify-center mt-4">
             <Pagination>
               <PaginationContent>
@@ -502,7 +467,6 @@ const JobsPage = () => {
                   />
                 </PaginationItem>
 
-                {/* First page */}
                 {currentPage > 2 && (
                   <PaginationItem>
                     <PaginationLink onClick={() => setCurrentPage(1)}>
@@ -511,14 +475,12 @@ const JobsPage = () => {
                   </PaginationItem>
                 )}
 
-                {/* Ellipsis if needed */}
                 {currentPage > 3 && (
                   <PaginationItem>
                     <PaginationEllipsis />
                   </PaginationItem>
                 )}
 
-                {/* Current page and surrounding pages */}
                 {Array.from({ length: 3 }, (_, i) => currentPage - 1 + i)
                   .filter((page) => page > 0 && page <= totalPages)
                   .map((page) => (
@@ -532,14 +494,12 @@ const JobsPage = () => {
                     </PaginationItem>
                   ))}
 
-                {/* Ellipsis if needed */}
                 {currentPage < totalPages - 2 && (
                   <PaginationItem>
                     <PaginationEllipsis />
                   </PaginationItem>
                 )}
 
-                {/* Last page */}
                 {currentPage < totalPages - 1 && (
                   <PaginationItem>
                     <PaginationLink onClick={() => setCurrentPage(totalPages)}>
@@ -565,7 +525,6 @@ const JobsPage = () => {
           </div>
         </div>
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog
           open={!!jobToDelete}
           onOpenChange={() => setJobToDelete(null)}

@@ -319,10 +319,6 @@ export const jobAPI = {
       }
     }
   },
-  getJob: (jobId: string) =>
-    api.get(`/job?id=${jobId}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    }),
 };
 
 export const textAPI = {
