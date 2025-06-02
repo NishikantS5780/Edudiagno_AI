@@ -84,6 +84,7 @@ async def get_quiz_questions(
             QuizQuestion.type,
             QuizQuestion.category,
             QuizQuestion.image_url,
+            QuizQuestion.time_seconds,
         ).where(QuizQuestion.job_id == int(job_id))
     else:
         response.status_code = 400

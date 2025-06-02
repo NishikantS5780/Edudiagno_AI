@@ -28,6 +28,7 @@ import { InterviewData } from "@/types/interview";
 import DsaManagement from "@/components/jobs/DsaManagement";
 import McqManagement from "@/components/jobs/McqManagement";
 import { jobAPI } from "@/services/jobApi";
+import InterviewQuestionManagement from "@/components/jobs/InterviewQuestionManagement";
 
 const JobDetail = () => {
   const { id } = useParams();
@@ -466,7 +467,9 @@ const JobDetail = () => {
                 <TabsContent value="mcq">
                   {job.id && <McqManagement jobId={job.id} />}
                 </TabsContent>
-                <TabsContent value="custom_interview_questions"></TabsContent>
+                <TabsContent value="custom_interview_questions">
+                  {job.id && <InterviewQuestionManagement jobId={job.id} />}
+                </TabsContent>
               </Tabs>
             </CardContent>
           </Card>

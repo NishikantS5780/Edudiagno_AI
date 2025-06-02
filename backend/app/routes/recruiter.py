@@ -270,6 +270,17 @@ async def delete_interview_question(
     return services.interview_question.delete_interview_question(id, db)
 
 
+@router.get("/interview-question")
+async def get_interview_question_by_job(
+    interview_id: int,
+    recruiter_id: int = Depends(authorize_recruiter),
+    db: Session = Depends(database.get_db),
+):
+    return services.interview_question_response.get_interview_question_response_by_interview_id(
+        interview_id, db
+    )
+
+
 @router.get("/interview-question-response")
 async def get_interview_question_response_by_interview(
     interview_id: int,

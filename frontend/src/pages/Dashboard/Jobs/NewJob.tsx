@@ -522,7 +522,6 @@ const NewJob = () => {
       const options = [];
       for (const option of newQuizOptions || []) {
         const res = await quizAPI.createQuizOption(option, quizData.id);
-        console.log(res);
         if (!res) {
           throw new Error("Failed to save MCQ option");
         }
@@ -547,9 +546,9 @@ const NewJob = () => {
       ]);
       setQuizImageFile(null);
 
-      toast.success("MCQ questions saved successfully");
+      toast.success("MCQ question saved successfully");
     } catch (error: any) {
-      let errorMessage = "Failed to save MCQ questions";
+      let errorMessage = "Failed to save MCQ question";
 
       if (error.response?.data?.detail) {
         errorMessage = error.response.data.detail;

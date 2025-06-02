@@ -20,4 +20,10 @@ export const interviewQuestionAPI = {
     );
     return res;
   },
+  getByJob: async (jobId: number) => {
+    const res = await axios.get(
+      `${config.API_BASE_URL}/interview-question?job_id=${jobId}`
+    );
+    return res;
+  },
 };
