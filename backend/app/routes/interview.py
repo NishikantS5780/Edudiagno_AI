@@ -253,7 +253,7 @@ async def get_interview(
         )
     result = db.execute(stmt)
     interviews = result.scalars().all()
-    count = db.execute(count_stmt).mappings().one()
+    count = db.execute(count_stmt).mappings().one_or_none() or count
 
     return {"interviews": interviews, "count": count["count"]}
 

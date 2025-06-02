@@ -20,6 +20,8 @@ import {
   GraduationCap,
   Briefcase,
   Link as LinkIcon,
+  Cross,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -29,6 +31,7 @@ import DsaManagement from "@/components/jobs/DsaManagement";
 import McqManagement from "@/components/jobs/McqManagement";
 import { jobAPI } from "@/services/jobApi";
 import InterviewQuestionManagement from "@/components/jobs/InterviewQuestionManagement";
+import { interviewAPI } from "@/services/interviewAPI";
 
 const JobDetail = () => {
   const { id } = useParams();
@@ -42,7 +45,7 @@ const JobDetail = () => {
 
   useEffect(() => {
     fetchJobDetails();
-    fetchInterviews();
+    // fetchInterviews();
   }, [id]);
 
   const fetchJobDetails = async () => {
@@ -86,29 +89,29 @@ const JobDetail = () => {
 
   const fetchInterviews = async () => {
     try {
-      // const response = await interviewAPI.getInterviews({ job_id: id });
-      // const formattedInterviews = response.data.interviews.map(
-      //   (interview: any) => ({
-      //     id: interview.id,
-      //     status: interview.status,
-      //     firstName: interview.first_name,
-      //     lastName: interview.last_name,
-      //     email: interview.email,
-      //     phone: interview.phone,
-      //     workExperience: interview.work_experience,
-      //     education: interview.education,
-      //     skills: interview.skills,
-      //     location: interview.location,
-      //     linkedinUrl: interview.linkedin_url,
-      //     portfolioUrl: interview.portfolio_url,
-      //     resumeUrl: interview.resume_url,
-      //     resumeMatchScore: interview.resume_match_score,
-      //     resumeMatchFeedback: interview.resume_match_feedback,
-      //     overallScore: interview.overall_score,
-      //     feedback: interview.feedback,
-      //   })
-      // );
-      // setInterviews(formattedInterviews);
+      const response = await interviewAPI.getInterviews({ job_id: id });
+      const formattedInterviews = response.data.interviews.map(
+        (interview: any) => ({
+          id: interview.id,
+          status: interview.status,
+          firstName: interview.first_name,
+          lastName: interview.last_name,
+          email: interview.email,
+          phone: interview.phone,
+          workExperience: interview.work_experience,
+          education: interview.education,
+          skills: interview.skills,
+          location: interview.location,
+          linkedinUrl: interview.linkedin_url,
+          portfolioUrl: interview.portfolio_url,
+          resumeUrl: interview.resume_url,
+          resumeMatchScore: interview.resume_match_score,
+          resumeMatchFeedback: interview.resume_match_feedback,
+          overallScore: interview.overall_score,
+          feedback: interview.feedback,
+        })
+      );
+      setInterviews(formattedInterviews);
     } catch (error) {
       console.error("Error fetching interviews:", error);
       toast.error("Failed to load candidates");
@@ -233,13 +236,6 @@ const JobDetail = () => {
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild>
-              <Link to={`/dashboard/jobs/${job?.id}/edit`}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Link>
-            </Button>
-
             <Button
               variant="outline"
               onClick={() => {
@@ -268,14 +264,31 @@ const JobDetail = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card className="md:col-span-3">
             <CardHeader>
+              <CardTitle className="flex gap-2 items-center">
+                <div>{job.title}</div>
+                <div className="ml-auto">
+                  {getStatusBadge(job.status || "")}
+                </div>
+                {!isEditMode && (
+                  <Button onClick={handleEditModeToggle} variant={"ghost"}>
+                    <Edit />
+                  </Button>
+                )}
+                {isEditMode && (
+                  <Button
+                    onClick={handleEditModeToggle}
+                    variant={"destructive"}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </CardTitle>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-xl">{job.title}</CardTitle>
                   <p className="text-muted-foreground">
                     {job.department} • {job.location}
                   </p>
                 </div>
-                {/* {getStatusBadge(job.status)} */}
               </div>
             </CardHeader>
             <CardContent>

@@ -422,12 +422,6 @@ const JobsPage = () => {
                                 View Details
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/dashboard/jobs/${job.id}/edit`}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </Link>
-                            </DropdownMenuItem>
                             <DropdownMenuItem
                             // onClick={() => copyInterviewLink(job.id)}
                             >

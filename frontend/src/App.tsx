@@ -28,7 +28,6 @@ import Dashboard from "@/pages/Dashboard/Dashboard";
 import JobsPage from "@/pages/Dashboard/Jobs/JobsPage";
 import NewJob from "@/pages/Dashboard/Jobs/NewJob";
 import JobDetail from "@/pages/Dashboard/Jobs/JobDetail";
-import JobEdit from "@/pages/Dashboard/Jobs/JobEdit";
 import InterviewsPage from "@/pages/Dashboard/Interviews/InterviewsPage";
 import InterviewDetail from "@/pages/Dashboard/Interviews/InterviewDetail";
 import Profile from "@/pages/Dashboard/Profile";
