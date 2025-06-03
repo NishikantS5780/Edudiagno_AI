@@ -1,29 +1,28 @@
-import React, { useContext } from "react";
+import { FC, useContext, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import LoadingSpinner from "./LoadingSpinner";
-import { UserContext } from "@/context/UserContext";
+import { AuthContext } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 interface RequireAuthProps {
   children: React.ReactNode;
 }
 
-const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
+const RequireAuth: FC<RequireAuthProps> = ({ children }) => {
   const location = useLocation();
-  const { recruiter, isLoading } = useContext(UserContext);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    return toast.error("Something went wrong");
   }
 
-  if (!recruiter) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  useEffect(() => {
+    if (!authContext.recruiter) {
+      authContext.verifyLogin().catch((_) => {
+        return <Navigate to="/login" state={{ from: location }} replace />;
+      });
+    }
+  }, []);
 
-  return <>{children}</>;
+  return <>{authContext && authContext.recruiter && children}</>;
 };
 
 export default RequireAuth;

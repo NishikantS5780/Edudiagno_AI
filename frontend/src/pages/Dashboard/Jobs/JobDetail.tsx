@@ -1,20 +1,10 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   ArrowLeft,
   Edit,
@@ -23,25 +13,26 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Video,
   Copy,
-  Share2,
   Mail,
   Phone,
   MapPin,
   GraduationCap,
   Briefcase,
   Link as LinkIcon,
-  BookOpen,
-  Save,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
-import { jobAPI, interviewAPI } from "@/lib/api";
 import { JobData } from "@/types/job";
 import { InterviewData } from "@/types/interview";
 import DsaManagement from "@/components/jobs/DsaManagement";
 import McqManagement from "@/components/jobs/McqManagement";
+import { jobAPI } from "@/services/jobApi";
+import InterviewQuestionManagement from "@/components/jobs/InterviewQuestionManagement";
+import { interviewAPI } from "@/services/interviewAPI";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const JobDetail = () => {
   const { id } = useParams();
@@ -51,7 +42,6 @@ const JobDetail = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editedJob, setEditedJob] = useState<Partial<JobData>>({});
 
   useEffect(() => {
     fetchJobDetails();
@@ -64,7 +54,7 @@ const JobDetail = () => {
         toast.error("Job ID is required");
         return;
       }
-      const response = await jobAPI.recruiterGetJob(id as string);
+      const response = await jobAPI.getCurrentRecruiterJob(id);
       const data = response.data;
       setJob({
         id: data.id,
@@ -88,7 +78,6 @@ const JobDetail = () => {
         dsa_questions: data.dsa_questions || [],
         requires_mcq: data.requires_mcq || false,
       });
-      setEditedJob({});
     } catch (error) {
       console.error("Error fetching job details:", error);
       toast.error("Failed to load job details");
@@ -128,14 +117,20 @@ const JobDetail = () => {
     }
   };
 
+  const handleJobDetailChange = (field: keyof JobData, value: any) => {
+    setJob((prev) => {
+      return { ...prev, [field]: value };
+    });
+  };
+
   const handleDelete = async () => {
     if (!job) return;
 
     if (window.confirm("Are you sure you want to delete this job?")) {
       try {
-        await jobAPI.deleteJob(job.id.toString());
-        toast.success("Job deleted successfully");
-        navigate("/dashboard/jobs");
+        // await jobAPI.deleteJob(job.id.toString());
+        // toast.success("Job deleted successfully");
+        // navigate("/dashboard/jobs");
       } catch (error) {
         console.error("Error deleting job:", error);
         toast.error("Failed to delete job");
@@ -173,32 +168,18 @@ const JobDetail = () => {
 
   const handleEditModeToggle = () => {
     setIsEditMode(!isEditMode);
-    if (!isEditMode) {
-      setEditedJob({});
-    }
   };
 
-  const handleJobChange = (
-    field: keyof JobData,
-    value: string | number | boolean
-  ) => {
-    setEditedJob((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleSaveChanges = async () => {
-    if (!job) return;
+  const handleSaveJob = async () => {
+    if (!job || !job.id) return;
 
     try {
       setLoading(true);
-      await jobAPI.updateJob(job.id.toString(), editedJob);
+      await jobAPI.updateJob(job.id.toString(), job);
       toast.success("Job details updated successfully");
       fetchJobDetails();
       setIsEditMode(false);
     } catch (error) {
-      console.error("Error updating job:", error);
       toast.error("Failed to update job details");
     } finally {
       setLoading(false);
@@ -244,16 +225,8 @@ const JobDetail = () => {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-bold">{job.title}</h1>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild>
-              <Link to={`/dashboard/jobs/${job?.id}/edit`}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Link>
-            </Button>
-
             <Button
               variant="outline"
               onClick={() => {
@@ -282,14 +255,16 @@ const JobDetail = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card className="md:col-span-3">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl">{job.title}</CardTitle>
-                  <p className="text-muted-foreground">
-                    {job.department} • {job.location}
-                  </p>
+              <CardTitle className="flex gap-2 items-center">
+                <div>{job.title}</div>
+                <div className="ml-auto">
+                  {getStatusBadge(job.status || "")}
                 </div>
-                {getStatusBadge(job.status)}
+              </CardTitle>
+              <div className="flex items-center justify-between">
+                <p className="text-muted-foreground">
+                  {job.department} • {job.location}
+                </p>
               </div>
             </CardHeader>
             <CardContent>
@@ -299,39 +274,151 @@ const JobDetail = () => {
                   <TabsTrigger value="candidates">Candidates</TabsTrigger>
                   <TabsTrigger value="dsa">DSA Questions</TabsTrigger>
                   <TabsTrigger value="mcq">MCQ Questions</TabsTrigger>
+                  <TabsTrigger value="custom_interview_questions">
+                    Interview Questions
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" className="space-y-6">
+                  <div>
+                    <div className="flex items-center">
+                      {isEditMode ? (
+                        <Input
+                          value={job.title}
+                          onChange={(e) =>
+                            handleJobDetailChange("title", e.target.value)
+                          }
+                        />
+                      ) : (
+                        <div>{job.title}</div>
+                      )}
+                      <div className="ml-auto">
+                        {isEditMode ? (
+                          <Input
+                            value={job.status}
+                            onChange={(e) =>
+                              handleJobDetailChange("status", e.target.value)
+                            }
+                          />
+                        ) : (
+                          getStatusBadge(job.status || "")
+                        )}
+                      </div>
+                      {!isEditMode && (
+                        <Button
+                          onClick={handleEditModeToggle}
+                          variant={"ghost"}
+                        >
+                          <Edit />
+                        </Button>
+                      )}
+                      {isEditMode && (
+                        <Button
+                          onClick={handleEditModeToggle}
+                          variant={"ghost"}
+                          className="text-destructive"
+                        >
+                          <X strokeWidth={5} />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      {isEditMode ? (
+                        <>
+                          <Input
+                            value={job.department}
+                            onChange={(e) =>
+                              handleJobDetailChange(
+                                "department",
+                                e.target.value
+                              )
+                            }
+                          />
+                          <Input
+                            value={job.location}
+                            onChange={(e) =>
+                              handleJobDetailChange("location", e.target.value)
+                            }
+                          />
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          {job.department} | {job.location}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                   <div className="space-y-4">
                     <h3 className="font-medium">Job Description</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {job.description}
-                    </p>
+                    {isEditMode ? (
+                      <Textarea
+                        value={job.description}
+                        onChange={(e) =>
+                          handleJobDetailChange("description", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {job.description}
+                      </p>
+                    )}
                   </div>
                   {job.show_salary && job.salary_min && job.salary_max && (
                     <div className="space-y-4">
                       <h3 className="font-medium">Salary Range</h3>
-                      <p className="text-muted-foreground">
-                        {job.currency === "INR" && "₹"}
-                        {job.currency === "USD" && "$"}
-                        {job.currency === "EUR" && "€"}
-                        {job.currency === "GBP" && "£"}
-                        {job.salary_min.toLocaleString()} -{" "}
-                        {job.salary_max.toLocaleString()} {job.currency}
-                      </p>
+                      {isEditMode ? (
+                        <Input
+                          value={job.currency}
+                          onChange={(e) =>
+                            handleJobDetailChange("currency", e.target.value)
+                          }
+                        />
+                      ) : (
+                        <p className="text-muted-foreground">
+                          {job.salary_min.toLocaleString()} -
+                          {job.salary_max.toLocaleString()} {job.currency}
+                        </p>
+                      )}
                     </div>
                   )}
                   <div className="space-y-4">
                     <h3 className="font-medium">Requirements</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {job.requirements}
-                    </p>
+                    {isEditMode ? (
+                      <Textarea
+                        value={job.requirements}
+                        onChange={(e) =>
+                          handleJobDetailChange("requirements", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {job.requirements}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-4">
                     <h3 className="font-medium">Benefits</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {job.benefits}
-                    </p>
+                    {isEditMode ? (
+                      <Textarea
+                        value={job.benefits}
+                        onChange={(e) =>
+                          handleJobDetailChange("benefits", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {job.benefits}
+                      </p>
+                    )}
                   </div>
+                  {isEditMode && (
+                    <Button
+                      onClick={handleSaveJob}
+                      className="w-full"
+                      size={"sm"}
+                    >
+                      Save
+                    </Button>
+                  )}
                 </TabsContent>
                 <TabsContent value="candidates">
                   <div className="space-y-4">
@@ -414,7 +501,7 @@ const JobDetail = () => {
                                 </div>
                               </div>
 
-                              {interview.resumeMatchScore && (
+                              {interview.resumeMatchScore != undefined && (
                                 <div className="mt-4">
                                   <h4 className="font-medium mb-2">
                                     Resume Match Score
@@ -440,7 +527,7 @@ const JobDetail = () => {
                                 </div>
                               )}
 
-                              {interview.overallScore && (
+                              {interview.overallScore != undefined && (
                                 <div className="mt-4">
                                   <h4 className="font-medium mb-2">
                                     Interview Score
@@ -455,7 +542,7 @@ const JobDetail = () => {
                                       />
                                     </div>
                                     <span className="text-sm font-medium">
-                                      {interview.overallScore}%
+                                      Score: {interview.overallScore}%
                                     </span>
                                   </div>
                                   {interview.feedback && (
@@ -473,10 +560,13 @@ const JobDetail = () => {
                   </div>
                 </TabsContent>
                 <TabsContent value="dsa">
-                  {job && <DsaManagement jobId={job.id} />}
+                  {job.id && <DsaManagement jobId={job.id} />}
                 </TabsContent>
                 <TabsContent value="mcq">
-                  {job && <McqManagement jobId={job.id} />}
+                  {job.id && <McqManagement jobId={job.id} />}
+                </TabsContent>
+                <TabsContent value="custom_interview_questions">
+                  {job.id && <InterviewQuestionManagement jobId={job.id} />}
                 </TabsContent>
               </Tabs>
             </CardContent>

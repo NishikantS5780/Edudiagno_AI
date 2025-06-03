@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
-import { jobAPI } from "@/lib/api";
+import { jobAPI } from "@/services/jobApi";
 
 interface AIGeneratePopupProps {
   title: string;
@@ -61,7 +61,6 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
   const [generatedContent, setGeneratedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Get appropriate icon based on field type
   const getButtonIcon = () => {
     switch (fieldLabel) {
       case "Description":
@@ -140,7 +139,6 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
       setGeneratedContent(content);
       toast.success(`${fieldLabel} generated successfully`);
     } catch (error) {
-      console.error("Error generating content:", error);
       toast.error("Failed to generate content. Please try again.");
     } finally {
       setIsGenerating(false);
@@ -153,7 +151,6 @@ const AIGeneratePopup: React.FC<AIGeneratePopupProps> = ({
       setOpen(false);
       toast.success(`${fieldLabel} applied successfully`);
 
-      // Reset state for next time
       setGeneratedContent("");
       setKeywords("");
       setCustomPrompt("");

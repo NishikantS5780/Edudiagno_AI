@@ -5,12 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import api, { dsaAPI } from "@/lib/api";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 interface CodeExecutionPanelProps {
   questionId: number;
-  expectedOutput: string;
   onCompilationStatusChange?: (status: string) => void;
   onSuccessRateChange?: (rate: string) => void;
   compilationStatus: string;
@@ -26,18 +24,12 @@ interface CodeExecutionPanelProps {
 
 function CodeExecutionPanel({
   questionId,
-  expectedOutput,
-  onCompilationStatusChange,
-  onSuccessRateChange,
   compilationStatus,
   setCompilationStatus,
   onNext,
   onSubmit,
   isLastQuestion,
   isOnlyQuestion,
-  isFirstQuestion,
-  currentQuestionIndex,
-  totalQuestions,
 }: CodeExecutionPanelProps) {
   const [taskId, setTaskId] = React.useState("");
   const [output, setOutput] = React.useState("");

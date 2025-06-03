@@ -19,8 +19,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import api from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { toast } from "sonner";
@@ -41,6 +39,10 @@ interface TestCase {
   input: string;
   expected_output: string;
 }
+import { InterviewData } from "@/types/interview";
+import { interviewAPI } from "@/services/interviewAPI";
+import { dsaAPI } from "@/services/dsaApi";
+import { DSAQuestion, TestCase } from "@/types/job";
 
 const DSAPlayground = () => {
   const [searchParams] = useSearchParams();
@@ -54,7 +56,9 @@ const DSAPlayground = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [warningShown, setWarningShown] = useState(false);
-  const [screenshotInterval, setScreenshotInterval] = useState<NodeJS.Timeout | null>(null);
+  const [interviewData, setInterviewData] = useState<InterviewData>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [dsaQuestions, setDsaQuestions] = useState<DSAQuestion[]>([]);
 
   // Add fullscreen effect hook with other useEffect hooks
   useEffect(() => {
@@ -128,45 +132,36 @@ const DSAPlayground = () => {
     setSocket(socket);
   }, []);
 
-  // Fetch interview data to get job_id
-  const { data: interviewData, isLoading: isLoadingInterview } = useQuery({
-    queryKey: ["interview", interviewId],
-    queryFn: async () => {
-      const response = await api.get("/interview", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+  useEffect(() => {
+    setIsLoading(true);
+    interviewAPI
+      .candidateGetInterview()
+      .then((res) => {
+        setInterviewData(res.data);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      return response.data;
-    },
-    enabled: !!interviewId,
-  });
+  }, []);
 
-  // Fetch DSA questions using job_id
-  const { data: dsaQuestions, isLoading: isLoadingQuestions } = useQuery({
-    queryKey: ["dsa-questions", interviewData?.job_id],
-    queryFn: async () => {
-      const response = await api.get(`/dsa-question`, {
-        params: { job_id: interviewData?.job_id },
+  useEffect(() => {
+    if (!interviewData || !interviewData.jobId) {
+      return;
+    }
+    dsaAPI
+      .getDSAQuestion(interviewData.jobId?.toString())
+      .then((res) => {
+        setDsaQuestions(res.data);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      return response.data;
-    },
-    enabled: !!interviewData?.job_id,
-  });
+  }, [interviewData]);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
 
   // Get current question and test cases
   const currentQuestion = dsaQuestions?.[currentQuestionIndex];
-
-  const { data: testCases, isLoading: isLoadingTestCases } = useQuery({
-    queryKey: ["dsa-test-cases", currentQuestion?.id],
-    queryFn: async () => {
-      const response = await api.get(`/dsa-test-case`, {
-        params: { question_id: currentQuestion?.id },
-      });
-      return response.data;
-    },
-    enabled: !!currentQuestion?.id,
-  });
 
   const handleNext = () => {
     if (currentQuestionIndex < dsaQuestions.length - 1) {
@@ -282,105 +277,7 @@ const DSAPlayground = () => {
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Add screenshot capture function
-  const captureAndSendScreenshot = async () => {
-    try {
-      console.log("[Screenshot] Starting capture process...");
-      const startTime = performance.now();
-
-      // Create canvas from the entire page
-      const canvas = await html2canvas(document.documentElement, {
-        scale: 1,
-        useCORS: true,
-        logging: false,
-        windowWidth: document.documentElement.scrollWidth,
-        windowHeight: document.documentElement.scrollHeight,
-      });
-
-      // Convert canvas to blob
-      const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((blob) => resolve(blob), "image/png");
-      });
-
-      if (!blob) {
-        console.error("[Screenshot] Failed to create blob from canvas");
-        return;
-      }
-
-      console.log(
-        `[Screenshot] Blob created successfully (${(blob.size / 1024).toFixed(2)} KB)`
-      );
-
-      // Get interview ID from URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const i_id = urlParams.get("i_id");
-
-      if (!i_id) {
-        console.error("[Screenshot] No interview ID found in URL");
-        return;
-      }
-
-      console.log("[Screenshot] Sending to backend...");
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/interview/screenshot`,
-        {
-          method: "POST",
-          body: blob,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("i_token")}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      const endTime = performance.now();
-      console.log(
-        `[Screenshot] Successfully saved (${((endTime - startTime) / 1000).toFixed(2)}s)`,
-        result
-      );
-    } catch (err) {
-      console.error("[Screenshot] Error during capture/upload:", err);
-      toast.error("Failed to capture screenshot");
-    }
-  };
-
-  // Start screenshot interval when test starts
-  useEffect(() => {
-    if (isTestStarted) {
-      console.log("[Screenshot] Starting screenshot interval");
-      // Clear any existing interval
-      if (screenshotInterval) {
-        clearInterval(screenshotInterval);
-      }
-      // Start new interval
-      const interval = setInterval(captureAndSendScreenshot, 30000); // Every 30 seconds
-      setScreenshotInterval(interval);
-
-      // Cleanup on unmount
-      return () => {
-        if (interval) {
-          console.log("[Screenshot] Cleaning up screenshot interval");
-          clearInterval(interval);
-        }
-      };
-    }
-  }, [isTestStarted]);
-
-  // Cleanup screenshot interval when test ends
-  useEffect(() => {
-    return () => {
-      if (screenshotInterval) {
-        console.log("[Screenshot] Cleaning up screenshot interval on unmount");
-        clearInterval(screenshotInterval);
-      }
-    };
-  }, []);
-
-  if (isLoadingInterview || isLoadingQuestions || isLoadingTestCases) {
+  if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -388,7 +285,7 @@ const DSAPlayground = () => {
     );
   }
 
-  if (!dsaQuestions || dsaQuestions.length === 0 || !testCases) {
+  if (!dsaQuestions || dsaQuestions.length === 0) {
     return (
       <div className="h-screen flex items-center justify-center">
         <p className="text-red-500">No DSA questions or test cases found</p>
@@ -564,14 +461,17 @@ const DSAPlayground = () => {
                           }`}
                           successRate={successRate}
                           questionNumber={`${currentQuestionIndex + 1}.`}
-                          questionTitle={currentQuestion.title}
-                          difficulty={currentQuestion.difficulty}
-                          description={currentQuestion.description}
-                          testCases={testCases.map((testCase: TestCase) => ({
-                            input: testCase.input,
-                            expectedOutput: testCase.expected_output,
-                          }))}
-                          constraints={currentQuestion.constraints}
+                          questionTitle={currentQuestion.title || ""}
+                          difficulty={currentQuestion.difficulty || ""}
+                          description={currentQuestion.description || ""}
+                          testCases={
+                            currentQuestion?.test_cases?.map(
+                              (testCase: TestCase) => ({
+                                input: testCase.input || "",
+                                expectedOutput: testCase.expected_output || "",
+                              })
+                            ) || []
+                          }
                           compilationStatus={compilationStatus}
                         />
                       </CardContent>
@@ -584,8 +484,7 @@ const DSAPlayground = () => {
                     <Card className="h-full">
                       <CardContent className="p-0 h-full">
                         <CodeExecutionPanel
-                          questionId={currentQuestion.id}
-                          expectedOutput={testCases[0]?.expected_output || ""}
+                          questionId={currentQuestion.id || 0}
                           setCompilationStatus={setCompilationStatus}
                           onCompilationStatusChange={setCompilationStatus}
                           onSuccessRateChange={setSuccessRate}

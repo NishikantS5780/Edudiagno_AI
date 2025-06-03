@@ -1,5 +1,5 @@
 import os
-from typing import Annotated
+from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
@@ -21,7 +21,7 @@ async def create_quiz_question(
     type: str = Form(...),
     category: str = Form(...),
     job_id: int = Form(...),
-    time_seconds: int = Form(),
+    time_seconds: Optional[int] = Form(None),
     image: UploadFile = File(None),
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
@@ -57,7 +57,7 @@ async def create_quiz_question(
 
 
 @router.get("")
-async def get_quiz_questions_for_interview(
+async def get_quiz_questions(
     response: Response,
     interview_id: str = None,
     job_id: str = None,
@@ -84,6 +84,7 @@ async def get_quiz_questions_for_interview(
             QuizQuestion.type,
             QuizQuestion.category,
             QuizQuestion.image_url,
+            QuizQuestion.time_seconds,
         ).where(QuizQuestion.job_id == int(job_id))
     else:
         response.status_code = 400

@@ -1,33 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { interviewAPI, quizAPI } from "@/lib/api";
 import { InterviewData } from "@/types/interview";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  ArrowLeft,
-  Download,
-  FileText,
-  BarChart2,
-  MessageSquare,
-  CheckCircle,
-  XCircle,
-  Calendar,
-} from "lucide-react";
+import { Download } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { QuizResponse, QuizQuestion } from "@/types/quiz";
-// import jsPDF from 'jspdf';
 import html2canvas from "html2canvas";
+import { MCQResponse, MCQuestion } from "@/types/job";
+import { interviewAPI } from "@/services/interviewAPI";
+import { quizAPI } from "@/services/quizApi";
 
 interface InterviewReportProps {
   jobTitle: string;
@@ -38,8 +22,8 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
   const navigate = useNavigate();
   const [interview, setInterview] = useState<InterviewData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [quizResponses, setQuizResponses] = useState<QuizResponse[]>([]);
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [quizResponses, setQuizResponses] = useState<MCQResponse[]>([]);
+  const [quizQuestions, setQuizQuestions] = useState<MCQuestion[]>([]);
   const [mcqScores, setMcqScores] = useState({
     total: { correct: 0, total: 0 },
     technical: { correct: 0, total: 0 },
@@ -49,18 +33,17 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
   useEffect(() => {
     const fetchInterview = async () => {
       try {
-        const response = await interviewAPI.getInterviews();
-        const interviewData = response.data.find(
-          (i: any) => i.id.toString() === id
-        );
+        if (!id) {
+          return;
+        }
+        const response = await interviewAPI.getInterview(id.toString());
 
-        if (!interviewData) {
+        if (!response.data) {
           toast.error("Interview not found");
           navigate("/dashboard/interviews");
           return;
         }
 
-        // Fetch MCQ data
         const quizResponse = await quizAPI.getQuizQuestions(id as string);
         const quizQuestionsResponse = await quizAPI.getQuizQuestions(
           id as string
@@ -69,32 +52,7 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
         setQuizResponses(quizResponse.data);
         setQuizQuestions(quizQuestionsResponse.data);
 
-        setInterview({
-          id: interviewData.id,
-          status: interviewData.status,
-          firstName: interviewData.first_name,
-          lastName: interviewData.last_name,
-          email: interviewData.email,
-          phone: interviewData.phone,
-          workExperience: interviewData.work_experience,
-          education: interviewData.education,
-          skills: interviewData.skills,
-          location: interviewData.location,
-          linkedinUrl: interviewData.linkedin_url,
-          portfolioUrl: interviewData.portfolio_url,
-          resumeUrl: interviewData.resume_url,
-          resumeText: interviewData.resume_text,
-          resumeMatchScore: interviewData.resume_match_score,
-          resumeMatchFeedback: interviewData.resume_match_feedback,
-          overallScore: interviewData.overall_score,
-          feedback: interviewData.feedback,
-          createdAt: interviewData.created_at,
-          jobId: interviewData.job_id,
-          technicalSkillsScore: interviewData.technical_skills_score,
-          communicationSkillsScore: interviewData.communication_skills_score,
-          problemSolvingSkillsScore: interviewData.problem_solving_skills_score,
-          culturalFitScore: interviewData.cultural_fit_score,
-        });
+        setInterview(response.data);
       } catch (error) {
         console.error("Error fetching interview:", error);
         toast.error("Failed to fetch interview data");
@@ -120,15 +78,18 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
         );
         const selectedOptionIds = responses.map((r) => r.option_id);
         const correctOptions = question.options
-          .filter((opt) => opt.correct)
+          ?.filter((opt) => opt.correct)
           .map((opt) => opt.id);
 
         const isFullyCorrect = selectedOptionIds.every((id) =>
-          correctOptions.includes(id)
+          correctOptions?.includes(id)
         );
-        const allCorrectOptionsSelected = correctOptions.every((id) =>
-          selectedOptionIds.includes(id)
-        );
+        const allCorrectOptionsSelected = correctOptions?.every((id) => {
+          if (!id) {
+            return;
+          }
+          selectedOptionIds.includes(id);
+        });
         const isCorrect = isFullyCorrect && allCorrectOptionsSelected;
 
         scores.total.total++;
@@ -389,10 +350,19 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Interview Report</h1>
-          <Button onClick={exportReport}>
-            <Download className="w-4 h-4 mr-2" />
-            Export Report
-          </Button>
+          {interview.report_url ? (
+            <a
+              href={interview.report_url}
+              className="flex gap-1 items-center bg-accent rounded p-2 hover:bg-accent/90 transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export Report
+            </a>
+          ) : interview.status == "incomplete" ? (
+            <div className="text-destructive">Interview incomplete!</div>
+          ) : (
+            <div className="text-amber-600">Report not Generated yet!</div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

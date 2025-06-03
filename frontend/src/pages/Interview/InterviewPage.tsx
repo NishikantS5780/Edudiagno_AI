@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { jobAPI } from "@/lib/api";
 import { CandidateJobData } from "@/types/job";
+import { jobAPI } from "@/services/jobApi";
 
 const InterviewPage = () => {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();

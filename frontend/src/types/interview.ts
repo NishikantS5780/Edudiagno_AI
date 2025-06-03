@@ -1,32 +1,35 @@
 export interface InterviewData {
   id?: number;
   status?: string;
-  firstName?: string;
-  lastName?: string;
+  first_name?: string;
+  last_name?: string;
   email?: string;
   phone?: string;
-  workExperience?: number;
+  work_experience?: number;
   education?: string;
   skills?: string;
   location?: string;
-  linkedinUrl?: string;
-  portfolioUrl?: string;
-  resumeUrl?: string;
+  linkedin_url?: string;
+  portfolio_url?: string;
+  resume_url?: string;
   resumeText?: string;
-  resumeMatchScore?: number;
-  resumeMatchFeedback?: string;
-  overallScore?: number;
-  technicalSkillsScore?: number;
-  communicationSkillsScore?: number;
-  problemSolvingSkillsScore?: number;
-  culturalFitScore?: number;
+  resume_match_score?: number;
+  resume_match_feedback?: string;
+  overall_score?: number;
+  technical_skills_score?: number;
+  communication_skills_score?: number;
+  problem_solving_skills_score?: number;
+  cultural_fit_score?: number;
   feedback?: string;
-  createdAt?: string;
-  jobId?: number;
-  videoUrl?: string;
+  created_at?: string;
+  job_id?: number;
+  video_url?: string;
   screenshot_urls?: string[];
+  report_url?: string;
 }
 
 export interface GetInterviewsParams {
   job_id?: string;
+  start?: number;
+  limit?: number;
 }

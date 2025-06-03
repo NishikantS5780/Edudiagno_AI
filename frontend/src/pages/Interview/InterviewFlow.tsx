@@ -5,7 +5,7 @@ import { ResumeUploadStage } from "@/components/interview/stages/ResumeUploadSta
 import { useInterviewResponseProcessor } from "@/components/interview/InterviewResponseProcessor";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
-import { jobAPI } from "@/lib/api";
+import { jobAPI } from "@/services/jobApi";
 
 export function InterviewFlow() {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
@@ -21,14 +21,14 @@ export function InterviewFlow() {
     const verifyInterviewLink = async () => {
       try {
         const jobId = urlSearchParams.get("job_id");
-        
+
         // Check if job_id is missing or invalid
         if (!jobId) {
           setError("Missing job ID. Please use a valid interview link.");
           setIsLoading(false);
           return;
         }
-        
+
         const response = await jobAPI.candidateGetJob(jobId);
         const data = response.data;
         setJobId(data.id);
