@@ -12,7 +12,7 @@ export interface InterviewData {
   linkedin_url?: string;
   portfolio_url?: string;
   resume_url?: string;
-  resumeText?: string;
+  resume_text?: string;
   resume_match_score?: number;
   resume_match_feedback?: string;
   overall_score?: number;

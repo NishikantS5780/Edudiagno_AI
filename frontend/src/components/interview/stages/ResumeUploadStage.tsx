@@ -94,29 +94,29 @@ export function ResumeUploadStage({
       // Log the parsed data that will be used
       const parsedData = {
         id: 0,
-        firstName: data.first_name,
-        lastName: data.last_name,
+        first_name: data.first_name,
+        last_name: data.last_name,
         email: data.email,
         phone: data.phone,
         location: data.location,
-        resumeText: data.resume_text,
-        workExperience: Number(data.work_experience),
+        resume_text: data.resume_text,
+        work_experience: Number(data.work_experience),
         education: data.education,
         skills: data.skills.join(","),
-        linkedinUrl: data.linkedin_url,
-        portfolioUrl: data.portfolio_url,
-        resumeMatchScore: 0,
-        resumeMatchFeedback: "",
+        linkedin_url: data.linkedin_url,
+        portfolio_url: data.portfolio_url,
+        resume_match_score: 0,
+        resume_match_feedback: "",
         status: "pending",
-        overallScore: 0,
+        overall_score: 0,
         feedback: "",
-        createdAt: new Date().toISOString(),
-        jobId: 0,
+        created_at: new Date().toISOString(),
+        job_id: 0,
         technical_skills_score: 0,
         communication_skills_score: 0,
         problem_solving_skills_score: 0,
         cultural_fit_score: 0,
-        resumeUrl: "",
+        resume_url: "",
       };
 
       console.log("Parsed Candidate Data:", parsedData);
@@ -137,10 +137,10 @@ export function ResumeUploadStage({
     const errors: { [key: string]: string } = {};
     // Full Name
     if (
-      !candidateData?.firstName ||
-      candidateData.firstName.trim() === "" ||
-      !candidateData?.lastName ||
-      candidateData.lastName.trim() === ""
+      !candidateData?.first_name ||
+      candidateData.first_name.trim() === "" ||
+      !candidateData?.last_name ||
+      candidateData.last_name.trim() === ""
     ) {
       errors.fullName = "Full name is required";
     }
@@ -166,9 +166,9 @@ export function ResumeUploadStage({
     }
     // Work Experience
     if (
-      candidateData?.workExperience === undefined ||
-      candidateData?.workExperience === null ||
-      isNaN(Number(candidateData?.workExperience))
+      candidateData?.work_experience === undefined ||
+      candidateData?.work_experience === null ||
+      isNaN(Number(candidateData?.work_experience))
     ) {
       errors.workExperience = "Work experience is required";
     }
@@ -208,41 +208,67 @@ export function ResumeUploadStage({
           toast.error("Please complete the form first");
           return;
         }
-        const res = await interviewAPI.createInterview(candidateData, jobId);
+
+        // Convert to snake_case for backend
+        const backendData = {
+          first_name: candidateData.first_name,
+          last_name: candidateData.last_name,
+          email: candidateData.email,
+          phone: candidateData.phone,
+          location: candidateData.location,
+          resume_text: candidateData.resume_text,
+          work_experience: candidateData.work_experience,
+          education: candidateData.education,
+          skills: candidateData.skills,
+          linkedin_url: candidateData.linkedin_url,
+          portfolio_url: candidateData.portfolio_url,
+          job_id: jobId
+        };
+
+        // Log the data being sent
+        console.log("Creating interview with data:", backendData);
+
+        const res = await interviewAPI.createInterview(backendData, jobId);
         const data = res.data;
+        console.log("Interview created successfully:", data);
+
         setCandidateData({
           id: data.id,
-          firstName: data.first_name,
-          lastName: data.last_name,
+          first_name: data.first_name,
+          last_name: data.last_name,
           email: data.email,
           phone: data.phone,
           location: data.location,
-          resumeText: data.resume_text,
-          workExperience: data.work_experience,
+          resume_text: data.resume_text,
+          work_experience: data.work_experience,
           education: data.education,
           skills: data.skills,
-          linkedinUrl: data.linkedin_url,
-          portfolioUrl: data.portfolio_url,
-          resumeMatchScore: 0,
-          resumeMatchFeedback: "",
+          linkedin_url: data.linkedin_url,
+          portfolio_url: data.portfolio_url,
+          resume_match_score: 0,
+          resume_match_feedback: "",
           status: "pending",
-          overallScore: 0,
+          overall_score: 0,
           feedback: "",
-          createdAt: new Date().toISOString(),
-          jobId: jobId,
-          technicalSkillsScore: 0,
-          communicationSkillsScore: 0,
-          problemSolvingSkillsScore: 0,
-          culturalFitScore: 0,
-          resumeUrl: "",
+          created_at: new Date().toISOString(),
+          job_id: jobId,
+          technical_skills_score: 0,
+          communication_skills_score: 0,
+          problem_solving_skills_score: 0,
+          cultural_fit_score: 0,
+          resume_url: "",
         });
         const token = res.headers["authorization"].split("Bearer ")[1];
         localStorage.setItem("i_token", token);
 
+        console.log("Uploading resume file:", resumeFile);
         await interviewAPI.uploadResume(resumeFile);
+        console.log("Resume uploaded successfully");
 
+        console.log("Analyzing candidate...");
         const analysisResponse = await interviewAPI.analyzeCandidate();
         const analysisData = analysisResponse.data;
+        console.log("Analysis completed:", analysisData);
 
         toast.success("Resume processed successfully!");
         setIsCompleted(true);
@@ -252,6 +278,10 @@ export function ResumeUploadStage({
         });
       } catch (error: any) {
         console.error("Error processing resume:", error);
+        console.error("Error response:", error.response?.data);
+        console.error("Error status:", error.response?.status);
+        console.error("Error headers:", error.response?.headers);
+        
         let errorMessage = "Error processing your resume";
 
         if (error.response?.data?.detail) {
@@ -378,15 +408,15 @@ export function ResumeUploadStage({
                   <span className="text-destructive">*</span>
                 </label>
                 <Input
-                  value={candidateData.firstName + " " + candidateData.lastName}
+                  value={candidateData.first_name + " " + candidateData.last_name}
                   onChange={(e) => {
                     const [firstName, ...lastNameParts] =
                       e.target.value.split(" ");
                     if (candidateData) {
                       setCandidateData({
                         ...candidateData,
-                        firstName: firstName || "",
-                        lastName: lastNameParts.join(" ") || "",
+                        first_name: firstName || "",
+                        last_name: lastNameParts.join(" ") || "",
                       });
                     }
                   }}
@@ -491,12 +521,12 @@ export function ResumeUploadStage({
                 </label>
                 <Input
                   type="number"
-                  value={candidateData.workExperience || ""}
+                  value={candidateData.work_experience || ""}
                   onChange={(e) => {
                     if (candidateData) {
                       setCandidateData({
                         ...candidateData,
-                        workExperience: Number(e.target.value),
+                        work_experience: Number(e.target.value),
                       });
                     }
                   }}
@@ -568,12 +598,12 @@ export function ResumeUploadStage({
                   <LucideLink className="text-brand w-4 h-4" /> LinkedIn URL
                 </label>
                 <Input
-                  value={candidateData.linkedinUrl || ""}
+                  value={candidateData.linkedin_url || ""}
                   onChange={(e) => {
                     if (candidateData) {
                       setCandidateData({
                         ...candidateData,
-                        linkedinUrl: e.target.value,
+                        linkedin_url: e.target.value,
                       });
                     }
                   }}
@@ -588,12 +618,12 @@ export function ResumeUploadStage({
                   <Globe className="text-brand w-4 h-4" /> Portfolio URL
                 </label>
                 <Input
-                  value={candidateData.portfolioUrl || ""}
+                  value={candidateData.portfolio_url || ""}
                   onChange={(e) => {
                     if (candidateData) {
                       setCandidateData({
                         ...candidateData,
-                        portfolioUrl: e.target.value,
+                        portfolio_url: e.target.value,
                       });
                     }
                   }}
