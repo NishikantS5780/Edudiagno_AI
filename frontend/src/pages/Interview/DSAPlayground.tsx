@@ -19,26 +19,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import api from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { toast } from "sonner";
-
-interface DSAQuestion {
-  id: number;
-  title: string;
-  description: string;
-  difficulty: string;
-  constraints: string;
-  time_minutes: number;
-}
-
-interface TestCase {
-  id: number;
-  input: string;
-  expected_output: string;
-}
+import { InterviewData } from "@/types/interview";
+import { interviewAPI } from "@/services/interviewAPI";
+import { dsaAPI } from "@/services/dsaApi";
+import { DSAQuestion, TestCase } from "@/types/job";
 
 const DSAPlayground = () => {
   const [searchParams] = useSearchParams();
@@ -52,6 +39,9 @@ const DSAPlayground = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [warningShown, setWarningShown] = useState(false);
+  const [interviewData, setInterviewData] = useState<InterviewData>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [dsaQuestions, setDsaQuestions] = useState<DSAQuestion[]>([]);
 
   // Add fullscreen effect hook with other useEffect hooks
   useEffect(() => {
@@ -125,45 +115,36 @@ const DSAPlayground = () => {
     setSocket(socket);
   }, []);
 
-  // Fetch interview data to get job_id
-  const { data: interviewData, isLoading: isLoadingInterview } = useQuery({
-    queryKey: ["interview", interviewId],
-    queryFn: async () => {
-      const response = await api.get("/interview", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+  useEffect(() => {
+    setIsLoading(true);
+    interviewAPI
+      .candidateGetInterview()
+      .then((res) => {
+        setInterviewData(res.data);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      return response.data;
-    },
-    enabled: !!interviewId,
-  });
+  }, []);
 
-  // Fetch DSA questions using job_id
-  const { data: dsaQuestions, isLoading: isLoadingQuestions } = useQuery({
-    queryKey: ["dsa-questions", interviewData?.job_id],
-    queryFn: async () => {
-      const response = await api.get(`/dsa-question`, {
-        params: { job_id: interviewData?.job_id },
+  useEffect(() => {
+    if (!interviewData || !interviewData.jobId) {
+      return;
+    }
+    dsaAPI
+      .getDSAQuestion(interviewData.jobId?.toString())
+      .then((res) => {
+        setDsaQuestions(res.data);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      return response.data;
-    },
-    enabled: !!interviewData?.job_id,
-  });
+  }, [interviewData]);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
 
   // Get current question and test cases
   const currentQuestion = dsaQuestions?.[currentQuestionIndex];
-
-  const { data: testCases, isLoading: isLoadingTestCases } = useQuery({
-    queryKey: ["dsa-test-cases", currentQuestion?.id],
-    queryFn: async () => {
-      const response = await api.get(`/dsa-test-case`, {
-        params: { question_id: currentQuestion?.id },
-      });
-      return response.data;
-    },
-    enabled: !!currentQuestion?.id,
-  });
 
   const handleNext = () => {
     if (currentQuestionIndex < dsaQuestions.length - 1) {
@@ -279,7 +260,7 @@ const DSAPlayground = () => {
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  if (isLoadingInterview || isLoadingQuestions || isLoadingTestCases) {
+  if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -287,7 +268,7 @@ const DSAPlayground = () => {
     );
   }
 
-  if (!dsaQuestions || dsaQuestions.length === 0 || !testCases) {
+  if (!dsaQuestions || dsaQuestions.length === 0) {
     return (
       <div className="h-screen flex items-center justify-center">
         <p className="text-red-500">No DSA questions or test cases found</p>
@@ -462,14 +443,17 @@ const DSAPlayground = () => {
                           }`}
                           successRate={successRate}
                           questionNumber={`${currentQuestionIndex + 1}.`}
-                          questionTitle={currentQuestion.title}
-                          difficulty={currentQuestion.difficulty}
-                          description={currentQuestion.description}
-                          testCases={testCases.map((testCase: TestCase) => ({
-                            input: testCase.input,
-                            expectedOutput: testCase.expected_output,
-                          }))}
-                          constraints={currentQuestion.constraints}
+                          questionTitle={currentQuestion.title || ""}
+                          difficulty={currentQuestion.difficulty || ""}
+                          description={currentQuestion.description || ""}
+                          testCases={
+                            currentQuestion?.test_cases?.map(
+                              (testCase: TestCase) => ({
+                                input: testCase.input || "",
+                                expectedOutput: testCase.expected_output || "",
+                              })
+                            ) || []
+                          }
                           compilationStatus={compilationStatus}
                         />
                       </CardContent>
@@ -482,8 +466,7 @@ const DSAPlayground = () => {
                     <Card className="h-full">
                       <CardContent className="p-0 h-full">
                         <CodeExecutionPanel
-                          questionId={currentQuestion.id}
-                          expectedOutput={testCases[0]?.expected_output || ""}
+                          questionId={currentQuestion.id || 0}
                           setCompilationStatus={setCompilationStatus}
                           onCompilationStatusChange={setCompilationStatus}
                           onSuccessRateChange={setSuccessRate}

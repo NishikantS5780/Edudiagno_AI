@@ -23,8 +23,6 @@ import { toast } from "sonner";
 import AIAvatar from "../../components/interview/AIAvatar";
 import RecordingButton from "../../components/interview/RecordingButton";
 import { useInterviewResponseProcessor } from "../../components/interview/InterviewResponseProcessor";
-import api, { interviewAPI, textAPI } from "@/lib/api";
-import { RecruiterData } from "@/types/recruiter";
 import { JobData } from "@/types/job";
 import { ThankYouStage } from "./ThankYouStage";
 import VoiceAnimation from "@/components/interview/VoiceAnimation";
@@ -38,6 +36,10 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import html2canvas from "html2canvas";
+import { RecruiterData } from "@/types/recruiter";
+import { interviewAPI } from "@/services/interviewAPI";
+import { config } from "@/config";
+import axios from "axios";
 
 interface InterviewFeedback {
   feedback: string;
@@ -249,7 +251,7 @@ export default function VideoInterview() {
       // Start text-to-speech conversion
       const text_to_speech = async () => {
         try {
-          const response = await textAPI.textToSpeech(currentQuestion);
+          const response = await interviewAPI.textToSpeech(currentQuestion);
           // Create and prepare audio element before setting speech state
           const newAudio = new Audio(
             "data:audio/mpeg;base64," + response.data.audio_base64
@@ -514,17 +516,8 @@ export default function VideoInterview() {
           type: "audio/webm;codecs=opus",
         });
 
-        // Create a new FormData instance
-        const formData = new FormData();
-        formData.append("audio_file", audioFile);
-
         // Use the /audio/to-text endpoint
-        const response = await api.post("/audio/to-text", formData, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("i_token")}`,
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        const response = await interviewAPI.speechToText(audioFile);
 
         if (response.data && response.data.transcript) {
           return response.data.transcript;
@@ -848,18 +841,18 @@ export default function VideoInterview() {
       const startTime = performance.now();
 
       // Create a video element to capture the screen stream
-      const videoElement = document.createElement('video');
+      const videoElement = document.createElement("video");
       videoElement.srcObject = screenStreamRef.current;
       videoElement.muted = true;
       await videoElement.play();
 
       // Create a canvas and draw the video frame
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = videoElement.videoWidth;
       canvas.height = videoElement.videoHeight;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       if (!ctx) {
-        throw new Error('Failed to get canvas context');
+        throw new Error("Failed to get canvas context");
       }
       ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
@@ -1034,12 +1027,16 @@ export default function VideoInterview() {
             const startTime = performance.now();
 
             // First send the video data
-            await api.post("/interview/record", await e.data.arrayBuffer(), {
-              headers: {
-                "Content-Type": "multipart/form-data",
-                Authorization: `Bearer ${localStorage.getItem("i_token")}`,
-              },
-            });
+            await axios.post(
+              `${config.API_BASE_URL}/interview/record`,
+              await e.data.arrayBuffer(),
+              {
+                headers: {
+                  "Content-Type": "multipart/form-data",
+                  Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+                },
+              }
+            );
           } catch (error) {
             console.error("Failed to upload interview clip:", error);
           }
@@ -1052,7 +1049,7 @@ export default function VideoInterview() {
           setIsConvertingVideo(true);
 
           // Then send finished=true to trigger HLS conversion
-          await api.post("/interview/record", null, {
+          await axios.post(`${config.API_BASE_URL}/interview/record`, null, {
             params: { finished: "true" },
             headers: {
               Authorization: `Bearer ${localStorage.getItem("i_token")}`,

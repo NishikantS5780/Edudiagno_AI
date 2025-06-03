@@ -66,6 +66,8 @@ export interface JobData {
   mcq_timing_mode?: "per_question" | "whole_test";
   company_id?: number;
   updated_at?: string;
+  hasQuiz?: boolean;
+  hasDSATest?: boolean;
 }
 
 export interface CandidateJobData {

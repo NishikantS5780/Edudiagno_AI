@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +20,6 @@ import {
   GraduationCap,
   Briefcase,
   Link as LinkIcon,
-  Cross,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -46,7 +45,7 @@ const JobDetail = () => {
 
   useEffect(() => {
     fetchJobDetails();
-    // fetchInterviews();
+    fetchInterviews();
   }, [id]);
 
   const fetchJobDetails = async () => {
@@ -502,7 +501,7 @@ const JobDetail = () => {
                                 </div>
                               </div>
 
-                              {interview.resumeMatchScore && (
+                              {interview.resumeMatchScore != undefined && (
                                 <div className="mt-4">
                                   <h4 className="font-medium mb-2">
                                     Resume Match Score
@@ -528,7 +527,7 @@ const JobDetail = () => {
                                 </div>
                               )}
 
-                              {interview.overallScore && (
+                              {interview.overallScore != undefined && (
                                 <div className="mt-4">
                                   <h4 className="font-medium mb-2">
                                     Interview Score
@@ -543,7 +542,7 @@ const JobDetail = () => {
                                       />
                                     </div>
                                     <span className="text-sm font-medium">
-                                      {interview.overallScore}%
+                                      Score: {interview.overallScore}%
                                     </span>
                                   </div>
                                   {interview.feedback && (

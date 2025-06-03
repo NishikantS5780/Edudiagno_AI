@@ -64,6 +64,12 @@ export const jobAPI = {
     axios.get(`${config.API_BASE_URL}/job?id=${jobId}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     }),
+  candidateGetJob: async (jobId: string) => {
+    const res = await axios.get(
+      `${config.API_BASE_URL}/job/candidate-view?id=${jobId}`
+    );
+    return res;
+  },
   updateJob: async (jobId: string, data: JobData) => {
     const res = await axios.put(
       `${config.API_BASE_URL}/job`,

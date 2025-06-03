@@ -62,6 +62,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { interviewAPI } from "@/services/interviewAPI";
+import { jobAPI } from "@/services/jobApi";
 
 const InterviewsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,69 +75,47 @@ const InterviewsPage = () => {
   const [interviewToDelete, setInterviewToDelete] = useState<number | null>(
     null
   );
+  const [isLoading, setIsLoading] = useState(false);
+  const [interviewsData, setInterviewsData] = useState<InterviewData[]>([]);
   const itemsPerPage = 10;
 
-  useEffect(() => {}, []);
-  // const { data: interviewsData, isLoading } = useQuery({
-  //   queryKey: ["interviews", currentPage, itemsPerPage],
-  //   queryFn: async () => {
-  //     const res = await interviewAPI.getInterviews({
-  //       start: (currentPage - 1) * itemsPerPage,
-  //       limit: itemsPerPage,
-  //     });
+  useEffect(() => {
+    interviewAPI
+      .getInterviews({
+        start: (currentPage - 1) * itemsPerPage,
+        limit: itemsPerPage,
+      })
+      .then((res) => {
+        const jobIds = res.data.interviews.map(
+          (interview: any) => interview.job_id
+        ) as number[];
+        const uniqueJobIds = Array.from(new Set(jobIds));
 
-  //     // Fetch job titles for all interviews
-  //     const jobIds = res.data.interviews.map(
-  //       (interview: any) => interview.job_id
-  //     ) as number[];
-  //     const uniqueJobIds = Array.from(new Set(jobIds));
+        const jobTitlePromises = uniqueJobIds.map(async (jobId) => {
+          try {
+            const jobRes = await jobAPI.getCurrentRecruiterJob(
+              jobId.toString()
+            );
+            return { jobId, title: jobRes.data.title };
+          } catch (error) {
+            console.error(`Error fetching job ${jobId}:`, error);
+            return { jobId, title: "Unknown Job" };
+          }
+        });
 
-  //     const jobTitlePromises = uniqueJobIds.map(async (jobId) => {
-  //       try {
-  //         const jobRes = await jobAPI.recruiterGetJob(jobId.toString());
-  //         return { jobId, title: jobRes.data.title };
-  //       } catch (error) {
-  //         console.error(`Error fetching job ${jobId}:`, error);
-  //         return { jobId, title: "Unknown Job" };
-  //       }
-  //     });
+        Promise.all(jobTitlePromises).then((values) => {
+          const jobTitlesMap = values.reduce((acc, { jobId, title }) => {
+            acc[jobId] = title;
+            return acc;
+          }, {} as Record<number, string>);
+        });
 
-  //     const jobTitleResults = await Promise.all(jobTitlePromises);
-  //     const jobTitlesMap = jobTitleResults.reduce((acc, { jobId, title }) => {
-  //       acc[jobId] = title;
-  //       return acc;
-  //     }, {} as Record<number, string>);
+        const totalCount = res.data.count;
+        setTotalPages(Math.ceil(totalCount / itemsPerPage));
 
-  //     const totalCount =
-  //       res.headers["x-total-count"] || res.data.interviews.length;
-  //     setTotalPages(Math.ceil(totalCount / itemsPerPage));
-
-  //     return {
-  //       interviews: res.data.interviews.map((interview: any) => ({
-  //         id: interview.id,
-  //         status: interview.status,
-  //         firstName: interview.first_name,
-  //         lastName: interview.last_name,
-  //         email: interview.email,
-  //         phone: interview.phone,
-  //         workExperience: interview.work_experience,
-  //         education: interview.education,
-  //         skills: interview.skills,
-  //         location: interview.location,
-  //         linkedinUrl: interview.linkedin_url,
-  //         portfolioUrl: interview.portfolio_url,
-  //         resumeUrl: interview.resume_url,
-  //         resumeMatchScore: interview.resume_match_score,
-  //         resumeMatchFeedback: interview.resume_match_feedback,
-  //         overallScore: interview.overall_score,
-  //         feedback: interview.feedback,
-  //         createdAt: interview.created_at,
-  //         jobId: interview.job_id,
-  //       })),
-  //       jobTitles: jobTitlesMap,
-  //     };
-  //   },
-  // });
+        setInterviewsData(res.data.interviews);
+      });
+  }, []);
 
   // const deleteInterviewMutation = useMutation({
   //   mutationFn: (id: number) => interviewAPI.deleteInterview(id),
@@ -283,13 +263,13 @@ const InterviewsPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {/* {interviewsData && interviewsData.interviews.length > 0 ? (
-                interviewsData.interviews
+              {interviewsData && interviewsData.length > 0 ? (
+                interviewsData
                   .filter((interview: InterviewData) => {
                     console.log("Filtering interview:", interview);
                     // Filter by score
                     if (scoreFilter !== "all") {
-                      const score = interview.overallScore || 0;
+                      const score = interview.overall_score || 0;
                       const [min, max] = scoreFilter.split("-").map(Number);
                       console.log("Score filter:", { score, min, max });
                       if (score < min || score > max) {
@@ -302,10 +282,10 @@ const InterviewsPage = () => {
                     if (searchQuery) {
                       const searchLower = searchQuery.toLowerCase();
                       const matches =
-                        interview.firstName
+                        interview.first_name
                           ?.toLowerCase()
                           .includes(searchLower) ||
-                        interview.lastName
+                        interview.last_name
                           ?.toLowerCase()
                           .includes(searchLower) ||
                         interview.email?.toLowerCase().includes(searchLower);
@@ -326,10 +306,10 @@ const InterviewsPage = () => {
                           <Avatar>
                             <AvatarImage
                               src={undefined}
-                              alt={interview.firstName}
+                              alt={interview.first_name}
                             />
                             <AvatarFallback>
-                              {interview.firstName?.[0]}
+                              {interview.first_name?.[0]}
                             </AvatarFallback>
                           </Avatar>
                           <div>
@@ -337,7 +317,7 @@ const InterviewsPage = () => {
                               to={`/dashboard/interviews/${interview.id}`}
                               className="font-medium hover:underline"
                             >
-                              {interview.firstName} {interview.lastName}
+                              {interview.first_name} {interview.last_name}
                             </Link>
                             <div className="text-xs text-muted-foreground">
                               {interview.email}
@@ -346,7 +326,7 @@ const InterviewsPage = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {interview.jobId ? (
+                        {/* {interview.jobId ? (
                           <Link
                             to={`/dashboard/jobs/${interview.jobId}`}
                             className="text-sm hover:underline"
@@ -358,17 +338,18 @@ const InterviewsPage = () => {
                           <span className="text-sm text-muted-foreground">
                             -
                           </span>
-                        )}
+                        )} */}
                       </TableCell>
                       <TableCell>
-                        {new Date(interview.createdAt).toLocaleDateString()}
+                        {interview.created_at &&
+                          new Date(interview.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        {interview.overallScore ? (
+                        {interview.overall_score ? (
                           <span
-                            className={getScoreColor(interview.overallScore)}
+                            className={getScoreColor(interview.overall_score)}
                           >
-                            {interview.overallScore}%
+                            {interview.overall_score}%
                           </span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -426,7 +407,7 @@ const InterviewsPage = () => {
                     No interviews found matching your criteria
                   </TableCell>
                 </TableRow>
-              )} */}
+              )}
             </TableBody>
           </Table>
         </div>

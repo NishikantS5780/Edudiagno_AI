@@ -3,7 +3,6 @@ import videojs from "video.js";
 import "video.js/dist/video-js.css";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { interviewAPI, jobAPI, api } from "@/lib/api";
 import { InterviewData } from "@/types/interview";
 import { JobData } from "@/types/job";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -40,6 +39,8 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import VideoJS from "@/components/common/VideoJs";
+import { interviewAPI } from "@/services/interviewAPI";
+import { jobAPI } from "@/services/jobApi";
 
 interface ScoreBreakdown {
   technicalSkills: number;
@@ -123,46 +124,20 @@ const InterviewDetail = () => {
           throw "Invalid interview";
         }
 
-        const interviewData = await interviewAPI.getInterviewRecruiterView(id);
+        const res = await interviewAPI.getInterview(id);
 
-        if (!interviewData) {
+        if (!res.data) {
           toast.error("Interview not found");
           navigate("/dashboard/interviews");
           return;
         }
 
-        setInterview({
-          id: interviewData.id,
-          status: interviewData.status,
-          firstName: interviewData.first_name,
-          lastName: interviewData.last_name,
-          email: interviewData.email,
-          phone: interviewData.phone,
-          workExperience: interviewData.work_experience,
-          education: interviewData.education,
-          skills: interviewData.skills,
-          location: interviewData.location,
-          linkedinUrl: interviewData.linkedin_url,
-          portfolioUrl: interviewData.portfolio_url,
-          resumeUrl: interviewData.resume_url,
-          resumeText: interviewData.resume_text,
-          resumeMatchScore: interviewData.resume_match_score,
-          resumeMatchFeedback: interviewData.resume_match_feedback,
-          overallScore: interviewData.overall_score,
-          technicalSkillsScore: interviewData.technical_skills_score,
-          communicationSkillsScore: interviewData.communication_skills_score,
-          problemSolvingSkillsScore: interviewData.problem_solving_skills_score,
-          culturalFitScore: interviewData.cultural_fit_score,
-          feedback: interviewData.feedback,
-          jobId: interviewData.job_id,
-          videoUrl: interviewData.video_url,
-          screenshot_urls: interviewData.screenshot_urls || [],
-        });
+        setInterview(res.data);
 
         // Fetch job details
-        if (interviewData.job_id) {
-          const jobResponse = await jobAPI.recruiterGetJob(
-            interviewData.job_id.toString()
+        if (res.data.job_id) {
+          const jobResponse = await jobAPI.getCurrentRecruiterJob(
+            res.data.job_id.toString()
           );
           const jobData = jobResponse.data;
           setJob({
@@ -424,40 +399,6 @@ const InterviewDetail = () => {
     return "text-destructive";
   };
 
-  const handleDownloadResume = async () => {
-    if (!interview) {
-      toast.error("Interview data not found");
-      return;
-    }
-
-    try {
-      const response = await api.get(
-        `interview/resume?interview_id=${interview.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          responseType: "blob",
-        }
-      );
-
-      const blob = response.data;
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${interview.firstName}_${interview.lastName}_resume_${
-        new Date().toISOString().split("T")[0]
-      }.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error("Error downloading resume:", error);
-      toast.error("Failed to download resume");
-    }
-  };
-
   if (loading) {
     return (
       <DashboardLayout>
@@ -491,13 +432,13 @@ const InterviewDetail = () => {
             <div className="flex items-center gap-4">
               <Avatar className="h-14 w-14">
                 <AvatarFallback className="text-lg">
-                  {interview.firstName[0]}
-                  {interview.lastName[0]}
+                  {interview.first_name?.[0]}
+                  {interview.last_name?.[0]}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <CardTitle className="text-xl">
-                  {interview.firstName} {interview.lastName}
+                  {interview.first_name} {interview.last_name}
                 </CardTitle>
                 <CardDescription>{interview.email}</CardDescription>
               </div>
@@ -535,9 +476,9 @@ const InterviewDetail = () => {
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Experience</p>
                 <p className="font-medium">
-                  {interview.workExperience
-                    ? `${interview.workExperience} ${
-                        interview.workExperience === 1 ? "year" : "years"
+                  {interview.work_experience
+                    ? `${interview.work_experience} ${
+                        interview.work_experience === 1 ? "year" : "years"
                       }`
                     : "Not specified"}
                 </p>
@@ -545,25 +486,23 @@ const InterviewDetail = () => {
             </div>
             <div className="mt-6">
               <p className="text-sm text-muted-foreground mb-2">Skills</p>
-              <div className="font-medium flex flex-wrap gap-2">
+              <div className="font-medium flex flex-wrap">
                 {interview.skills?.split(",").map((skill, index) => (
                   <span key={index} className="whitespace-nowrap">
-                    {skill.trim()}
-                    {index < interview.skills.split(",").length - 1 ? "," : ""}
+                    {index == 0 ? "" : ","} {skill.trim()}
                   </span>
                 ))}
               </div>
             </div>
-            {interview.resumeUrl && (
+            {interview.resume_url && (
               <div className="mt-6">
-                <Button
-                  variant="secondary"
+                <a
                   className="flex items-center gap-2"
-                  onClick={handleDownloadResume}
+                  href={interview.resume_url}
                 >
                   <FileText className="h-4 w-4" />
                   Download Resume
-                </Button>
+                </a>
               </div>
             )}
           </CardContent>
@@ -576,23 +515,23 @@ const InterviewDetail = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span>Status:</span>
-              {getStatusBadge(interview.status)}
+              {interview.status && getStatusBadge(interview.status)}
             </div>
             <div className="flex items-center justify-between">
               <span>Date:</span>
               <div className="flex items-center text-sm">
                 <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-                {new Date(interview.createdAt || "").toLocaleDateString()}
+                {new Date(interview.created_at || "").toLocaleDateString()}
               </div>
             </div>
             <div className="flex items-center justify-between">
               <span>Overall Score:</span>
               <span
                 className={`text-xl font-bold ${getScoreColor(
-                  interview.overallScore || 0
+                  interview.overall_score || 0
                 )}`}
               >
-                {interview.overallScore || 0}%
+                {interview.overall_score || 0}%
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -637,12 +576,12 @@ const InterviewDetail = () => {
                     <div
                       className="bg-primary h-2 rounded-full"
                       style={{
-                        width: `${interview.technicalSkillsScore}%`,
+                        width: `${interview.technical_skills_score || 0}%`,
                       }}
                     />
                   </div>
                   <span className="text-sm font-medium">
-                    {interview.technicalSkillsScore}%
+                    {interview.technical_skills_score || 0}%
                   </span>
                 </div>
               </div>
@@ -654,12 +593,12 @@ const InterviewDetail = () => {
                     <div
                       className="bg-primary h-2 rounded-full"
                       style={{
-                        width: `${interview.communicationSkillsScore}%`,
+                        width: `${interview.communication_skills_score || 0}%`,
                       }}
                     />
                   </div>
                   <span className="text-sm font-medium">
-                    {interview.communicationSkillsScore}%
+                    {interview.communication_skills_score || 0}%
                   </span>
                 </div>
               </div>
@@ -671,12 +610,14 @@ const InterviewDetail = () => {
                     <div
                       className="bg-primary h-2 rounded-full"
                       style={{
-                        width: `${interview.problemSolvingSkillsScore}%`,
+                        width: `${
+                          interview.problem_solving_skills_score || 0
+                        }%`,
                       }}
                     />
                   </div>
                   <span className="text-sm font-medium">
-                    {interview.problemSolvingSkillsScore}%
+                    {interview.problem_solving_skills_score || 0}%
                   </span>
                 </div>
               </div>
@@ -688,12 +629,12 @@ const InterviewDetail = () => {
                     <div
                       className="bg-primary h-2 rounded-full"
                       style={{
-                        width: `${interview.culturalFitScore}%`,
+                        width: `${interview.cultural_fit_score || 0}%`,
                       }}
                     />
                   </div>
                   <span className="text-sm font-medium">
-                    {interview.culturalFitScore}%
+                    {interview.cultural_fit_score || 0}%
                   </span>
                 </div>
               </div>
@@ -746,19 +687,20 @@ const InterviewDetail = () => {
                         <div
                           className="bg-primary h-2 rounded-full"
                           style={{
-                            width: `${interview.resumeMatchScore || 0}%`,
+                            width: `${interview.resume_match_score || 0}%`,
                           }}
                         />
                       </div>
                       <span className="text-sm font-medium">
-                        {interview.resumeMatchScore || 0}%
+                        {interview.resume_match_score || 0}%
                       </span>
                     </div>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Feedback</p>
                     <p className="font-medium">
-                      {interview.resumeMatchFeedback || "No feedback available"}
+                      {interview.resume_match_feedback ||
+                        "No feedback available"}
                     </p>
                   </div>
                 </>
@@ -795,7 +737,7 @@ const InterviewDetail = () => {
               <CardDescription>Candidate's recorded responses</CardDescription>
             </CardHeader>
             <CardContent>
-              {!interview.videoUrl && (
+              {!interview.video_url && (
                 <div className="text-center p-10">
                   <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground">
@@ -803,7 +745,7 @@ const InterviewDetail = () => {
                   </p>
                 </div>
               )}
-              {interview.videoUrl && (
+              {interview.video_url && (
                 <VideoJS
                   options={{
                     autoplay: true,
@@ -812,7 +754,7 @@ const InterviewDetail = () => {
                     fluid: true,
                     sources: [
                       {
-                        src: interview.videoUrl.replace('/uploads/', '/api/uploads/'),
+                        src: interview.video_url,
                         type: "application/x-mpegURL",
                       },
                     ],
@@ -839,49 +781,61 @@ const InterviewDetail = () => {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Interview Screenshots</CardTitle>
-              <CardDescription>Captured moments during the interview</CardDescription>
+              <CardDescription>
+                Captured moments during the interview
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {interview.screenshot_urls && interview.screenshot_urls.length > 0 ? (
+              {interview.screenshot_urls &&
+              interview.screenshot_urls.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {interview.screenshot_urls.map((url: string, index: number) => {
-                    // Clean up the URL by removing any 'None' segments and ensuring proper path
-                    const cleanUrl = url.replace(/\/None\//g, '/').replace(/\/+/g, '/');
-                    // Extract just the filename from the URL
-                    const filename = cleanUrl.split('/').pop();
-                    // Construct the full URL using the API base URL, ensuring no double /api
-                    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-                    const imageUrl = `${baseUrl}/uploads/screenshot/${interview.id}/${filename}`;
-                    
-                    return (
-                      <div key={index} className="relative group">
-                        <img
-                          src={imageUrl}
-                          alt={`Interview screenshot ${index + 1}`}
-                          className="w-full h-48 object-cover rounded-lg"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = 'https://placehold.co/400x300?text=Image+Not+Found';
-                            console.error('Failed to load image:', imageUrl);
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => window.open(imageUrl, '_blank')}
-                          >
-                            View Full Size
-                          </Button>
+                  {interview.screenshot_urls.map(
+                    (url: string, index: number) => {
+                      // Clean up the URL by removing any 'None' segments and ensuring proper path
+                      const cleanUrl = url
+                        .replace(/\/None\//g, "/")
+                        .replace(/\/+/g, "/");
+                      // Extract just the filename from the URL
+                      const filename = cleanUrl.split("/").pop();
+                      // Construct the full URL using the API base URL, ensuring no double /api
+                      const baseUrl =
+                        import.meta.env.VITE_API_BASE_URL ||
+                        "http://localhost:8000";
+                      const imageUrl = `${baseUrl}/uploads/screenshot/${interview.id}/${filename}`;
+
+                      return (
+                        <div key={index} className="relative group">
+                          <img
+                            src={imageUrl}
+                            alt={`Interview screenshot ${index + 1}`}
+                            className="w-full h-48 object-cover rounded-lg"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src =
+                                "https://placehold.co/400x300?text=Image+Not+Found";
+                              console.error("Failed to load image:", imageUrl);
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => window.open(imageUrl, "_blank")}
+                            >
+                              View Full Size
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    }
+                  )}
                 </div>
               ) : (
                 <div className="text-center p-10">
                   <Image className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No screenshots available</p>
+                  <p className="text-muted-foreground">
+                    No screenshots available
+                  </p>
                 </div>
               )}
             </CardContent>

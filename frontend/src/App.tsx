@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route, useParams } from "react-router-dom";
 import { ThemeProvider } from "@/context/ThemeContext";
 import RequireAuth from "@/components/common/RequireAuth";
-import { useEffect, useContext } from "react";
+import { useEffect, useContext, useState } from "react";
 import VideoInterview from "@/pages/Interview/VideoInterview";
 import ScrollToTop from "@/components/common/ScrollToTop";
 
@@ -64,6 +64,10 @@ import PlatformAnalytics from "@/pages/Admin/Analytics";
 import BillingManagement from "@/pages/Admin/Billing";
 import IntegrationManagement from "@/pages/Admin/Integrations";
 import SupportManagement from "@/pages/Admin/Support";
+import { InterviewData } from "./types/interview";
+import { interviewAPI } from "./services/interviewAPI";
+import { JobData } from "./types/job";
+import { jobAPI } from "./services/jobApi";
 
 // import { interviewAPI, jobAPI } from "@/lib/api";
 
@@ -93,12 +97,8 @@ const App = () => {
               path="/recruiter-email-verification"
               element={<RecruiterEmailVerification />}
             /> */}
-        {/* Interview Routes */}
-        {/* <Route path="/interview" element={<InterviewPage />} /> */}
-        {/* <Route
-              path="/interview/compatibility"
-              element={<InterviewFlow />}
-            /> */}
+        <Route path="/interview" element={<InterviewPage />} />
+        <Route path="/interview/compatibility" element={<InterviewFlow />} />
         {/* <Route path="/interview/setup" element={<CandidatePreCheck />} /> */}
         {/* <Route
               path="/interview/video-interview"
@@ -106,13 +106,10 @@ const App = () => {
             /> */}
         {/* <Route path="/interview/flow" element={<InterviewFlow />} /> */}
         {/* <Route path="/interview/precheck" element={<CandidatePreCheck />} /> */}
-        {/* <Route
-              path="/interview/dsa-playground"
-              element={<DSAPlayground />}
-            /> */}
-        {/* <Route path="/interview/video" element={<VideoInterview />} /> */}
-        {/* <Route path="/interview/overview" element={<InterviewOverview />} /> */}
-        {/* <Route path="/mcq" element={<MCQTest />} /> */}
+        <Route path="/interview/dsa-playground" element={<DSAPlayground />} />
+        <Route path="/interview/video" element={<VideoInterview />} />
+        <Route path="/interview/overview" element={<InterviewOverview />} />
+        <Route path="/mcq" element={<MCQTest />} />
         {/* Protected Dashboard Routes */}
         <Route
           path="/dashboard"
@@ -158,14 +155,14 @@ const App = () => {
             </RequireAuth>
           }
         />
-        {/* <Route
-              path="/dashboard/interviews/:id"
-              element={
-                <RequireAuth>
-                  <InterviewDetail />
-                </RequireAuth>
-              }
-            /> */}
+        <Route
+          path="/dashboard/interviews/:id"
+          element={
+            <RequireAuth>
+              <InterviewDetail />
+            </RequireAuth>
+          }
+        />
         {/* <Route
               path="/dashboard/interviews/new"
               element={
@@ -176,14 +173,14 @@ const App = () => {
                 </RequireAuth>
               }
             /> */}
-        {/* <Route
-              path="/dashboard/interviews/:id/report"
-              element={
-                <RequireAuth>
-                  <InterviewReportWrapper />
-                </RequireAuth>
-              }
-            /> */}
+        <Route
+          path="/dashboard/interviews/:id/report"
+          element={
+            <RequireAuth>
+              <InterviewReportWrapper />
+            </RequireAuth>
+          }
+        />
         {/* <Route
               path="/dashboard/profile"
               element={
@@ -244,30 +241,24 @@ const App = () => {
   );
 };
 
-// const InterviewReportWrapper = () => {
-//   const { id } = useParams();
-//   const { data: interview } = useQuery({
-//     queryKey: ["interview", id],
-//     queryFn: async () => {
-//       const response = await interviewAPI.getInterviews();
-//       return response.data.find((i: any) => i.id.toString() === id);
-//     },
-//     enabled: !!id,
-//   });
+const InterviewReportWrapper = () => {
+  const { id } = useParams();
+  const [interview, setInterview] = useState<InterviewData>({});
+  const [job, setJob] = useState<JobData>({});
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+    interviewAPI.getInterview(id).then((res) => {
+      setInterview(res.data);
+      jobAPI.getCurrentRecruiterJob(res.data.job_id.toString()).then((res) => {
+        setJob(res.data);
+      });
+    });
+  }, []);
 
-//   const { data: job } = useQuery({
-//     queryKey: ["job", interview?.job_id],
-//     queryFn: async () => {
-//       const response = await jobAPI.recruiterGetJob(
-//         interview?.job_id.toString()
-//       );
-//       return response.data;
-//     },
-//     enabled: !!interview?.job_id,
-//   });
-
-//   if (!interview || !job) return null;
-//   return <InterviewReport jobTitle={job.title} />;
-// };
+  if (!interview || !job) return null;
+  return <InterviewReport jobTitle={job.title || ""} />;
+};
 
 export default App;

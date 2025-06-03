@@ -1,41 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { CheckCircle, Code, Video, BookOpen, Clock } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { jobAPI } from '@/lib/api';
-import { api } from '@/lib/api';
+import { CheckCircle, Code, Video, BookOpen, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { ResumeUploadStage } from "@/components/interview/stages/ResumeUploadStage";
+import { JobData } from "@/types/job";
+import { interviewAPI } from "@/services/interviewAPI";
+import { jobAPI } from "@/services/jobApi";
 
 const InterviewOverview = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const interviewId = searchParams.get('i_id');
-  const companyName = searchParams.get('company');
+  const interviewId = searchParams.get("i_id");
+  const companyName = searchParams.get("company");
+  const [jobData, setJobData] = useState<JobData>({});
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Fetch job data to determine interview flow
-  const { data: jobData, isLoading } = useQuery({
-    queryKey: ['job', interviewId],
-    queryFn: async () => {
-      // First get the job_id from the interview
-      const interviewResponse = await api.get(`/interview?id=${interviewId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("i_token")}` },
+  useEffect(() => {
+    setIsLoading(true);
+    interviewAPI
+      .candidateGetInterview()
+      .then((interviewResponse) => {
+        const jobId = interviewResponse.data.job_id;
+
+        jobAPI
+          .candidateGetJob(jobId)
+          .then((response) => {
+            setJobData(response.data);
+          })
+          .catch();
+      })
+      .catch()
+      .finally(() => {
+        setIsLoading(false);
       });
-      const jobId = interviewResponse.data.job_id;
-      
-      // Then fetch the job data
-      const response = await jobAPI.candidateGetJob(jobId);
-      return response.data;
-    },
-    enabled: !!interviewId,
-  });
+  }, []);
 
   const handleStartInterview = async () => {
     try {
-      let interviewUrl = '';
+      let interviewUrl = "";
       if (jobData?.hasQuiz) {
         interviewUrl = `/mcq?i_id=${interviewId}&company=${companyName}`;
       } else if (jobData?.hasDSATest) {
@@ -44,15 +48,15 @@ const InterviewOverview = () => {
         interviewUrl = `/interview/video?i_id=${interviewId}&company=${companyName}`;
       }
 
-      // Navigate to the interview page
       navigate(interviewUrl);
 
-      // Request fullscreen after a short delay to ensure the page has loaded
       setTimeout(() => {
         const element = document.documentElement;
         if (element.requestFullscreen) {
-          element.requestFullscreen().catch(err => {
-            console.error(`Error attempting to enable fullscreen: ${err.message}`);
+          element.requestFullscreen().catch((err) => {
+            console.error(
+              `Error attempting to enable fullscreen: ${err.message}`
+            );
           });
         } else if ((element as any).webkitRequestFullscreen) {
           (element as any).webkitRequestFullscreen();
@@ -61,8 +65,8 @@ const InterviewOverview = () => {
         }
       }, 100);
     } catch (error) {
-      console.error('Error starting interview:', error);
-      toast.error('Failed to start interview. Please try again.');
+      console.error("Error starting interview:", error);
+      toast.error("Failed to start interview. Please try again.");
     }
   };
 
@@ -97,57 +101,57 @@ const InterviewOverview = () => {
 
         <div className="grid gap-6 md:grid-cols-3">
           {jobData?.hasQuiz && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2 mb-2">
-                <BookOpen className="h-6 w-6 text-primary" />
-                <CardTitle>MCQ Test</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Multiple choice questions</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Technical knowledge assessment</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Time limit: 20 minutes</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen className="h-6 w-6 text-primary" />
+                  <CardTitle>MCQ Test</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span>Multiple choice questions</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span>Technical knowledge assessment</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span>Time limit: 20 minutes</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
           )}
 
           {jobData?.hasDSATest && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2 mb-2">
-                <Code className="h-6 w-6 text-primary" />
-                <CardTitle>DSA Playground</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Algorithmic problem solving</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Code in your preferred language</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Time limit: 20 minutes</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2 mb-2">
+                  <Code className="h-6 w-6 text-primary" />
+                  <CardTitle>DSA Playground</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span>Algorithmic problem solving</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span>Code in your preferred language</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span>Time limit: 20 minutes</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
           )}
 
           <Card>
@@ -182,17 +186,15 @@ const InterviewOverview = () => {
             <li>• Ensure you have a stable internet connection</li>
             <li>• Use a quiet environment with good lighting</li>
             <li>• Have your ID ready for verification</li>
-            {jobData?.hasDSATest && <li>• Keep a notepad handy for the DSA section</li>}
+            {jobData?.hasDSATest && (
+              <li>• Keep a notepad handy for the DSA section</li>
+            )}
             <li>• Test your microphone and camera before starting</li>
           </ul>
         </div>
 
         <div className="flex justify-center">
-          <Button 
-            size="lg" 
-            onClick={handleStartInterview}
-            className="px-8"
-          >
+          <Button size="lg" onClick={handleStartInterview} className="px-8">
             Start Interview
           </Button>
         </div>
@@ -201,4 +203,4 @@ const InterviewOverview = () => {
   );
 };
 
-export default InterviewOverview; 
+export default InterviewOverview;

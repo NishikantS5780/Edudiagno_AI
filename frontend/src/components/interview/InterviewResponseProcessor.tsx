@@ -1,6 +1,8 @@
+import { config } from "@/config";
+import { interviewAPI } from "@/services/interviewAPI";
+import axios from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
-import api, { interviewAPI } from "@/lib/api";
 
 interface GenerateQuestionParams {
   jobDescription: string;
@@ -47,11 +49,14 @@ export function useInterviewResponseProcessor() {
   }: ProcessResponseParams): Promise<{ nextQuestion: string } | null> => {
     try {
       setIsProcessing(true);
-      const apiResponse = await api.post("/interview-ai/process-response", {
-        response,
-        interviewId,
-        conversationHistory,
-      });
+      const apiResponse = await axios.post(
+        `${config.API_BASE_URL}/interview-ai/process-response`,
+        {
+          response,
+          interviewId,
+          conversationHistory,
+        }
+      );
       return apiResponse.data;
     } catch (error) {
       console.error("Error processing response:", error);
@@ -68,11 +73,15 @@ export function useInterviewResponseProcessor() {
       const formData = new FormData();
       formData.append("audio", audioBlob);
 
-      const response = await api.post("/interview-ai/transcribe", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        `${config.API_BASE_URL}/interview-ai/transcribe`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       return response.data.transcript;
     } catch (error) {
       toast.error("Failed to transcribe audio");

@@ -109,77 +109,11 @@ export const interviewAPI = {
     );
     return res;
   },
-  candidateGetInterview: async () => {
-    const iToken = localStorage.getItem("i_token");
-    const res = await api.get("/interview", {
-      headers: { Authorization: `Bearer ${iToken}` },
-    });
-    return res;
-  },
-  createInterview: async (data: InterviewData, jobId: number) => {
-    const token = localStorage.getItem("token");
-    const res = await api.post(
-      "/interview",
-      {
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        work_experience: data.workExperience,
-        education: data.education,
-        skills: data.skills,
-        location: data.location,
-        linkedin_url: data.linkedinUrl,
-        portfolio_url: data.portfolioUrl,
-        resume_text: data.resumeText,
-        job_id: jobId,
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return res;
-  },
   deleteInterview: async (id: number) => {
     const token = localStorage.getItem("token");
     const res = await api.delete(`/interview?id=${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return res;
-  },
-  analyzeCandidate: async () => {
-    const iToken = localStorage.getItem("i_token");
-    const res = await api.post("/interview/analyze-resume", undefined, {
-      headers: { Authorization: `Bearer ${iToken}` },
-    });
-    return res;
-  },
-  uploadResume: async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const iToken = localStorage.getItem("i_token");
-      const response = await api.put("/interview/upload-resume", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${iToken}`,
-        },
-      });
-      return response;
-    } catch (error) {
-      console.error("Error uploading resume:", error);
-      throw error;
-    }
-  },
-  generateQuestions: async () => {
-    const iToken = localStorage.getItem("i_token");
-    const res = await api.post(
-      "/interview-question-and-response/generate-questions",
-      undefined,
-      {
-        headers: { Authorization: `Bearer ${iToken}` },
-      }
-    );
     return res;
   },
   analyzeTranscript: async (transcript: string, jobContext: any) => {
@@ -214,66 +148,6 @@ export const interviewAPI = {
     );
     return res;
   },
-  generateFeedback: async (transcript: string, jobRequirements: string) => {
-    const iToken = localStorage.getItem("i_token");
-    const res = await api.put("/interview/generate-feedback", JSON.stringify({
-      transcript,
-      job_requirements: jobRequirements
-    }), {
-      headers: { 
-        Authorization: `Bearer ${iToken}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-    });
-    return res.data;
-  },
-  submitTextResponse: async (question_order: number, answer: string) => {
-    const iToken = localStorage.getItem("i_token");
-    const res = await api.put(
-      "/interview-question-and-response/submit-text-response",
-      {
-        question_order,
-        answer,
-      },
-      {
-        headers: { Authorization: `Bearer ${iToken}` },
-      }
-    );
-    return res;
-  },
-  getInterviewQuestionsAndResponses: async (interviewId: string) => {
-    const token = localStorage.getItem("token");
-    const res = await api.get(
-      `/interview-question-and-response?interview_id=${interviewId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return res;
-  },
-  sendOtp: async (email: string) => {
-    const iToken = localStorage.getItem("i_token");
-    const res = await api.post(
-      "/interview/send-otp",
-      { email },
-      {
-        headers: { Authorization: `Bearer ${iToken}` },
-      }
-    );
-    return res.data;
-  },
-  verifyOtp: async (email: string, otp: string) => {
-    const iToken = localStorage.getItem("i_token");
-    const res = await api.post(
-      "/interview/verify-otp",
-      { email, otp },
-      {
-        headers: { Authorization: `Bearer ${iToken}` },
-      }
-    );
-    return res.data;
-  },
 };
 
 export const jobAPI = {
@@ -281,10 +155,6 @@ export const jobAPI = {
     const res = await api.get(`/job?id=${jobId}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-    return res;
-  },
-  candidateGetJob: async (jobId: string) => {
-    const res = await api.get(`/job/candidate-view?id=${jobId}`);
     return res;
   },
   getMcqQuestions: async (jobId: string) => {
@@ -329,21 +199,6 @@ export const jobAPI = {
 };
 
 export const textAPI = {
-  textToSpeech: async (text: string) => {
-    const res = api.post("/text/to-speech", { text });
-    return res;
-  },
-};
-
-export const resumeAPI = {
-  extractResumeData: async (resume: File) => {
-    const formdata = new FormData();
-    formdata.append("file", resume);
-    const res = await api.post("/resume/parse", formdata, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return res;
-  },
 };
 
 export const userAPI = {
