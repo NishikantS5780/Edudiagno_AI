@@ -150,16 +150,6 @@ const App = () => {
             </RequireAuth>
           }
         />
-        {/* <Route
-              path="/dashboard/jobs/:id/edit"
-              element={
-                <RequireAuth>
-                  <RequireProfileVerified>
-                    <JobEdit />
-                  </RequireProfileVerified>
-                </RequireAuth>
-              }
-            /> */}
         <Route
           path="/dashboard/interviews"
           element={

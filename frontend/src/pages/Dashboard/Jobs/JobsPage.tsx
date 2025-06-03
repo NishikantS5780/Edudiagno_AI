@@ -114,11 +114,10 @@ const JobsPage = () => {
         limit: itemsPerPage,
       });
 
-      const data = response.data;
-      const totalCount = parseInt(response.headers["x-total-count"] || "0");
+      const totalCount = response.data.count;
       setTotalPages(Math.ceil(totalCount / itemsPerPage));
 
-      const jobsData = data.map(
+      const jobsData = response.data.jobs.map(
         (jobData: {
           id: number;
           title: string;
@@ -144,7 +143,6 @@ const JobsPage = () => {
       );
       setJobs(jobsData);
     } catch (error) {
-      console.error("Error fetching jobs:", error);
       toast.error("Failed to fetch jobs");
     } finally {
       setLoading(false);
@@ -423,7 +421,9 @@ const JobsPage = () => {
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                            // onClick={() => copyInterviewLink(job.id)}
+                              onClick={() =>
+                                job.id && copyInterviewLink(job.id)
+                              }
                             >
                               <Share className="mr-2 h-4 w-4" />
                               Copy Interview Link

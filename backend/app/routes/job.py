@@ -146,22 +146,15 @@ async def get_all_job(
         .offset(start_int)
     )
 
-    # Get total count of jobs for this recruiter
     count_stmt = (
         select(func.count()).select_from(Job).where(Job.company_id == recruiter_id)
     )
     total_count = db.execute(count_stmt).scalar()
 
     result = db.execute(stmt)
-    jobs = []
-    for job in result.all():
-        job_dict = dict(job._mapping)
-        # Convert datetime to ISO format string
-        if job_dict.get("created_at"):
-            job_dict["created_at"] = job_dict["created_at"].isoformat()
-        jobs.append(job_dict)
+    jobs = result.mappings().all()
 
-    return JSONResponse(content=jobs, headers={"X-Total-Count": str(total_count)})
+    return {"count": total_count, "jobs": jobs}
 
 
 @router.get("/candidate-view")
