@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import DsaQuestion from "../DsaLab/DsaQuestion";
 import CodeExecutionPanel from "../DsaLab/CodeExecutionPanel";
@@ -24,6 +24,8 @@ import api from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { toast } from "sonner";
+import DraggableCameraFeed from "@/components/DraggableCameraFeed";
+import html2canvas from "html2canvas";
 
 interface DSAQuestion {
   id: number;
@@ -52,6 +54,7 @@ const DSAPlayground = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [warningShown, setWarningShown] = useState(false);
+  const [screenshotInterval, setScreenshotInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Add fullscreen effect hook with other useEffect hooks
   useEffect(() => {
@@ -279,6 +282,104 @@ const DSAPlayground = () => {
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Add screenshot capture function
+  const captureAndSendScreenshot = async () => {
+    try {
+      console.log("[Screenshot] Starting capture process...");
+      const startTime = performance.now();
+
+      // Create canvas from the entire page
+      const canvas = await html2canvas(document.documentElement, {
+        scale: 1,
+        useCORS: true,
+        logging: false,
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight,
+      });
+
+      // Convert canvas to blob
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), "image/png");
+      });
+
+      if (!blob) {
+        console.error("[Screenshot] Failed to create blob from canvas");
+        return;
+      }
+
+      console.log(
+        `[Screenshot] Blob created successfully (${(blob.size / 1024).toFixed(2)} KB)`
+      );
+
+      // Get interview ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const i_id = urlParams.get("i_id");
+
+      if (!i_id) {
+        console.error("[Screenshot] No interview ID found in URL");
+        return;
+      }
+
+      console.log("[Screenshot] Sending to backend...");
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/interview/screenshot`,
+        {
+          method: "POST",
+          body: blob,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const endTime = performance.now();
+      console.log(
+        `[Screenshot] Successfully saved (${((endTime - startTime) / 1000).toFixed(2)}s)`,
+        result
+      );
+    } catch (err) {
+      console.error("[Screenshot] Error during capture/upload:", err);
+      toast.error("Failed to capture screenshot");
+    }
+  };
+
+  // Start screenshot interval when test starts
+  useEffect(() => {
+    if (isTestStarted) {
+      console.log("[Screenshot] Starting screenshot interval");
+      // Clear any existing interval
+      if (screenshotInterval) {
+        clearInterval(screenshotInterval);
+      }
+      // Start new interval
+      const interval = setInterval(captureAndSendScreenshot, 30000); // Every 30 seconds
+      setScreenshotInterval(interval);
+
+      // Cleanup on unmount
+      return () => {
+        if (interval) {
+          console.log("[Screenshot] Cleaning up screenshot interval");
+          clearInterval(interval);
+        }
+      };
+    }
+  }, [isTestStarted]);
+
+  // Cleanup screenshot interval when test ends
+  useEffect(() => {
+    return () => {
+      if (screenshotInterval) {
+        console.log("[Screenshot] Cleaning up screenshot interval on unmount");
+        clearInterval(screenshotInterval);
+      }
+    };
+  }, []);
+
   if (isLoadingInterview || isLoadingQuestions || isLoadingTestCases) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -314,6 +415,7 @@ const DSAPlayground = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <DraggableCameraFeed />
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">DSA Playground</h1>
