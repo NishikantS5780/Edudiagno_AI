@@ -76,6 +76,8 @@ import IntegrationManagement from "@/pages/Admin/Integrations";
 import SupportManagement from "@/pages/Admin/Support";
 
 import { interviewAPI, jobAPI } from "@/lib/api";
+import Payment from "./pages/Payment";
+import PaymentSuccessPage from "./pages/PaymentSuccessPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -127,6 +129,8 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/payment" element={<Payment/>}/>
+                <Route path="/payment-success" element={<PaymentSuccessPage/>}/>
                 <Route
                   path="/recruiter-email-verification"
                   element={<RecruiterEmailVerification />}
