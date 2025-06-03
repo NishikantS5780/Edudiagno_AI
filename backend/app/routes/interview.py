@@ -529,9 +529,15 @@ async def analyze_resume(
 
 @router.put("/generate-feedback")
 async def generate_feedback(
+    request: Request,
     db: Session = Depends(database.get_db),
     interview_id=Depends(authorize_candidate),
 ):
+    # Get request body
+    body = await request.json()
+    transcript = body.get("transcript", "")
+    job_requirements = body.get("job_requirements", "")
+
     stmt = (
         select(
             Job.title,
@@ -576,20 +582,21 @@ async def generate_feedback(
     )
     custom_question_responses = db.execute(stmt).mappings().all()
 
-    conversation = ""
-    for question_and_response in questions_and_responses:
-        conversation += f"""
-            Recruiter: {question_and_response.question} (question type: {question_and_response.question_type})
+    conversation = transcript or ""
+    if not conversation:
+        for question_and_response in questions_and_responses:
+            conversation += f"""
+                Recruiter: {question_and_response.question} (question type: {question_and_response.question_type})
 
-            Candidate: {question_and_response.answer}
-        """
+                Candidate: {question_and_response.answer}
+            """
 
-    for response in custom_question_responses:
-        conversation += f"""
-            Recruiter: {response.question} (question type: {response.question_type})
+        for response in custom_question_responses:
+            conversation += f"""
+                Recruiter: {response.question} (question type: {response.question_type})
 
-            Candidate: {response.answer}
-        """
+                Candidate: {response.answer}
+            """
 
     prompt = f"""
         You are evaluating an interview transcript. The candidate is applying for a specific job. Carefully analyze their responses and assess their performance. Be critical, especially when answers are insufficient or irrelevant.
@@ -611,7 +618,7 @@ async def generate_feedback(
                 "communication": number between 0 and 100,
                 "problemSolving": number between 0 and 100,
                 "culturalFit": number between 0 and 100
-            }},
+            }}
             "suggestions": [
                 "Each item must be a concrete, actionable suggestion for the candidate",
                 "Be specific: e.g., 'Provide examples when answering', 'Work on articulating thoughts clearly'"
@@ -632,7 +639,7 @@ async def generate_feedback(
         {data.description}
 
         Job Requirements:
-        {data.requirements}
+        {job_requirements or data.requirements}
 
         Important:
         - Return ONLY the JSON object, no other text
@@ -712,6 +719,19 @@ async def generate_feedback(
     pdf.cell(half_width, 16.8, "Skills", border=1)
     pdf.cell(half_width, 16.8, data["skills"], border=1, ln=1)
     pdf.ln(14)
+    # pdf.set_font("Arial", size=16)
+    # pdf.set_text_color(0, 0, 200)
+    # pdf.cell(full_width, 19.2, "MCQ Test Results", border=0, ln=1)
+    # pdf.ln(8)
+    # pdf.set_text_color(0, 0, 0)
+    # pdf.set_font("Arial", size=14)
+    # pdf.cell(half_width, 16.8, "Total Score", border=1)
+    # pdf.cell(half_width, 16.8, "13", border=1, ln=1)
+    # pdf.cell(half_width, 16.8, "Technical Questions", border=1)
+    # pdf.cell(half_width, 16.8, "13", border=1, ln=1)
+    # pdf.cell(half_width, 16.8, "Aptitude Questions", border=1)
+    # pdf.cell(half_width, 16.8, "13", border=1, ln=1)
+    # pdf.ln(14)
     pdf.set_font("Arial", size=16)
     pdf.set_text_color(0, 0, 200)
     pdf.cell(full_width, 19.2, "Assessment Results", border=0, ln=1)

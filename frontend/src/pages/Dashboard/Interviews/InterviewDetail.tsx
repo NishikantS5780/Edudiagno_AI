@@ -812,7 +812,7 @@ const InterviewDetail = () => {
                     fluid: true,
                     sources: [
                       {
-                        src: interview.videoUrl,
+                        src: interview.videoUrl.replace('/uploads/', '/api/uploads/'),
                         type: "application/x-mpegURL",
                       },
                     ],
@@ -847,9 +847,11 @@ const InterviewDetail = () => {
                   {interview.screenshot_urls.map((url: string, index: number) => {
                     // Clean up the URL by removing any 'None' segments and ensuring proper path
                     const cleanUrl = url.replace(/\/None\//g, '/').replace(/\/+/g, '/');
-                    const imageUrl = cleanUrl.startsWith('http') 
-                      ? cleanUrl 
-                      : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/uploads/screenshot/${interview.id}/${cleanUrl.split('/').pop()}`;
+                    // Extract just the filename from the URL
+                    const filename = cleanUrl.split('/').pop();
+                    // Construct the full URL using the API base URL, ensuring no double /api
+                    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+                    const imageUrl = `${baseUrl}/uploads/screenshot/${interview.id}/${filename}`;
                     
                     return (
                       <div key={index} className="relative group">

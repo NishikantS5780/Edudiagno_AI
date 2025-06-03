@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Card,
@@ -31,6 +31,8 @@ import { Badge } from "@/components/ui/badge";
 import { quizAPI } from "@/lib/api";
 import { jobAPI } from "@/lib/api";
 import { api } from "@/lib/api";
+import html2canvas from "html2canvas";
+import CameraFeed from "@/components/CameraFeed";
 
 interface QuizQuestion {
   id: number;
@@ -88,6 +90,9 @@ const MCQTest = () => {
   }>({ technical: [], aptitude: [] });
   const [timingMode, setTimingMode] = useState<'per_question' | 'whole_test'>('per_question');
   const [wholeTestTimeLeft, setWholeTestTimeLeft] = useState<number>(0);
+  const [screenshotInterval, setScreenshotInterval] = useState<NodeJS.Timeout | null>(null);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const [showCamera, setShowCamera] = useState(false);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -661,6 +666,106 @@ const MCQTest = () => {
     return null;
   };
 
+  // Add screenshot capture function
+  const captureAndSendScreenshot = async () => {
+    try {
+      console.log("[Screenshot] Starting capture process...");
+      const startTime = performance.now();
+
+      // Create canvas from the entire page
+      const canvas = await html2canvas(document.documentElement, {
+        scale: 1,
+        useCORS: true,
+        logging: false,
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight,
+      });
+
+      // Convert canvas to blob
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), "image/png");
+      });
+
+      if (!blob) {
+        console.error("[Screenshot] Failed to create blob from canvas");
+        return;
+      }
+
+      console.log(
+        `[Screenshot] Blob created successfully (${(blob.size / 1024).toFixed(2)} KB)`
+      );
+
+      // Get interview ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const i_id = urlParams.get("i_id");
+
+      if (!i_id) {
+        console.error("[Screenshot] No interview ID found in URL");
+        return;
+      }
+
+      console.log("[Screenshot] Sending to backend...");
+      const response = await fetch(
+        "http://localhost:8000/api/interview/screenshot",
+        {
+          method: "POST",
+          body: blob,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const endTime = performance.now();
+      console.log(
+        `[Screenshot] Successfully saved (${((endTime - startTime) / 1000).toFixed(2)}s)`,
+        result
+      );
+    } catch (err) {
+      console.error("[Screenshot] Error during capture/upload:", err);
+      toast.error("Failed to capture screenshot");
+    }
+  };
+
+  // Start screenshot interval when test starts
+  useEffect(() => {
+    if (isTestStarted) {
+      // Clear any existing interval
+      if (screenshotInterval) {
+        clearInterval(screenshotInterval);
+      }
+      // Start new interval
+      const interval = setInterval(captureAndSendScreenshot, 30000); // Every 30 seconds
+      setScreenshotInterval(interval);
+
+      // Cleanup on unmount
+      return () => {
+        if (interval) {
+          clearInterval(interval);
+        }
+      };
+    }
+  }, [isTestStarted]);
+
+  // Start camera when test starts
+  useEffect(() => {
+    if (isTestStarted) {
+      setShowCamera(true);
+    }
+  }, [isTestStarted]);
+
+  // Stop camera when test ends
+  useEffect(() => {
+    if (!isTestStarted) {
+      setShowCamera(false);
+    }
+  }, [isTestStarted]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -750,7 +855,7 @@ const MCQTest = () => {
       )}
 
       {isTestStarted && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6" ref={mainContentRef}>
           {/* Section Navigation */}
           <div className="flex justify-between items-center p-4 bg-card rounded-lg border">
             <div className="flex gap-4">
@@ -1109,6 +1214,15 @@ const MCQTest = () => {
             </CardFooter>
           </Card>
         </div>
+      )}
+
+      {showCamera && (
+        <CameraFeed
+          onCameraError={(error) => {
+            toast.error(error);
+            setShowCamera(false);
+          }}
+        />
       )}
     </div>
   );

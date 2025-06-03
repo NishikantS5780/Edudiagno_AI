@@ -214,10 +214,17 @@ export const interviewAPI = {
     );
     return res;
   },
-  generateFeedback: async () => {
+  generateFeedback: async (transcript: string, jobRequirements: string) => {
     const iToken = localStorage.getItem("i_token");
-    const res = await api.put("/interview/generate-feedback", undefined, {
-      headers: { Authorization: `Bearer ${iToken}` },
+    const res = await api.put("/interview/generate-feedback", JSON.stringify({
+      transcript,
+      job_requirements: jobRequirements
+    }), {
+      headers: { 
+        Authorization: `Bearer ${iToken}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
     });
     return res.data;
   },
