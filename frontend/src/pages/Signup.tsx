@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { cn } from "@/lib/utils";
 import RegularLayout from "@/components/layout/RegularLayout";
 import { CommandList } from "cmdk";
-import { UserContext } from "@/context/UserContext";
+import { authAPI } from "@/services/authApi";
 
 interface Country {
   id: number;
@@ -38,8 +38,6 @@ interface City {
   id: number;
   name: string;
 }
-
-const countries = ["Afghanistan", "Albania", "Algeria", "India"];
 
 const SignUp = () => {
   const [name, setName] = useState("");
@@ -68,7 +66,6 @@ const SignUp = () => {
   // Form state
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useContext(UserContext)!;
   const navigate = useNavigate();
 
   // Password strength indicators
@@ -99,48 +96,52 @@ const SignUp = () => {
 
   const fetchCountries = async (keyword?: string) => {
     try {
-      const url = new URL(import.meta.env.VITE_API_BASE_URL + '/country');
-      if (keyword) url.searchParams.append('keyword', keyword);
+      const url = new URL(import.meta.env.VITE_API_BASE_URL + "/country");
+      if (keyword) url.searchParams.append("keyword", keyword);
       const response = await fetch(url.toString());
       const data = await response.json();
       const countriesArray = data || [];
       setCountries(countriesArray);
     } catch (error: any) {
-      console.error('Error fetching countries:', error);
-      toast.error('Failed to fetch countries');
+      console.error("Error fetching countries:", error);
+      toast.error("Failed to fetch countries");
       setCountries([]);
     }
   };
 
   const fetchStates = async (countryId: number, keyword?: string) => {
     try {
-      const url = new URL(import.meta.env.VITE_API_BASE_URL + '/state');
-      url.searchParams.append('country_id', countryId.toString());
-      if (keyword) url.searchParams.append('keyword', keyword);
+      const url = new URL(import.meta.env.VITE_API_BASE_URL + "/state");
+      url.searchParams.append("country_id", countryId.toString());
+      if (keyword) url.searchParams.append("keyword", keyword);
       const response = await fetch(url.toString());
       const data = await response.json();
       const statesArray = data || [];
       setStates(statesArray);
     } catch (error: any) {
-      console.error('Error fetching states:', error);
-      toast.error('Failed to fetch states');
+      console.error("Error fetching states:", error);
+      toast.error("Failed to fetch states");
       setStates([]);
     }
   };
 
-  const fetchCities = async (countryId: number, stateId: number, keyword?: string) => {
+  const fetchCities = async (
+    countryId: number,
+    stateId: number,
+    keyword?: string
+  ) => {
     try {
-      const url = new URL(import.meta.env.VITE_API_BASE_URL + '/city');
-      url.searchParams.append('country_id', countryId.toString());
-      url.searchParams.append('state_id', stateId.toString());
-      if (keyword) url.searchParams.append('keyword', keyword);
+      const url = new URL(import.meta.env.VITE_API_BASE_URL + "/city");
+      url.searchParams.append("country_id", countryId.toString());
+      url.searchParams.append("state_id", stateId.toString());
+      if (keyword) url.searchParams.append("keyword", keyword);
       const response = await fetch(url.toString());
       const data = await response.json();
       const citiesArray = data || [];
       setCities(citiesArray);
     } catch (error: any) {
-      console.error('Error fetching cities:', error);
-      toast.error('Failed to fetch cities');
+      console.error("Error fetching cities:", error);
+      toast.error("Failed to fetch cities");
       setCities([]);
     }
   };
@@ -176,10 +177,10 @@ const SignUp = () => {
       return;
     }
 
-    if (passwordStrengthScore < 3) {
-      toast.error("Please use a stronger password");
-      return;
-    }
+    // if (passwordStrengthScore < 3) {
+    //   toast.error("Please use a stronger password");
+    //   return;
+    // }
 
     if (!agreedToTerms) {
       toast.error("You must agree to the terms and conditions");
@@ -189,7 +190,7 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
-      await signup({
+      await authAPI.signupRecruiter({
         name,
         email,
         password,
@@ -207,10 +208,19 @@ const SignUp = () => {
       navigate("/login");
     } catch (error: any) {
       if (error.response?.status === 400) {
-        if (error.response?.data?.detail?.includes('duplicate key value violates unique constraint "ix_recruiters_email"')) {
-          toast.error("This email is already registered. Please use a different email or try logging in.");
+        if (
+          error.response?.data?.detail?.includes(
+            'duplicate key value violates unique constraint "ix_recruiters_email"'
+          )
+        ) {
+          toast.error(
+            "This email is already registered. Please use a different email or try logging in."
+          );
         } else {
-          toast.error(error.response?.data?.detail || "Invalid input. Please check your details and try again.");
+          toast.error(
+            error.response?.data?.detail ||
+              "Invalid input. Please check your details and try again."
+          );
         }
       } else {
         toast.error("Failed to create account. Please try again later.");
@@ -284,7 +294,7 @@ const SignUp = () => {
                     value={phone}
                     onChange={(e) => {
                       // Only allow numbers
-                      const value = e.target.value.replace(/\D/g, '');
+                      const value = e.target.value.replace(/\D/g, "");
                       setPhone(value);
                     }}
                     pattern="[0-9]*"
@@ -422,7 +432,10 @@ const SignUp = () => {
                       <Command>
                         <CommandInput
                           placeholder="Search state..."
-                          onValueChange={(value) => selectedCountry && fetchStates(selectedCountry.id, value)}
+                          onValueChange={(value) =>
+                            selectedCountry &&
+                            fetchStates(selectedCountry.id, value)
+                          }
                         />
                         <CommandList>
                           <CommandEmpty>No state found.</CommandEmpty>
@@ -455,10 +468,7 @@ const SignUp = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
-                  <Popover
-                    open={cityPopupOpen}
-                    onOpenChange={setCityPopupOpen}
-                  >
+                  <Popover open={cityPopupOpen} onOpenChange={setCityPopupOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -477,7 +487,15 @@ const SignUp = () => {
                       <Command>
                         <CommandInput
                           placeholder="Search city..."
-                          onValueChange={(value) => selectedCountry && selectedState && fetchCities(selectedCountry.id, selectedState.id, value)}
+                          onValueChange={(value) =>
+                            selectedCountry &&
+                            selectedState &&
+                            fetchCities(
+                              selectedCountry.id,
+                              selectedState.id,
+                              value
+                            )
+                          }
                         />
                         <CommandList>
                           <CommandEmpty>No city found.</CommandEmpty>

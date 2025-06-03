@@ -1,17 +1,27 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
-import { interviewAPI } from "@/lib/api";
+import { interviewAPI } from "@/services/interviewAPI";
 
 interface EmailVerificationStageProps {
   resumeEmail: string;
   onVerified: () => void;
 }
 
-export function EmailVerificationStage({ resumeEmail, onVerified }: EmailVerificationStageProps) {
+export function EmailVerificationStage({
+  resumeEmail,
+  onVerified,
+}: EmailVerificationStageProps) {
   const [email, setEmail] = useState(resumeEmail);
   const [otp, setOtp] = useState("");
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -54,7 +64,8 @@ export function EmailVerificationStage({ resumeEmail, onVerified }: EmailVerific
       <CardHeader>
         <CardTitle>Email Verification</CardTitle>
         <CardDescription>
-          Please verify your email address to continue with the interview process
+          Please verify your email address to continue with the interview
+          process
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -85,10 +96,7 @@ export function EmailVerificationStage({ resumeEmail, onVerified }: EmailVerific
       </CardContent>
       <CardFooter className="flex justify-end gap-2">
         {!otpSent ? (
-          <Button
-            onClick={handleSendOtp}
-            disabled={isSendingOtp}
-          >
+          <Button onClick={handleSendOtp} disabled={isSendingOtp}>
             {isSendingOtp ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -116,4 +124,4 @@ export function EmailVerificationStage({ resumeEmail, onVerified }: EmailVerific
       </CardFooter>
     </Card>
   );
-} 
+}

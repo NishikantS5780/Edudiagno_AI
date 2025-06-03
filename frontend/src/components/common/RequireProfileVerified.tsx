@@ -1,9 +1,10 @@
 import React, { useContext } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { UserContext } from "@/context/UserContext";
+import { AuthContext } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 interface RequireProfileCompletionProps {
   children: React.ReactNode;
@@ -12,14 +13,18 @@ interface RequireProfileCompletionProps {
 const RequireProfileVerified: React.FC<RequireProfileCompletionProps> = ({
   children,
 }) => {
-  const { recruiter } = useContext(UserContext);
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    toast("Something went wrong");
+    return;
+  }
   const location = useLocation();
 
   if (location.pathname.includes("/dashboard/profile")) {
     return <>{children}</>;
   }
 
-  if (recruiter && recruiter.verified) {
+  if (authContext.recruiter && authContext.recruiter.verified) {
     return (
       <div className="container max-w-7xl py-6">
         <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 mb-6">

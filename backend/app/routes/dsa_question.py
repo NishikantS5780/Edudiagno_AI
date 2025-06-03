@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.orm import Session
 
 from app import database
@@ -16,31 +16,80 @@ async def create_dsa_question(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    dsa_question = DSAQuestion(
-        title=dsa_question_data.title,
-        description=dsa_question_data.description,
-        difficulty=dsa_question_data.difficulty,
-        time_minutes=dsa_question_data.time_minutes,
-        job_id=dsa_question_data.job_id,
+    stmt = (
+        insert(DSAQuestion)
+        .values(
+            title=dsa_question_data.title,
+            description=dsa_question_data.description,
+            difficulty=dsa_question_data.difficulty,
+            time_minutes=dsa_question_data.time_minutes,
+            job_id=dsa_question_data.job_id,
+        )
+        .returning(
+            DSAQuestion.id,
+            DSAQuestion.title,
+            DSAQuestion.description,
+            DSAQuestion.difficulty,
+            DSAQuestion.time_minutes,
+            DSAQuestion.job_id,
+        )
     )
-    db.add(dsa_question)
+    result = db.execute(stmt)
     db.commit()
-    db.refresh(dsa_question)
+    dsa_question = result.mappings().one()
 
-    return dsa_question
+    data = dict(dsa_question)
+    data["test_cases"] = []
+
+    for test_case in dsa_question_data.test_cases:
+        stmt = (
+            insert(DSATestCase)
+            .values(
+                input=test_case.input,
+                expected_output=test_case.expected_output,
+                dsa_question_id=dsa_question["id"],
+            )
+            .returning(
+                DSATestCase.id,
+                DSATestCase.input,
+                DSATestCase.expected_output,
+                DSATestCase.dsa_question_id,
+            )
+        )
+        result = db.execute(stmt)
+        db.commit()
+        dsa_test_case = result.mappings().one()
+        data["test_cases"].append(dict(dsa_test_case))
+    return data
 
 
 @router.get("")
 async def get_dsa_question(job_id: str, db: Session = Depends(database.get_db)):
-    stmt = select(
-        DSAQuestion.id,
-        DSAQuestion.title,
-        DSAQuestion.description,
-        DSAQuestion.difficulty,
-        DSAQuestion.time_minutes,
-    ).where(DSAQuestion.job_id == int(job_id))
+    stmt = (
+        select(
+            DSAQuestion.id,
+            DSAQuestion.title,
+            DSAQuestion.description,
+            DSAQuestion.difficulty,
+            DSAQuestion.time_minutes,
+        )
+        .where(DSAQuestion.job_id == int(job_id))
+        .order_by(DSAQuestion.id)
+    )
     result = db.execute(stmt)
-    dsa_questions = result.mappings().all()
+    dsa_questions = [dict(q) for q in result.mappings().all()]
+
+    for question in dsa_questions:
+        stmt = select(
+            DSATestCase.id,
+            DSATestCase.expected_output,
+            DSATestCase.input,
+            DSATestCase.dsa_question_id,
+        ).where(DSATestCase.dsa_question_id == question["id"])
+        result = db.execute(stmt)
+        test_cases = [dict(t) for t in result.mappings().all()]
+        question["test_cases"] = test_cases
+
     return dsa_questions
 
 

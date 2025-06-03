@@ -4,11 +4,6 @@ import ThemeToggle from "@/components/common/ThemeToggle";
 import {
   LayoutDashboard,
   Briefcase,
-  Users,
-  Calendar,
-  BarChart2,
-  Settings,
-  HelpCircle,
   Menu,
   X,
   LogOut,
@@ -25,15 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { UserContext } from "@/context/UserContext";
-import { useNotifications } from "@/context/NotificationContext";
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from "date-fns";
+import { AuthContext } from "@/context/AuthContext";
 
 interface SidebarLink {
   name: string;
@@ -50,23 +38,23 @@ const navigation: SidebarLink[] = [
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const userContext = useContext(UserContext);
-  if (!userContext) {
-    throw new Error('UserContext is not available');
+  const authContext = useContext(AuthContext);
+  if (!authContext || !authContext.recruiter) {
+    throw new Error("Something went wrong");
   }
-  const { logout, recruiter: { name, companyLogo } } = userContext;
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  // const { notifications, unreadCount, markAsRead, markAllAsRead } =
+  //   useNotifications();
 
   const handleLogout = () => {
-    logout();
+    authContext.logout();
     navigate("/");
   };
 
-  const initials = name
-    ? name
+  const initials = authContext.recruiter.name
+    ? authContext.recruiter.name
         .split(" ")
         .map((n) => n[0])
         .join("")
@@ -144,19 +132,23 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
           <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="relative hidden">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="relative hidden"
+                >
                   <Bell className="h-5 w-5" />
-                  {unreadCount > 0 && (
+                  {/* {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-brand text-xs flex items-center justify-center text-white">
                       {unreadCount}
                     </span>
-                  )}
+                  )} */}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80">
                 <DropdownMenuLabel className="flex items-center justify-between">
                   <span>Notifications</span>
-                  {unreadCount > 0 && (
+                  {/* {unreadCount > 0 && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -165,10 +157,10 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
                     >
                       Mark all as read
                     </Button>
-                  )}
+                  )} */}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {notifications.length === 0 ? (
+                {/* {notifications.length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
                     No notifications
                   </div>
@@ -177,14 +169,18 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
                     <DropdownMenuItem
                       key={notification.id}
                       className={`flex flex-col items-start gap-1 p-3 ${
-                        !notification.read ? 'bg-muted/50' : ''
+                        !notification.read ? "bg-muted/50" : ""
                       }`}
                       onClick={() => markAsRead(notification.id)}
                     >
                       <div className="flex items-center justify-between w-full">
-                        <span className="font-medium">{notification.title}</span>
+                        <span className="font-medium">
+                          {notification.title}
+                        </span>
                         <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(notification.timestamp, { addSuffix: true })}
+                          {formatDistanceToNow(notification.timestamp, {
+                            addSuffix: true,
+                          })}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -192,7 +188,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
                       </p>
                     </DropdownMenuItem>
                   ))
-                )}
+                )} */}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -203,7 +199,10 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
                   className="relative h-8 w-8 rounded-full"
                 >
                   <Avatar>
-                    <AvatarImage src={companyLogo} alt={name || ""} />
+                    <AvatarImage
+                      src={authContext.recruiter.companyLogo}
+                      alt={authContext.recruiter.name || ""}
+                    />
                     <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                 </Button>

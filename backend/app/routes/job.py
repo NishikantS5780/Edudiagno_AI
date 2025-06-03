@@ -20,11 +20,9 @@ async def create_job(
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),
 ):
-    # Only validate salary range if show_salary is true
-    if job_data.show_salary:
-        if job_data.salary_min is not None and job_data.salary_max is not None:
-            if job_data.salary_min < 0 or job_data.salary_max > 2000000000:
-                raise CustomException(code=400, messag="invalid salary range")
+    if job_data.salary_min is not None and job_data.salary_max is not None:
+        if job_data.salary_min < 0 or job_data.salary_max > 2000000000:
+            raise CustomException(code=400, messag="invalid salary range")
 
     job = Job(
         title=job_data.title,
@@ -44,7 +42,6 @@ async def create_job(
         requirements=job_data.requirements,
         benefits=job_data.benefits,
         status=job_data.status,
-        quiz_time_minutes=job_data.quiz_time_minutes,
         company_id=recruiter_id,
     )
     db.add(job)
@@ -149,23 +146,15 @@ async def get_all_job(
         .offset(start_int)
     )
 
-    # Get total count of jobs for this recruiter
-    count_stmt = select(func.count()).select_from(Job).where(Job.company_id == recruiter_id)
+    count_stmt = (
+        select(func.count()).select_from(Job).where(Job.company_id == recruiter_id)
+    )
     total_count = db.execute(count_stmt).scalar()
 
     result = db.execute(stmt)
-    jobs = []
-    for job in result.all():
-        job_dict = dict(job._mapping)
-        # Convert datetime to ISO format string
-        if job_dict.get('created_at'):
-            job_dict['created_at'] = job_dict['created_at'].isoformat()
-        jobs.append(job_dict)
+    jobs = result.mappings().all()
 
-    return JSONResponse(
-        content=jobs,
-        headers={"X-Total-Count": str(total_count)}
-    )
+    return {"count": total_count, "jobs": jobs}
 
 
 @router.get("/candidate-view")
