@@ -45,18 +45,34 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
     fetchQuestions();
   }, [jobId]);
 
-  const handleSaveNewQuestion = () => {
+  const handleSaveNewQuestion = async () => {
     try {
-      const response = dsaAPI.createDSAQuestion(jobId.toString(), newQuestion);
+      const response = await dsaAPI.createDSAQuestion(
+        jobId.toString(),
+        newQuestion
+      );
+      if (!response || response.status != 200) {
+        throw Error("Could not create question");
+      }
 
       toast.success("Question created successfully");
-      setNewQuestion({});
-      fetchQuestions()
-        .then()
-        .catch()
-        .finally(() => {});
-    } catch (error) {
-      toast.error("Failed to create question");
+      setNewQuestion({
+        title: "",
+        description: "",
+        difficulty: newQuestion.difficulty,
+        time_minutes: newQuestion.time_minutes,
+      });
+      await fetchQuestions();
+    } catch (error: any) {
+      if (error.status == 422) {
+        toast.error(
+          `${error.response.data.detail[0].type} ${error.response.data.detail[0].loc[1]}`
+        );
+      } else if (error.name == "AxiosError") {
+        toast.error(error.response.data.detail);
+      } else {
+        toast.error("Failed to create question");
+      }
     }
   };
 

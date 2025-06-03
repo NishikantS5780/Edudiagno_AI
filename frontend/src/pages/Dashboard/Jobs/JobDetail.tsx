@@ -32,6 +32,8 @@ import McqManagement from "@/components/jobs/McqManagement";
 import { jobAPI } from "@/services/jobApi";
 import InterviewQuestionManagement from "@/components/jobs/InterviewQuestionManagement";
 import { interviewAPI } from "@/services/interviewAPI";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const JobDetail = () => {
   const { id } = useParams();
@@ -41,7 +43,6 @@ const JobDetail = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editedJob, setEditedJob] = useState<Partial<JobData>>({});
 
   useEffect(() => {
     fetchJobDetails();
@@ -78,7 +79,6 @@ const JobDetail = () => {
         dsa_questions: data.dsa_questions || [],
         requires_mcq: data.requires_mcq || false,
       });
-      setEditedJob({});
     } catch (error) {
       console.error("Error fetching job details:", error);
       toast.error("Failed to load job details");
@@ -116,6 +116,12 @@ const JobDetail = () => {
       console.error("Error fetching interviews:", error);
       toast.error("Failed to load candidates");
     }
+  };
+
+  const handleJobDetailChange = (field: keyof JobData, value: any) => {
+    setJob((prev) => {
+      return { ...prev, [field]: value };
+    });
   };
 
   const handleDelete = async () => {
@@ -163,32 +169,18 @@ const JobDetail = () => {
 
   const handleEditModeToggle = () => {
     setIsEditMode(!isEditMode);
-    if (!isEditMode) {
-      setEditedJob({});
-    }
   };
 
-  const handleJobChange = (
-    field: keyof JobData,
-    value: string | number | boolean
-  ) => {
-    setEditedJob((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleSaveChanges = async () => {
-    if (!job) return;
+  const handleSaveJob = async () => {
+    if (!job || !job.id) return;
 
     try {
-      // setLoading(true);
-      // await jobAPI.updateJob(job.id.toString(), editedJob);
-      // toast.success("Job details updated successfully");
-      // fetchJobDetails();
-      // setIsEditMode(false);
+      setLoading(true);
+      await jobAPI.updateJob(job.id.toString(), job);
+      toast.success("Job details updated successfully");
+      fetchJobDetails();
+      setIsEditMode(false);
     } catch (error) {
-      console.error("Error updating job:", error);
       toast.error("Failed to update job details");
     } finally {
       setLoading(false);
@@ -269,26 +261,11 @@ const JobDetail = () => {
                 <div className="ml-auto">
                   {getStatusBadge(job.status || "")}
                 </div>
-                {!isEditMode && (
-                  <Button onClick={handleEditModeToggle} variant={"ghost"}>
-                    <Edit />
-                  </Button>
-                )}
-                {isEditMode && (
-                  <Button
-                    onClick={handleEditModeToggle}
-                    variant={"destructive"}
-                  >
-                    Cancel
-                  </Button>
-                )}
               </CardTitle>
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-muted-foreground">
-                    {job.department} • {job.location}
-                  </p>
-                </div>
+                <p className="text-muted-foreground">
+                  {job.department} • {job.location}
+                </p>
               </div>
             </CardHeader>
             <CardContent>
@@ -303,37 +280,146 @@ const JobDetail = () => {
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" className="space-y-6">
+                  <div>
+                    <div className="flex items-center">
+                      {isEditMode ? (
+                        <Input
+                          value={job.title}
+                          onChange={(e) =>
+                            handleJobDetailChange("title", e.target.value)
+                          }
+                        />
+                      ) : (
+                        <div>{job.title}</div>
+                      )}
+                      <div className="ml-auto">
+                        {isEditMode ? (
+                          <Input
+                            value={job.status}
+                            onChange={(e) =>
+                              handleJobDetailChange("status", e.target.value)
+                            }
+                          />
+                        ) : (
+                          getStatusBadge(job.status || "")
+                        )}
+                      </div>
+                      {!isEditMode && (
+                        <Button
+                          onClick={handleEditModeToggle}
+                          variant={"ghost"}
+                        >
+                          <Edit />
+                        </Button>
+                      )}
+                      {isEditMode && (
+                        <Button
+                          onClick={handleEditModeToggle}
+                          variant={"ghost"}
+                          className="text-destructive"
+                        >
+                          <X strokeWidth={5} />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      {isEditMode ? (
+                        <>
+                          <Input
+                            value={job.department}
+                            onChange={(e) =>
+                              handleJobDetailChange(
+                                "department",
+                                e.target.value
+                              )
+                            }
+                          />
+                          <Input
+                            value={job.location}
+                            onChange={(e) =>
+                              handleJobDetailChange("location", e.target.value)
+                            }
+                          />
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          {job.department} | {job.location}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                   <div className="space-y-4">
                     <h3 className="font-medium">Job Description</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {job.description}
-                    </p>
+                    {isEditMode ? (
+                      <Textarea
+                        value={job.description}
+                        onChange={(e) =>
+                          handleJobDetailChange("description", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {job.description}
+                      </p>
+                    )}
                   </div>
                   {job.show_salary && job.salary_min && job.salary_max && (
                     <div className="space-y-4">
                       <h3 className="font-medium">Salary Range</h3>
-                      <p className="text-muted-foreground">
-                        {job.currency === "INR" && "₹"}
-                        {job.currency === "USD" && "$"}
-                        {job.currency === "EUR" && "€"}
-                        {job.currency === "GBP" && "£"}
-                        {job.salary_min.toLocaleString()} -{" "}
-                        {job.salary_max.toLocaleString()} {job.currency}
-                      </p>
+                      {isEditMode ? (
+                        <Input
+                          value={job.currency}
+                          onChange={(e) =>
+                            handleJobDetailChange("currency", e.target.value)
+                          }
+                        />
+                      ) : (
+                        <p className="text-muted-foreground">
+                          {job.salary_min.toLocaleString()} -
+                          {job.salary_max.toLocaleString()} {job.currency}
+                        </p>
+                      )}
                     </div>
                   )}
                   <div className="space-y-4">
                     <h3 className="font-medium">Requirements</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {job.requirements}
-                    </p>
+                    {isEditMode ? (
+                      <Textarea
+                        value={job.requirements}
+                        onChange={(e) =>
+                          handleJobDetailChange("requirements", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {job.requirements}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-4">
                     <h3 className="font-medium">Benefits</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {job.benefits}
-                    </p>
+                    {isEditMode ? (
+                      <Textarea
+                        value={job.benefits}
+                        onChange={(e) =>
+                          handleJobDetailChange("benefits", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {job.benefits}
+                      </p>
+                    )}
                   </div>
+                  {isEditMode && (
+                    <Button
+                      onClick={handleSaveJob}
+                      className="w-full"
+                      size={"sm"}
+                    >
+                      Save
+                    </Button>
+                  )}
                 </TabsContent>
                 <TabsContent value="candidates">
                   <div className="space-y-4">

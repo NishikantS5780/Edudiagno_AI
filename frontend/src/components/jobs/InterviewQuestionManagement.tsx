@@ -58,7 +58,7 @@ const InterviewQuestionManagement = ({ jobId }: { jobId: number }) => {
     try {
       setLoading(true);
       const response = await interviewQuestionAPI.create(newQuestion, jobId);
-      if (!response) {
+      if (!response || response.status != 200) {
         throw new Error("Failed to save Interview question");
       }
 
@@ -68,11 +68,14 @@ const InterviewQuestionManagement = ({ jobId }: { jobId: number }) => {
         question_type: newQuestion.question_type,
       });
 
-      toast.success("MCQ question saved successfully");
+      toast.success("Interview question saved successfully");
       await fetchInterviewQuestions();
     } catch (error: any) {
-      let msg = error.message || "Failed to save MCQ questions";
-      toast.error(msg);
+      if (error.name == "AxiosError") {
+        toast.error(error.response.data.detail);
+      } else {
+        toast.error("Failed to save Interview question");
+      }
     } finally {
       setLoading(false);
     }
