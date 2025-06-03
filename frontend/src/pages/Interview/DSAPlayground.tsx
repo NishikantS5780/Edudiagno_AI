@@ -24,21 +24,6 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { toast } from "sonner";
 import DraggableCameraFeed from "@/components/DraggableCameraFeed";
 import html2canvas from "html2canvas";
-
-interface DSAQuestion {
-  id: number;
-  title: string;
-  description: string;
-  difficulty: string;
-  constraints: string;
-  time_minutes: number;
-}
-
-interface TestCase {
-  id: number;
-  input: string;
-  expected_output: string;
-}
 import { InterviewData } from "@/types/interview";
 import { interviewAPI } from "@/services/interviewAPI";
 import { dsaAPI } from "@/services/dsaApi";
@@ -145,11 +130,11 @@ const DSAPlayground = () => {
   }, []);
 
   useEffect(() => {
-    if (!interviewData || !interviewData.jobId) {
+    if (!interviewData || !interviewData.job_id) {
       return;
     }
     dsaAPI
-      .getDSAQuestion(interviewData.jobId?.toString())
+      .getDSAQuestion(interviewData.job_id?.toString())
       .then((res) => {
         setDsaQuestions(res.data);
       })
