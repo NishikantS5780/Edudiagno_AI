@@ -122,6 +122,23 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
     }));
   };
 
+  const handleDeleteQuestion = async (id?: number) => {
+    if (!id) {
+      return;
+    }
+    try {
+      if (!editingQuestion) {
+        return;
+      }
+      await dsaAPI.deleteQuestion(id);
+
+      toast.success("Question delete successfully");
+      await fetchQuestions();
+    } catch (error) {
+      toast.error("Failed to delete question");
+    }
+  };
+
   const handleSaveEditingQuestion = async () => {
     try {
       if (!editingQuestion) {
@@ -363,7 +380,7 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                       variant={"ghost"}
                       className="text-destructive"
                       onClick={() => {
-                        // setEditingQuestionId(question.id);
+                        handleDeleteQuestion(question.id);
                       }}
                     >
                       <Trash />
@@ -502,7 +519,7 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                       setEditingQuestion(null);
                     }}
                   >
-                    Save
+                    Close
                   </Button>
                 </div>
               )}

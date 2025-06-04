@@ -326,12 +326,12 @@ const InterviewsPage = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {/* {interview.jobId ? (
+                        {/* {interview.job_id ? (
                           <Link
-                            to={`/dashboard/jobs/${interview.jobId}`}
+                            to={`/dashboard/jobs/${interview.job_id}`}
                             className="text-sm hover:underline"
                           >
-                            {interviewsData.jobTitles[interview.jobId] ||
+                            {interviewsData.j[interview.jobId] ||
                               "Loading..."}
                           </Link>
                         ) : (
