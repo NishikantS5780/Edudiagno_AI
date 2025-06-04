@@ -103,6 +103,15 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
     setNewTestCase({ input: "", expected_output: "" });
   };
 
+  const handleDeleteNewQuestionTestCase = (index: number) => {
+    setNewQuestion((prev) => {
+      return {
+        ...prev,
+        test_cases: prev.test_cases?.filter((_, i) => i != index),
+      };
+    });
+  };
+
   const handleEditingQuestionChange = (
     field: keyof DSAQuestion,
     value: any
@@ -137,6 +146,20 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
       await fetchQuestions();
     } catch (error) {
       toast.error("Failed to add test case");
+    }
+  };
+
+  const handleEditingDeleteTestCase = async (id?: number) => {
+    if (!editingQuestion?.id || !id) {
+      return;
+    }
+
+    try {
+      await dsaAPI.deleteTestCase(id);
+      toast.success("Test case deleted successfully");
+      await fetchQuestions();
+    } catch (error) {
+      toast.error("Failed to delete test case");
     }
   };
 
@@ -224,9 +247,9 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            // onClick={() =>
-                            //   handleDeleteNewTestCase(question.id, index)
-                            // }
+                            onClick={() =>
+                              handleDeleteNewQuestionTestCase(index)
+                            }
                             className="text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -455,7 +478,9 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                // onClick={() => handleDeleteTestCase(testCase.id)}
+                                onClick={() =>
+                                  handleEditingDeleteTestCase(testCase.id)
+                                }
                                 className="text-destructive hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -477,7 +502,7 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
                       setEditingQuestion(null);
                     }}
                   >
-                    Cancel
+                    Save
                   </Button>
                 </div>
               )}

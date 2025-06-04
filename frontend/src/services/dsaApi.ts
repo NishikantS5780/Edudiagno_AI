@@ -23,6 +23,11 @@ export const dsaAPI = {
       }
     );
   },
+  deleteTestCase: async (id: number) => {
+    await axios.delete(`${config.API_BASE_URL}/dsa-test-case?id=${id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+  },
   update: async (data: DSAQuestion) => {
     await axios.put(`${config.API_BASE_URL}/dsa-question`, data, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },

@@ -926,7 +926,7 @@ async def save_screenshot(request: Request, interview_id=Depends(authorize_candi
 
 
 @router.delete("", status_code=204)
-async def update_interview(
+async def delete_interview(
     id: str,
     db: Session = Depends(database.get_db),
     recruiter_id=Depends(authorize_recruiter),

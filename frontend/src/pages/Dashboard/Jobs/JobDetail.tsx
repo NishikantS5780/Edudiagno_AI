@@ -21,6 +21,7 @@ import {
   Briefcase,
   Link as LinkIcon,
   X,
+  Trash,
 } from "lucide-react";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -90,25 +91,7 @@ const JobDetail = () => {
     try {
       const response = await interviewAPI.getInterviews({ job_id: id });
       const formattedInterviews = response.data.interviews.map(
-        (interview: any) => ({
-          id: interview.id,
-          status: interview.status,
-          firstName: interview.first_name,
-          lastName: interview.last_name,
-          email: interview.email,
-          phone: interview.phone,
-          workExperience: interview.work_experience,
-          education: interview.education,
-          skills: interview.skills,
-          location: interview.location,
-          linkedinUrl: interview.linkedin_url,
-          portfolioUrl: interview.portfolio_url,
-          resumeUrl: interview.resume_url,
-          resumeMatchScore: interview.resume_match_score,
-          resumeMatchFeedback: interview.resume_match_feedback,
-          overallScore: interview.overall_score,
-          feedback: interview.feedback,
-        })
+        (interview: any) => interview
       );
       setInterviews(formattedInterviews);
     } catch (error) {
@@ -124,16 +107,30 @@ const JobDetail = () => {
   };
 
   const handleDelete = async () => {
-    if (!job) return;
+    if (!job || !job.id) return;
 
     if (window.confirm("Are you sure you want to delete this job?")) {
       try {
-        // await jobAPI.deleteJob(job.id.toString());
-        // toast.success("Job deleted successfully");
-        // navigate("/dashboard/jobs");
+        await jobAPI.deleteJob(job.id.toString());
+        toast.success("Job deleted successfully");
+        navigate("/dashboard/jobs");
       } catch (error) {
-        console.error("Error deleting job:", error);
         toast.error("Failed to delete job");
+      }
+    }
+  };
+
+  const handleDeleteInterview = async (id?: number) => {
+    if (!id) {
+      return;
+    }
+    if (window.confirm("Are you sure you want to delete this interview?")) {
+      try {
+        await interviewAPI.deleteInterview(id.toString());
+        toast.success("Interview deleted successfully");
+        await fetchInterviews();
+      } catch (error) {
+        toast.error("Failed to delete interview");
       }
     }
   };
@@ -434,19 +431,29 @@ const JobDetail = () => {
                         <Card key={interview.id}>
                           <CardContent className="p-6">
                             <div className="space-y-4">
-                              <div className="flex items-start justify-between">
+                              <div className="flex items-start">
                                 <div>
                                   <h3 className="text-lg font-semibold">
-                                    {interview.firstName} {interview.lastName}
+                                    {interview.first_name}{" "}
+                                    {interview.first_name}
                                   </h3>
                                   <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                                     <Mail className="h-4 w-4" />
                                     {interview.email}
                                   </div>
                                 </div>
-                                <Badge variant="outline" className="ml-2">
+                                <Badge variant="outline" className="">
                                   {interview.status}
                                 </Badge>
+                                <Button
+                                  onClick={() =>
+                                    handleDeleteInterview(interview.id)
+                                  }
+                                  variant={"destructive"}
+                                  className="ml-auto"
+                                >
+                                  <Trash />
+                                </Button>
                               </div>
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -465,18 +472,18 @@ const JobDetail = () => {
                                   </div>
                                   <div className="flex items-center gap-2 text-sm">
                                     <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                    {interview.workExperience
-                                      ? `${interview.workExperience} years experience`
+                                    {interview.work_experience
+                                      ? `${interview.work_experience} years experience`
                                       : "Experience not specified"}
                                   </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                  {interview.linkedinUrl && (
+                                  {interview.linkedin_url && (
                                     <div className="flex items-center gap-2 text-sm">
                                       <LinkIcon className="h-4 w-4 text-muted-foreground" />
                                       <a
-                                        href={interview.linkedinUrl}
+                                        href={interview.linkedin_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-primary hover:underline"
@@ -485,11 +492,11 @@ const JobDetail = () => {
                                       </a>
                                     </div>
                                   )}
-                                  {interview.portfolioUrl && (
+                                  {interview.portfolio_url && (
                                     <div className="flex items-center gap-2 text-sm">
                                       <LinkIcon className="h-4 w-4 text-muted-foreground" />
                                       <a
-                                        href={interview.portfolioUrl}
+                                        href={interview.portfolio_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-primary hover:underline"
@@ -501,7 +508,7 @@ const JobDetail = () => {
                                 </div>
                               </div>
 
-                              {interview.resumeMatchScore != undefined && (
+                              {interview.resume_match_score != undefined && (
                                 <div className="mt-4">
                                   <h4 className="font-medium mb-2">
                                     Resume Match Score
@@ -511,23 +518,23 @@ const JobDetail = () => {
                                       <div
                                         className="bg-primary h-2 rounded-full"
                                         style={{
-                                          width: `${interview.resumeMatchScore}%`,
+                                          width: `${interview.resume_match_score}%`,
                                         }}
                                       />
                                     </div>
                                     <span className="text-sm font-medium">
-                                      {interview.resumeMatchScore}%
+                                      {interview.resume_match_score}%
                                     </span>
                                   </div>
-                                  {interview.resumeMatchFeedback && (
+                                  {interview.resume_match_feedback && (
                                     <p className="text-sm text-muted-foreground mt-2">
-                                      {interview.resumeMatchFeedback}
+                                      {interview.resume_match_feedback}
                                     </p>
                                   )}
                                 </div>
                               )}
 
-                              {interview.overallScore != undefined && (
+                              {interview.overall_score != undefined && (
                                 <div className="mt-4">
                                   <h4 className="font-medium mb-2">
                                     Interview Score
@@ -537,12 +544,12 @@ const JobDetail = () => {
                                       <div
                                         className="bg-primary h-2 rounded-full"
                                         style={{
-                                          width: `${interview.overallScore}%`,
+                                          width: `${interview.overall_score}%`,
                                         }}
                                       />
                                     </div>
                                     <span className="text-sm font-medium">
-                                      Score: {interview.overallScore}%
+                                      Score: {interview.overall_score}%
                                     </span>
                                   </div>
                                   {interview.feedback && (

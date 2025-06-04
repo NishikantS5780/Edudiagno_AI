@@ -149,6 +149,25 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
     }
   };
 
+  const handleDeleteQuestion = async (id?: number) => {
+    if (!id) {
+      return;
+    }
+    try {
+      setLoading(true);
+
+      await quizAPI.deleteQuizQuestion(id);
+      toast.success("MCQ question deleted successfully");
+
+      await fetchMcqQuestions();
+    } catch (error: any) {
+      let msg = error.message || "Failed to delete MCQ questions";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -583,7 +602,7 @@ const McqManagement = ({ jobId }: McqManagementProps) => {
                   variant="ghost"
                   size="icon"
                   className="text-destructive ml-auto"
-                  // onClick={() => handleDeleteQuestion(index)}
+                  onClick={() => handleDeleteQuestion(question.id)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

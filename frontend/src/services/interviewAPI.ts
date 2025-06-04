@@ -50,8 +50,9 @@ export const interviewAPI = {
   },
 
   deleteInterview: async (id: string) => {
-    const response = await axios.delete(`${config.API_BASE_URL}/interviews`, {
+    const response = await axios.delete(`${config.API_BASE_URL}/interview`, {
       params: { id },
+      headers: {Authorization: `Bearer ${localStorage.getItem("token")}`}
     });
     return response;
   },

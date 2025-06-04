@@ -150,19 +150,7 @@ const InterviewQuestionManagement = ({ jobId }: { jobId: number }) => {
         {questions.map((question, index) => (
           <Card key={question.id}>
             <CardHeader>
-              <CardTitle className="w-full flex">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive ml-auto"
-                  // onClick={() => handleDeleteQuestion(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </CardTitle>
-              <CardDescription>
-                [{question.order_number}] {question.question}
-              </CardDescription>
+              <CardTitle className="w-full flex"></CardTitle>
               <div className="space-y-4">
                 {question.question_type == "behavioral" ? (
                   <Badge>Behavioral</Badge>
@@ -175,6 +163,10 @@ const InterviewQuestionManagement = ({ jobId }: { jobId: number }) => {
                 ) : (
                   ""
                 )}
+              </div>
+              <div className="flex gap-4">
+                <div>[{question.order_number}]</div>
+                <div>{question.question}</div>
               </div>
             </CardHeader>
           </Card>
