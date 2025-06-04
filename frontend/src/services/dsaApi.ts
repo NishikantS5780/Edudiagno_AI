@@ -15,7 +15,7 @@ export const dsaAPI = {
     return res;
   },
   deleteQuestion: async (id: number) => {
-    await axios.post(`${config.API_BASE_URL}/dsa-question?id=${id}`, {
+    await axios.delete(`${config.API_BASE_URL}/dsa-question?id=${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
   },

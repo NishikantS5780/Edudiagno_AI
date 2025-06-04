@@ -127,9 +127,6 @@ const DsaManagement = ({ jobId }: DsaManagementProps) => {
       return;
     }
     try {
-      if (!editingQuestion) {
-        return;
-      }
       await dsaAPI.deleteQuestion(id);
 
       toast.success("Question delete successfully");
