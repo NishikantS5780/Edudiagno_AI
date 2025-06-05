@@ -21,6 +21,7 @@ import CameraFeed from "@/components/CameraFeed";
 import { quizAPI } from "@/services/quizApi";
 import { interviewAPI } from "@/services/interviewAPI";
 import { jobAPI } from "@/services/jobApi";
+import { config } from "@/config";
 
 interface QuizQuestion {
   id: number;
@@ -726,7 +727,7 @@ const MCQTest = () => {
 
       console.log("[Screenshot] Sending to backend...");
       const response = await fetch(
-        "http://localhost:8000/api/interview/screenshot",
+        `${config.API_BASE_URL}/interview/screenshot`,
         {
           method: "POST",
           body: blob,

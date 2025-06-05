@@ -877,7 +877,7 @@ export default function VideoInterview() {
 
       console.log("[Screenshot] Sending to backend...");
       const response = await fetch(
-        "http://localhost:8000/api/interview/screenshot",
+        `${config.API_BASE_URL}/interview/screenshot`,
         {
           method: "POST",
           body: blob,
