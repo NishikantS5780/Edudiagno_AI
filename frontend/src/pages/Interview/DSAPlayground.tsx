@@ -44,6 +44,7 @@ const DSAPlayground = () => {
   const [interviewData, setInterviewData] = useState<InterviewData>({});
   const [isLoading, setIsLoading] = useState(false);
   const [dsaQuestions, setDsaQuestions] = useState<DSAQuestion[]>([]);
+  const [runStatus, setRunStatus] = useState<string>("");
 
   // Add fullscreen effect hook with other useEffect hooks
   useEffect(() => {
@@ -92,25 +93,28 @@ const DSAPlayground = () => {
         if (data.status == "successful") {
           console.log("Total Test Cases Passed: ", data.passed_count);
           setCompilationStatus(
-            "Passed All Test Cases " +
-              data.passed_count +
-              "/" +
-              data.passed_count
+            `Passed All Test Cases (${data.passed_count}/${data.passed_count})`
           );
+          setRunStatus("successful");
         } else if (data.status == "failed") {
-          let compilationStatus = "Your Output: ";
-          setCompilationStatus(
-            "Failed a test case \nInput: " +
-              data.failed_test_case.input +
-              "\nExpected output: " +
-              data.failed_test_case.expected_output +
-              "\nYour Output: " +
-              (data.failed_test_case.status == "wrong-answer"
+          let errorMessage = "Failed a test case\n";
+          if (data.failed_test_case) {
+            errorMessage += `Input: ${data.failed_test_case.input}\n`;
+            errorMessage += `Expected output: ${data.failed_test_case.expected_output}\n`;
+            errorMessage += `Your Output: ${
+              data.failed_test_case.status === "wrong-answer"
                 ? data.failed_test_case.output
-                : data.failed_test_case.compilation_output +
-                  "\nError: " +
-                  data.failed_test_case.execution_err)
-          );
+                : data.failed_test_case.compilation_output
+            }`;
+            if (data.failed_test_case.execution_err) {
+              errorMessage += `\nError: ${data.failed_test_case.execution_err}`;
+            }
+          }
+          setCompilationStatus(errorMessage);
+          setRunStatus("failed");
+        } else if (data.status === "error") {
+          setCompilationStatus(`Error: ${data.error || "Unknown error occurred"}`);
+          setRunStatus("error");
         }
       }
     };
