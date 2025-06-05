@@ -77,6 +77,7 @@ const InterviewsPage = () => {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [interviewsData, setInterviewsData] = useState<InterviewData[]>([]);
+  const [jobTitlesMap, setJobTitlesMap] = useState<Record<number, string>>({});
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -85,7 +86,7 @@ const InterviewsPage = () => {
         start: (currentPage - 1) * itemsPerPage,
         limit: itemsPerPage,
       })
-      .then((res) => {
+      .then(async (res) => {
         const jobIds = res.data.interviews.map(
           (interview: any) => interview.job_id
         ) as number[];
@@ -103,12 +104,12 @@ const InterviewsPage = () => {
           }
         });
 
-        Promise.all(jobTitlePromises).then((values) => {
-          const jobTitlesMap = values.reduce((acc, { jobId, title }) => {
-            acc[jobId] = title;
-            return acc;
-          }, {} as Record<number, string>);
-        });
+        const values = await Promise.all(jobTitlePromises);
+        const jobTitlesMapObj = values.reduce((acc, { jobId, title }) => {
+          acc[jobId] = title;
+          return acc;
+        }, {} as Record<number, string>);
+        setJobTitlesMap(jobTitlesMapObj);
 
         const totalCount = res.data.count;
         setTotalPages(Math.ceil(totalCount / itemsPerPage));
@@ -117,28 +118,35 @@ const InterviewsPage = () => {
       });
   }, []);
 
-  // const deleteInterviewMutation = useMutation({
-  //   mutationFn: (id: number) => interviewAPI.deleteInterview(id),
-  //   onSuccess: () => {
-  //     queryClient.invalidateQueries({ queryKey: ["interviews"] });
-  //     toast.success("Interview deleted successfully");
-  //   },
-  //   onError: (error) => {
-  //     console.error("Error deleting interview:", error);
-  //     toast.error("Failed to delete interview");
-  //   },
-  // });
+  const deleteInterview = async () => {
+    if (!interviewToDelete) return;
+
+    try {
+      setIsLoading(true);
+      await interviewAPI.deleteInterview(interviewToDelete?.toString());
+      toast.success("Interview deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete interview");
+    } finally {
+      setIsLoading(false);
+      setInterviewToDelete(null);
+
+      interviewAPI
+        .getInterviews({
+          start: (currentPage - 1) * itemsPerPage,
+          limit: itemsPerPage,
+        })
+        .then((res) => {
+          setInterviewsData(res.data.interviews);
+          const totalCount = res.data.count;
+          setTotalPages(Math.ceil(totalCount / itemsPerPage));
+        });
+    }
+  };
 
   const handleDeleteInterview = (id: number) => {
     setInterviewToDelete(id);
   };
-
-  // const confirmDelete = () => {
-  //   if (interviewToDelete) {
-  //     deleteInterviewMutation.mutate(interviewToDelete);
-  //     setInterviewToDelete(null);
-  //   }
-  // };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -326,19 +334,9 @@ const InterviewsPage = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {/* {interview.job_id ? (
-                          <Link
-                            to={`/dashboard/jobs/${interview.job_id}`}
-                            className="text-sm hover:underline"
-                          >
-                            {interviewsData.j[interview.jobId] ||
-                              "Loading..."}
-                          </Link>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            -
-                          </span>
-                        )} */}
+                        {(!!interview.job_id &&
+                          jobTitlesMap[interview.job_id]) ||
+                          "Unknown"}
                       </TableCell>
                       <TableCell>
                         {interview.created_at &&
@@ -479,12 +477,12 @@ const InterviewsPage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            {/* <AlertDialogAction
+            <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
-              onClick={confirmDelete}
+              onClick={deleteInterview}
             >
               Delete
-            </AlertDialogAction> */}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
