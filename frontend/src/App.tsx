@@ -65,7 +65,7 @@ import BillingManagement from "@/pages/Admin/Billing";
 import IntegrationManagement from "@/pages/Admin/Integrations";
 import SupportManagement from "@/pages/Admin/Support";
 import { InterviewData } from "./types/interview";
-import { interviewAPI } from "./services/interviewAPI";
+import { interviewAPI } from "./services/interviewApi";
 import { JobData } from "./types/job";
 import { jobAPI } from "./services/jobApi";
 

@@ -1,5 +1,5 @@
 import { config } from "@/config";
-import { interviewAPI } from "@/services/interviewAPI";
+import { interviewAPI } from "@/services/interviewApi";
 import axios from "axios";
 import { useState } from "react";
 import { toast } from "sonner";

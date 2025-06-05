@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import html2canvas from "html2canvas";
 import CameraFeed from "@/components/CameraFeed";
 import { quizAPI } from "@/services/quizApi";
-import { interviewAPI } from "@/services/interviewAPI";
+import { interviewAPI } from "@/services/interviewApi";
 import { jobAPI } from "@/services/jobApi";
 import { config } from "@/config";
 
