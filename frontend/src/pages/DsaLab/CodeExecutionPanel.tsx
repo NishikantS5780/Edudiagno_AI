@@ -80,8 +80,10 @@ function CodeExecutionPanel({
   };
   const [selectedLanguage, setSelectedLanguage] = React.useState<string>("C");
   const [code, setCode] = React.useState(codeTemplates["C"]);
+
   React.useEffect(() => {
     setCode(codeTemplates[selectedLanguage]);
+    setCompilationStatus("");
   }, [selectedLanguage]);
 
   return (
@@ -91,27 +93,37 @@ function CodeExecutionPanel({
         <div className="flex items-center gap-3">
           <button
             className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-green-500/20"
-            onClick={() => {
+            onClick={async () => {
               setOutput("");
               setCodeError("");
               setSyntaxError("");
               setRunStatus("");
+              setCompilationStatus("Running...");
 
               const currentCode = code || codeTemplates[selectedLanguage];
               setCode(currentCode);
 
-              fetch(import.meta.env.VITE_API_BASE_URL + "/dsa-response", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${localStorage.getItem("i_token")}`,
-                },
-                body: JSON.stringify({
-                  language: selectedLanguage,
-                  code: currentCode,
-                  question_id: questionId,
-                }),
-              });
+              try {
+                const response = await fetch(import.meta.env.VITE_API_BASE_URL + "/dsa-response", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("i_token")}`,
+                  },
+                  body: JSON.stringify({
+                    language: selectedLanguage,
+                    code: currentCode,
+                    question_id: questionId,
+                  }),
+                });
+
+                if (!response.ok) {
+                  throw new Error("Failed to execute code");
+                }
+              } catch (error) {
+                setCompilationStatus("Error: Failed to execute code");
+                console.error("Error executing code:", error);
+              }
             }}
           >
             <Play size={16} />
