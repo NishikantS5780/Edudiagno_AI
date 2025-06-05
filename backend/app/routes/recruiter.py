@@ -1,7 +1,7 @@
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select, update
+from sqlalchemy import Float, func, select, update
 import random
 
 from app import config, database, models, schemas
@@ -293,5 +293,191 @@ async def get_interview_question_response_by_interview(
 
 
 @router.get("/analytics")
-async def get_analytics():
-    return {}
+async def get_analytics(
+    recruiter_id: int = Depends(authorize_recruiter),
+    db: Session = Depends(database.get_db),
+):
+    now = datetime.datetime.utcnow()
+    first_day_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    first_day_prev_month = (first_day_this_month - datetime.timedelta(days=1)).replace(
+        day=1
+    )
+    last_day_prev_month = first_day_this_month - datetime.timedelta(seconds=1)
+
+    today = now.date()
+    start_of_week = today - datetime.timedelta(days=today.weekday())
+    daily_interviews_this_week = []
+    for i in range((today - start_of_week).days + 1):
+        day = start_of_week + datetime.timedelta(days=i)
+        day_start = datetime.datetime.combine(day, datetime.time.min)
+        day_end = datetime.datetime.combine(day, datetime.time.max)
+        count = db.execute(
+            select(func.count(models.Interview.id))
+            .join(models.Job, models.Job.id == models.Interview.job_id)
+            .where(
+                models.Job.company_id == recruiter_id,
+                models.Interview.created_at >= day_start,
+                models.Interview.created_at <= day_end,
+            )
+        ).scalar()
+        daily_interviews_this_week.append({"date": day.isoformat(), "count": count})
+
+    interviews_completed_this_month = db.execute(
+        select(func.count(models.Interview.id))
+        .join(models.Job, models.Job.id == models.Interview.job_id)
+        .where(
+            models.Job.company_id == recruiter_id,
+            models.Interview.status == "completed",
+            models.Interview.created_at >= first_day_this_month,
+            models.Interview.created_at
+            < (first_day_this_month + datetime.timedelta(days=32)).replace(day=1),
+        )
+    ).scalar()
+
+    interviews_completed_prev_month = db.execute(
+        select(func.count(models.Interview.id))
+        .join(models.Job, models.Job.id == models.Interview.job_id)
+        .where(
+            models.Job.company_id == recruiter_id,
+            models.Interview.status == "completed",
+            models.Interview.created_at >= first_day_prev_month,
+            models.Interview.created_at <= last_day_prev_month,
+        )
+    ).scalar()
+
+    total_jobs = db.execute(
+        select(func.count(models.Job.id)).where(models.Job.company_id == recruiter_id)
+    ).scalar()
+
+    total_interviews_conducted = db.execute(
+        select(func.count(models.Interview.id))
+        .join(models.Job, models.Job.id == models.Interview.job_id)
+        .where(models.Job.company_id == recruiter_id)
+    ).scalar()
+
+    interviews_conducted_this_month = db.execute(
+        select(func.count(models.Interview.id))
+        .join(models.Job, models.Job.id == models.Interview.job_id)
+        .where(
+            models.Job.company_id == recruiter_id,
+            models.Interview.created_at >= first_day_this_month,
+            models.Interview.created_at
+            < (first_day_this_month + datetime.timedelta(days=32)).replace(day=1),
+        )
+    ).scalar()
+
+    interviews_conducted_prev_month = db.execute(
+        select(func.count(models.Interview.id))
+        .join(models.Job, models.Job.id == models.Interview.job_id)
+        .where(
+            models.Job.company_id == recruiter_id,
+            models.Interview.created_at >= first_day_prev_month,
+            models.Interview.created_at <= last_day_prev_month,
+        )
+    ).scalar()
+
+    total_interviews_completed = db.execute(
+        select(func.count(models.Interview.id))
+        .join(models.Job, models.Job.id == models.Interview.job_id)
+        .where(
+            models.Job.company_id == recruiter_id,
+            models.Interview.status == "completed",
+        )
+    ).scalar()
+
+
+    avg_score = (
+        db.execute(
+            select(func.avg(models.Interview.overall_score.cast(Float)))
+            .join(models.Job, models.Job.id == models.Interview.job_id)
+            .where(
+                models.Job.company_id == recruiter_id,
+                models.Interview.status == "completed",
+                models.Interview.created_at >= first_day_this_month,
+                models.Interview.created_at < (first_day_this_month + datetime.timedelta(days=32)).replace(day=1),
+            )
+        ).scalar()
+        or 0
+    )
+
+    total_candidates = db.execute(
+        select(func.count(func.distinct(models.Interview.email)))
+        .join(models.Job, models.Job.id == models.Interview.job_id)
+        .where(
+            models.Job.company_id == recruiter_id,
+            models.Interview.status == "completed",
+        )
+    ).scalar()
+
+    candidates_this_month = db.execute(
+        select(func.count(func.distinct(models.Interview.email)))
+        .join(models.Job, models.Job.id == models.Interview.job_id)
+        .where(
+            models.Job.company_id == recruiter_id,
+            models.Interview.status == "completed",
+            models.Interview.created_at >= first_day_this_month,
+            models.Interview.created_at
+            < (first_day_this_month + datetime.timedelta(days=32)).replace(day=1),
+        )
+    ).scalar()
+
+    candidates_prev_month = db.execute(
+        select(func.count(func.distinct(models.Interview.email)))
+        .join(models.Job, models.Job.id == models.Interview.job_id)
+        .where(
+            models.Job.company_id == recruiter_id,
+            models.Interview.status == "completed",
+            models.Interview.created_at >= first_day_prev_month,
+            models.Interview.created_at <= last_day_prev_month,
+        )
+    ).scalar()
+
+    total_open_jobs = db.execute(
+        select(func.count(models.Job.id)).where(
+            models.Job.company_id == recruiter_id, models.Job.status == "active"
+        )
+    ).scalar()
+
+    total_closed_jobs = db.execute(
+        select(func.count(models.Job.id)).where(
+            models.Job.company_id == recruiter_id, models.Job.status == "closed"
+        )
+    ).scalar()
+
+    active_jobs_this_month = db.execute(
+        select(func.count(models.Job.id)).where(
+            models.Job.company_id == recruiter_id,
+            models.Job.status == "active",
+            models.Job.created_at >= first_day_this_month,
+            models.Job.created_at
+            < (first_day_this_month + datetime.timedelta(days=32)).replace(day=1),
+        )
+    ).scalar()
+
+    active_jobs_prev_month = db.execute(
+        select(func.count(models.Job.id)).where(
+            models.Job.company_id == recruiter_id,
+            models.Job.status == "active",
+            models.Job.created_at >= first_day_prev_month,
+            models.Job.created_at <= last_day_prev_month,
+        )
+    ).scalar()
+
+    return {
+        "total_jobs": total_jobs,
+        "total_open_jobs": total_open_jobs,
+        "total_closed_jobs": total_closed_jobs,
+        "total_interviews_conducted": total_interviews_conducted,
+        "total_interviews_conducted_this_month": interviews_conducted_this_month,
+        "total_interviews_conducted_prev_month": interviews_conducted_prev_month,
+        "total_interviews_completed": total_interviews_completed,
+        "interviews_completed_this_month": interviews_completed_this_month,
+        "interviews_completed_prev_month": interviews_completed_prev_month,
+        "total_candidates": total_candidates,
+        "average_candidate_score": round(avg_score, 2) if avg_score else 0,
+        "active_jobs_this_month": active_jobs_this_month,
+        "active_jobs_prev_month": active_jobs_prev_month,
+        "candidates_this_month": candidates_this_month,
+        "candidates_prev_month": candidates_prev_month,
+        "daily_interviews_this_week": daily_interviews_this_week,
+    }

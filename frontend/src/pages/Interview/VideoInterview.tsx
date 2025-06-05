@@ -37,7 +37,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import html2canvas from "html2canvas";
 import { RecruiterData } from "@/types/recruiter";
-import { interviewAPI } from "@/services/interviewAPI";
+import { interviewAPI } from "@/services/interviewApi";
 import { config } from "@/config";
 import axios from "axios";
 

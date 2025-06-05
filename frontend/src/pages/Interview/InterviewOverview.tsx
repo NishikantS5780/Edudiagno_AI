@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CheckCircle, Code, Video, BookOpen, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { JobData } from "@/types/job";
-import { interviewAPI } from "@/services/interviewAPI";
+import { interviewAPI } from "@/services/interviewApi";
 import { jobAPI } from "@/services/jobApi";
 
 const InterviewOverview = () => {

@@ -6,13 +6,13 @@ interface AuthContextType {
   login: (data: RecruiterLoginData) => Promise<void>;
   logout: () => Promise<void>;
   verifyLogin: () => Promise<void>;
-  recruiter?: RecruiterData;
+  recruiter?: RecruiterData | null;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [recruiter, setRecruiter] = useState<RecruiterData>();
+  const [recruiter, setRecruiter] = useState<RecruiterData | null>();
 
   const login = async (data: RecruiterLoginData) => {
     const res = await authAPI.loginRecruiter(data);
@@ -25,7 +25,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const logout = async () => {
     localStorage.removeItem("token");
-    setRecruiter({});
+    setRecruiter(null);
   };
 
   const verifyLogin = async () => {

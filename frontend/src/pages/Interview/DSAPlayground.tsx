@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import DraggableCameraFeed from "@/components/DraggableCameraFeed";
 import html2canvas from "html2canvas";
 import { InterviewData } from "@/types/interview";
-import { interviewAPI } from "@/services/interviewAPI";
+import { interviewAPI } from "@/services/interviewApi";
 import { dsaAPI } from "@/services/dsaApi";
 import { DSAQuestion, TestCase } from "@/types/job";
 

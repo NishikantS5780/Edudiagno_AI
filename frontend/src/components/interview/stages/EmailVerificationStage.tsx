@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
-import { interviewAPI } from "@/services/interviewAPI";
+import { interviewAPI } from "@/services/interviewApi";
 
 interface EmailVerificationStageProps {
   resumeEmail: string;

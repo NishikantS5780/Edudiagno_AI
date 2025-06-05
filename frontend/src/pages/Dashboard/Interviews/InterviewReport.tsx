@@ -10,7 +10,7 @@ import { Download } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import html2canvas from "html2canvas";
 import { MCQResponse, MCQuestion } from "@/types/job";
-import { interviewAPI } from "@/services/interviewAPI";
+import { interviewAPI } from "@/services/interviewApi";
 import { quizAPI } from "@/services/quizApi";
 
 interface InterviewReportProps {

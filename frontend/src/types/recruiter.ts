@@ -1,4 +1,5 @@
 export interface RecruiterData {
+  id?: number;
   verified?: boolean;
   name: string;
   companyLogo?: string;
@@ -15,8 +16,8 @@ export interface RecruiterData {
   country?: string;
   is_profile_complete?: boolean;
   profileProgress?: number;
-  updateProfileProgress?: (progress: number) => Promise<void>;
-  updateUserProfile?: (data: any) => Promise<void>;
+  // updateProfileProgress?: (progress: number) => Promise<void>;
+  // updateUserProfile?: (data: any) => Promise<void>;
 }
 
 export interface RecruiterRegistrationData {

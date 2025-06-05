@@ -20,7 +20,7 @@ import {
 import { InterviewData } from "@/types/interview";
 import { MatchResultsStage } from "./MatchResultsStage";
 import { EmailVerificationStage } from "./EmailVerificationStage";
-import { interviewAPI } from "@/services/interviewAPI";
+import { interviewAPI } from "@/services/interviewApi";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -222,7 +222,7 @@ export function ResumeUploadStage({
           skills: candidateData.skills,
           linkedin_url: candidateData.linkedin_url,
           portfolio_url: candidateData.portfolio_url,
-          job_id: jobId
+          job_id: jobId,
         };
 
         // Log the data being sent
@@ -281,7 +281,7 @@ export function ResumeUploadStage({
         console.error("Error response:", error.response?.data);
         console.error("Error status:", error.response?.status);
         console.error("Error headers:", error.response?.headers);
-        
+
         let errorMessage = "Error processing your resume";
 
         if (error.response?.data?.detail) {
@@ -408,7 +408,9 @@ export function ResumeUploadStage({
                   <span className="text-destructive">*</span>
                 </label>
                 <Input
-                  value={candidateData.first_name + " " + candidateData.last_name}
+                  value={
+                    candidateData.first_name + " " + candidateData.last_name
+                  }
                   onChange={(e) => {
                     const [firstName, ...lastNameParts] =
                       e.target.value.split(" ");

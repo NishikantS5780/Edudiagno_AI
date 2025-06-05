@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import VideoJS from "@/components/common/VideoJs";
-import { interviewAPI } from "@/services/interviewAPI";
+import { interviewAPI } from "@/services/interviewApi";
 import { jobAPI } from "@/services/jobApi";
 
 interface ScoreBreakdown {

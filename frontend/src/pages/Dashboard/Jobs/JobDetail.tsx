@@ -31,7 +31,7 @@ import DsaManagement from "@/components/jobs/DsaManagement";
 import McqManagement from "@/components/jobs/McqManagement";
 import { jobAPI } from "@/services/jobApi";
 import InterviewQuestionManagement from "@/components/jobs/InterviewQuestionManagement";
-import { interviewAPI } from "@/services/interviewAPI";
+import { interviewAPI } from "@/services/interviewApi";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
