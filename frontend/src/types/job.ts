@@ -49,8 +49,8 @@ export interface JobData {
   max_experience?: number;
   duration_months?: number;
   key_qualification?: string;
-  salary_min?: number | null;
-  salary_max?: number | null;
+  salary_min?: string | number | null;
+  salary_max?: string | number | null;
   currency?: string;
   show_salary?: boolean;
   requirements?: string;

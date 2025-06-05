@@ -77,8 +77,8 @@ const NewJob = () => {
     max_experience: 0,
     duration_months: 12,
     key_qualification: "bachelors",
-    salary_min: null,
-    salary_max: null,
+    salary_min: "",
+    salary_max: "",
     currency: "INR",
     show_salary: true,
     requirements: "",
@@ -363,7 +363,13 @@ const NewJob = () => {
   const handleSaveJobDetails = async () => {
     setIsSaving(true);
     try {
-      const validationResult = jobFormSchema.safeParse(jobData);
+      const dataToValidate = {
+        ...jobData,
+        salary_min: jobData.salary_min ? Number(jobData.salary_min) : null,
+        salary_max: jobData.salary_max ? Number(jobData.salary_max) : null,
+      };
+      
+      const validationResult = jobFormSchema.safeParse(dataToValidate);
       if (!validationResult.success) {
         const newErrors: Record<string, string> = {};
         validationResult.error.errors.forEach((error) => {
@@ -387,6 +393,8 @@ const NewJob = () => {
       let response;
       response = await jobAPI.createJob({
         ...jobData,
+        salary_min: jobData.salary_min ? Number(jobData.salary_min) : null,
+        salary_max: jobData.salary_max ? Number(jobData.salary_max) : null,
       });
 
       if ((response.status = 200)) {
@@ -1041,14 +1049,11 @@ const NewJob = () => {
                               type="number"
                               min="0"
                               placeholder="e.g. 60000"
-                              value={jobData.salary_min || ""}
+                              value={typeof jobData.salary_min === 'string' ? jobData.salary_min : ''}
                               onChange={(e) => {
                                 const value = e.target.value;
                                 if (value === "" || /^\d+$/.test(value)) {
-                                  handleChange(
-                                    "salary_min",
-                                    value === "" ? null : Number(value)
-                                  );
+                                  handleChange("salary_min", value);
                                 }
                               }}
                             />
@@ -1061,14 +1066,11 @@ const NewJob = () => {
                               type="number"
                               min="0"
                               placeholder="e.g. 80000"
-                              value={jobData.salary_max || ""}
+                              value={typeof jobData.salary_max === 'string' ? jobData.salary_max : ''}
                               onChange={(e) => {
                                 const value = e.target.value;
                                 if (value === "" || /^\d+$/.test(value)) {
-                                  handleChange(
-                                    "salary_max",
-                                    value === "" ? null : Number(value)
-                                  );
+                                  handleChange("salary_max", value);
                                 }
                               }}
                             />
