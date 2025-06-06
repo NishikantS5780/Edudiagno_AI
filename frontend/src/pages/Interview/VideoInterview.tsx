@@ -18,6 +18,8 @@ import {
   Sparkles,
   BookOpen,
   Briefcase,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 import { toast } from "sonner";
 import AIAvatar from "../../components/interview/AIAvatar";
@@ -190,6 +192,8 @@ export default function VideoInterview() {
   const fullInterviewRecorderRef = useRef<MediaRecorder | null>(null);
   const fullInterviewChunksRef = useRef<Blob[]>([]);
   const [isConvertingVideo, setIsConvertingVideo] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
 
   // Add ref to track processing state
   const isProcessingRef = useRef(false);
@@ -1184,6 +1188,48 @@ export default function VideoInterview() {
     };
   }, []);
 
+  const toggleFullscreen = () => {
+    if (!videoContainerRef.current) return;
+
+    if (!isFullscreen) {
+      if (videoContainerRef.current.requestFullscreen) {
+        videoContainerRef.current.requestFullscreen();
+      } else if ((videoContainerRef.current as any).webkitRequestFullscreen) {
+        (videoContainerRef.current as any).webkitRequestFullscreen();
+      } else if ((videoContainerRef.current as any).msRequestFullscreen) {
+        (videoContainerRef.current as any).msRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen();
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(
+        document.fullscreenElement !== null ||
+          (document as any).webkitFullscreenElement !== null ||
+          (document as any).msFullscreenElement !== null
+      );
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("msfullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("msfullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
   // Add loading overlay for video conversion
   if (isConvertingVideo) {
     return (
@@ -1364,7 +1410,7 @@ export default function VideoInterview() {
               )}
 
               {isInterviewActive ? (
-                <div className="relative w-full h-full bg-black rounded-lg overflow-hidden">
+                <div className="relative w-full h-full bg-black rounded-lg overflow-hidden" ref={videoContainerRef}>
                   <video
                     ref={videoRef}
                     autoPlay
@@ -1395,61 +1441,71 @@ export default function VideoInterview() {
                   )}
 
                   {/* Controls Overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                    <div className="flex items-center justify-center gap-4">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={toggleVideo}
-                        className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                      >
-                        {isVideoEnabled ? (
-                          <VideoIcon className="h-5 w-5 text-white" />
-                        ) : (
-                          <VideoOff className="h-5 w-5 text-destructive" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={toggleAudio}
-                        className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                      >
-                        {isAudioEnabled ? (
-                          <Mic className="h-5 w-5 text-white" />
-                        ) : (
-                          <MicOff className="h-5 w-5 text-destructive" />
-                        )}
-                      </Button>
-                      <RecordingButton
-                        onStartRecording={handleStartRecording}
-                        onStopRecording={handleStopRecording}
-                        isRecording={isRecording}
-                        recordingTime={recordingTime}
-                        isProcessing={isProcessingResponse}
-                        disabled={
-                          !isInterviewActive ||
-                          isAiSpeaking ||
-                          isAiTyping ||
-                          hasRecordedCurrentQuestion ||
-                          isProcessingResponse
-                        }
-                        className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                      />
-                      {hasRecordedCurrentQuestion &&
-                        currentQuestionIndex <= interviewFlow.length && (
-                          <Button
-                            variant="default"
-                            onClick={handleNextQuestion}
-                            disabled={isRecording || isProcessingResponse}
-                            className=""
-                          >
-                            {currentQuestionIndex === interviewFlow.length - 1
-                              ? "End Interview"
-                              : "Next Question"}
-                          </Button>
-                        )}
-                    </div>
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={toggleVideo}
+                      className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                    >
+                      {isVideoEnabled ? (
+                        <VideoIcon className="h-5 w-5 text-white" />
+                      ) : (
+                        <VideoOff className="h-5 w-5 text-destructive" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={toggleAudio}
+                      className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                    >
+                      {isAudioEnabled ? (
+                        <Mic className="h-5 w-5 text-white" />
+                      ) : (
+                        <MicOff className="h-5 w-5 text-destructive" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={toggleFullscreen}
+                      className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                    >
+                      {isFullscreen ? (
+                        <Minimize className="h-5 w-5 text-white" />
+                      ) : (
+                        <Maximize className="h-5 w-5 text-white" />
+                      )}
+                    </Button>
+                    <RecordingButton
+                      onStartRecording={handleStartRecording}
+                      onStopRecording={handleStopRecording}
+                      isRecording={isRecording}
+                      recordingTime={recordingTime}
+                      isProcessing={isProcessingResponse}
+                      disabled={
+                        !isInterviewActive ||
+                        isAiSpeaking ||
+                        isAiTyping ||
+                        hasRecordedCurrentQuestion ||
+                        isProcessingResponse
+                      }
+                      className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                    />
+                    {hasRecordedCurrentQuestion &&
+                      currentQuestionIndex <= interviewFlow.length && (
+                        <Button
+                          variant="default"
+                          onClick={handleNextQuestion}
+                          disabled={isRecording || isProcessingResponse}
+                          className=""
+                        >
+                          {currentQuestionIndex === interviewFlow.length - 1
+                            ? "End Interview"
+                            : "Next Question"}
+                        </Button>
+                      )}
                   </div>
 
                   {/* Question Progress */}
