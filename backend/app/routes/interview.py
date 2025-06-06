@@ -533,7 +533,6 @@ async def generate_feedback(
     db: Session = Depends(database.get_db),
     interview_id=Depends(authorize_candidate),
 ):
-    # Get request body
     body = await request.json()
     transcript = body.get("transcript", "")
     job_requirements = body.get("job_requirements", "")

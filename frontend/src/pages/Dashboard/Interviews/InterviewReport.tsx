@@ -135,8 +135,8 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
       <div style="text-align: center; margin-bottom: 40px; border-bottom: 2px solid #2563eb; padding-bottom: 20px;">
         <h1 style="font-size: 32px; margin-bottom: 15px; color: #1e40af; font-weight: bold;">Interview Report</h1>
         <h2 style="font-size: 24px; color: #1e3a8a; margin-bottom: 10px;">${
-          interview.firstName
-        } ${interview.lastName}</h2>
+          interview.first_name
+        } ${interview.last_name}</h2>
         <p style="font-size: 16px; color: #4b5563;">Generated on ${new Date().toLocaleDateString()}</p>
       </div>
 
@@ -170,7 +170,7 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
           <tr>
             <td style="padding: 12px; border: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold;">Experience</td>
             <td style="padding: 12px; border: 1px solid #e2e8f0;">${
-              interview.workExperience
+              interview.work_experience
             } years</td>
           </tr>
           <tr>
@@ -188,38 +188,38 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
           <tr>
             <td style="width: 30%; padding: 12px; border: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold;">Overall Score</td>
             <td style="width: 70%; padding: 12px; border: 1px solid #e2e8f0; font-weight: bold; color: ${getScoreColor(
-              interview.overallScore
-            )}">${interview.overallScore || 0}%</td>
+              interview.overall_score
+            )}">${interview.overall_score || 0}%</td>
           </tr>
           <tr>
             <td style="padding: 12px; border: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold;">Resume Match Score</td>
             <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold; color: ${getScoreColor(
-              interview.resumeMatchScore
-            )}">${interview.resumeMatchScore || 0}%</td>
+              interview.resume_match_score
+            )}">${interview.resume_match_score || 0}%</td>
           </tr>
           <tr>
             <td style="padding: 12px; border: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold;">Technical Skills</td>
             <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold; color: ${getScoreColor(
-              interview.technicalSkillsScore
-            )}">${interview.technicalSkillsScore || 0}%</td>
+              interview.technical_skills_score
+            )}">${interview.technical_skills_score || 0}%</td>
           </tr>
           <tr>
             <td style="padding: 12px; border: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold;">Communication Skills</td>
             <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold; color: ${getScoreColor(
-              interview.communicationSkillsScore
-            )}">${interview.communicationSkillsScore || 0}%</td>
+              interview.communication_skills_score
+            )}">${interview.communication_skills_score || 0}%</td>
           </tr>
           <tr>
             <td style="padding: 12px; border: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold;">Problem Solving</td>
             <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold; color: ${getScoreColor(
-              interview.problemSolvingSkillsScore
-            )}">${interview.problemSolvingSkillsScore || 0}%</td>
+              interview.problem_solving_skills_score
+            )}">${interview.problem_solving_skills_score || 0}%</td>
           </tr>
           <tr>
             <td style="padding: 12px; border: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold;">Cultural Fit</td>
             <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold; color: ${getScoreColor(
-              interview.culturalFitScore
-            )}">${interview.culturalFitScore || 0}%</td>
+              interview.cultural_fit_score
+            )}">${interview.cultural_fit_score || 0}%</td>
           </tr>
         </table>
       </div>
@@ -259,7 +259,8 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
         <h3 style="font-size: 22px; color: #1e40af; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px;">Resume Match Feedback</h3>
         <div style="font-size: 16px; line-height: 1.6; color: #1f2937; white-space: pre-wrap; background-color: #ffffff; padding: 15px; border: 1px solid #e2e8f0; border-radius: 4px;">
           ${
-            interview.resumeMatchFeedback || "No resume match feedback provided"
+            interview.resume_match_feedback ||
+            "No resume match feedback provided"
           }
         </div>
       </div>
@@ -350,9 +351,9 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Interview Report</h1>
-          {interview.report_url ? (
+          {interview.report_file_url ? (
             <a
-              href={interview.report_url}
+              href={interview.report_file_url}
               className="flex gap-1 items-center bg-accent rounded p-2 hover:bg-accent/90 transition-all cursor-pointer"
             >
               <Download className="w-4 h-4 mr-2" />
@@ -377,13 +378,13 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
                     src={`https://avatar.vercel.sh/${interview?.email}`}
                   />
                   <AvatarFallback>
-                    {interview?.firstName?.[0]}
-                    {interview?.lastName?.[0]}
+                    {interview?.first_name?.[0]}
+                    {interview?.last_name?.[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 className="font-semibold">
-                    {interview?.firstName} {interview?.lastName}
+                    {interview?.first_name} {interview?.last_name}
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {interview?.email}
@@ -405,7 +406,7 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Experience</p>
-                  <p>{interview?.workExperience} years</p>
+                  <p>{interview?.work_experience} years</p>
                 </div>
               </div>
             </CardContent>
@@ -420,10 +421,10 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
                 <span>Overall Score:</span>
                 <span
                   className={`text-xl font-bold ${getScoreColor(
-                    interview?.overallScore
+                    interview?.overall_score
                   )}`}
                 >
-                  {interview?.overallScore || 0}%
+                  {interview?.overall_score || 0}%
                 </span>
               </div>
             </CardContent>
@@ -440,13 +441,13 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
                 <div className="flex justify-between mb-1">
                   <span>Technical Skills</span>
                   <span
-                    className={getScoreColor(interview?.technicalSkillsScore)}
+                    className={getScoreColor(interview?.technical_skills_score)}
                   >
-                    {interview?.technicalSkillsScore || 0}%
+                    {interview?.technical_skills_score || 0}%
                   </span>
                 </div>
                 <Progress
-                  value={interview?.technicalSkillsScore || 0}
+                  value={interview?.technical_skills_score || 0}
                   className="h-2"
                 />
               </div>
@@ -455,14 +456,14 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
                   <span>Communication</span>
                   <span
                     className={getScoreColor(
-                      interview?.communicationSkillsScore
+                      interview?.communication_skills_score
                     )}
                   >
-                    {interview?.communicationSkillsScore || 0}%
+                    {interview?.communication_skills_score || 0}%
                   </span>
                 </div>
                 <Progress
-                  value={interview?.communicationSkillsScore || 0}
+                  value={interview?.communication_skills_score || 0}
                   className="h-2"
                 />
               </div>
@@ -471,26 +472,28 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
                   <span>Problem Solving</span>
                   <span
                     className={getScoreColor(
-                      interview?.problemSolvingSkillsScore
+                      interview?.problem_solving_skills_score
                     )}
                   >
-                    {interview?.problemSolvingSkillsScore || 0}%
+                    {interview?.problem_solving_skills_score || 0}%
                   </span>
                 </div>
                 <Progress
-                  value={interview?.problemSolvingSkillsScore || 0}
+                  value={interview?.problem_solving_skills_score || 0}
                   className="h-2"
                 />
               </div>
               <div>
                 <div className="flex justify-between mb-1">
                   <span>Cultural Fit</span>
-                  <span className={getScoreColor(interview?.culturalFitScore)}>
-                    {interview?.culturalFitScore || 0}%
+                  <span
+                    className={getScoreColor(interview?.cultural_fit_score)}
+                  >
+                    {interview?.cultural_fit_score || 0}%
                   </span>
                 </div>
                 <Progress
-                  value={interview?.culturalFitScore || 0}
+                  value={interview?.cultural_fit_score || 0}
                   className="h-2"
                 />
               </div>
@@ -505,19 +508,21 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
               <div>
                 <div className="flex justify-between mb-1">
                   <span>Match Score</span>
-                  <span className={getScoreColor(interview?.resumeMatchScore)}>
-                    {interview?.resumeMatchScore || 0}%
+                  <span
+                    className={getScoreColor(interview?.resume_match_score)}
+                  >
+                    {interview?.resume_match_score || 0}%
                   </span>
                 </div>
                 <Progress
-                  value={interview?.resumeMatchScore || 0}
+                  value={interview?.resume_match_score || 0}
                   className="h-2"
                 />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Feedback</p>
                 <p className="text-sm whitespace-pre-wrap break-words">
-                  {interview?.resumeMatchFeedback}
+                  {interview?.resume_match_feedback}
                 </p>
               </div>
             </CardContent>

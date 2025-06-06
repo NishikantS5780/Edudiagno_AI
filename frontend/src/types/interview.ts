@@ -25,7 +25,7 @@ export interface InterviewData {
   job_id?: number;
   video_url?: string;
   screenshot_urls?: string[];
-  report_url?: string;
+  report_file_url?: string;
 }
 
 export interface GetInterviewsParams {
