@@ -259,7 +259,8 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
         <h3 style="font-size: 22px; color: #1e40af; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px;">Resume Match Feedback</h3>
         <div style="font-size: 16px; line-height: 1.6; color: #1f2937; white-space: pre-wrap; background-color: #ffffff; padding: 15px; border: 1px solid #e2e8f0; border-radius: 4px;">
           ${
-            interview.resume_match_feedback || "No resume match feedback provided"
+            interview.resume_match_feedback ||
+            "No resume match feedback provided"
           }
         </div>
       </div>
@@ -350,9 +351,9 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Interview Report</h1>
-          {interview.report_url ? (
+          {interview.report_file_url ? (
             <a
-              href={interview.report_url}
+              href={interview.report_file_url}
               className="flex gap-1 items-center bg-accent rounded p-2 hover:bg-accent/90 transition-all cursor-pointer"
             >
               <Download className="w-4 h-4 mr-2" />
@@ -485,7 +486,9 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
               <div>
                 <div className="flex justify-between mb-1">
                   <span>Cultural Fit</span>
-                  <span className={getScoreColor(interview?.cultural_fit_score)}>
+                  <span
+                    className={getScoreColor(interview?.cultural_fit_score)}
+                  >
                     {interview?.cultural_fit_score || 0}%
                   </span>
                 </div>
@@ -505,7 +508,9 @@ const InterviewReport = ({ jobTitle }: InterviewReportProps) => {
               <div>
                 <div className="flex justify-between mb-1">
                   <span>Match Score</span>
-                  <span className={getScoreColor(interview?.resume_match_score)}>
+                  <span
+                    className={getScoreColor(interview?.resume_match_score)}
+                  >
                     {interview?.resume_match_score || 0}%
                   </span>
                 </div>
